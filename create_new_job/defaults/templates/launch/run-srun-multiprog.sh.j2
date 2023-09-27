@@ -1,0 +1,79 @@
+#!/bin/bash
+# This scripts allows to run the same node with multi program
+# and srun: tested on the ECMWF Atos-aa platform
+
+# Run EC-Earth4
+set -ex
+
+#  DR_HOOK controls the tracing facility in OpenIFS.
+#  0 = off, 1 = on.
+export DR_HOOK=1
+export DR_HOOK_IGNORE_SIGNALS='-1'
+
+#  Set number of OpenMP threads to use. Must be compiled
+#  with openmp for this to have any effect.
+export OMP_NUM_THREADS=1
+
+#  Increase stacksize as default too small
+export OMP_STACKSIZE=64M
+
+#  Set the GRIB_SAMPLES_PATH to your installation.
+#  Make sure LD_LIBRARY_PATH contains the grib_api 'lib' directory.
+export GRIB_SAMPLES_PATH={{build.deps.grib.samples_path}}
+
+# OpenMP threads for OASIS
+export OASIS_OMP_NUM_THREADS=1
+
+# Stack and core size limits
+ulimit -s unlimited
+ulimit -c unlimited
+
+function launch()
+{
+    # version using srun
+    CONF_FILE=multiprog.conf
+    rm -f ${CONF_FILE}
+    _task1=-1
+    NBTASKS=0    
+    while (( "$#" ))
+    do
+        nranks=$1
+        executable=./$(basename $2)
+        shift
+        shift
+        _task0=$((_task1+1))
+        _task1=$((_task0+nranks-1))
+        cmd="${_task0}-${_task1} ${executable}"
+        NBTASKS=$((NBTASKS+nranks))
+        
+        while (( "$#" )) && [ "$1" != "--" ]
+        do
+            cmd+=" $1"
+            shift
+        done
+        echo ${cmd} >> ${CONF_FILE}
+        shift || true
+    done
+        
+    cmd="srun --kill-on-bad-exit=1"
+    echo "$cmd --ntasks=$NBTASKS -l --multi-prog $CONF_FILE"
+    /usr/bin/time $cmd --ntasks=$NBTASKS -l --multi-prog $CONF_FILE
+}
+
+launch \
+{%- if 'xios' in model_config.components %}
+    {{job.xios.ntasks}} ./xios_server.exe -- \
+{%- endif -%}
+{%- if 'nemo' in model_config.components %}
+    {{job.nemo.ntasks}} ./nemo.exe -- \
+{%- endif -%}
+{%- if 'rnfm' in model_config.components %}
+    1 ./runoff-mapper.exe -- \
+{%- endif -%}
+{%- if 'amipfr' in model_config.components %}
+    1 ./amip-reader.exe -- \
+{%- endif -%}
+{%- if 'oifs' in model_config.components %}
+    {{job.oifs.ntasks}} ./oifs.exe -e {{experiment.id}}
+{%- endif -%}
+

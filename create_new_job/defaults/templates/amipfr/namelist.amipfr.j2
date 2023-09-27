@@ -1,0 +1,9 @@
+&NAMAMIP
+    RunLengthSec = {{(24*3600*(experiment.schedule.leg.end-experiment.schedule.leg.start).days)|int}}
+    TimeStepSec = {{model_config.oasis.amipfr_oifs.dt}}
+    StartYear = {{(experiment.schedule.leg.start).year}}
+    StartMonth = {{(experiment.schedule.leg.start).month}}
+    StartDay = {{(experiment.schedule.leg.start).day}}
+    FileListSST = "{{experiment.amipfr.forcing.dir}}/{{experiment.amipfr.forcing.sst}}"
+    FileListSIC = "{{experiment.amipfr.forcing.dir}}/{{experiment.amipfr.forcing.sic}}"
+/

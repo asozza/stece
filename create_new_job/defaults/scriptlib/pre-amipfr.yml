@@ -1,0 +1,3 @@
+- base.template:
+    src: "namelist.amipfr.j2"
+    dst: "namelist.amip"

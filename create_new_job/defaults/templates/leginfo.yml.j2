@@ -1,0 +1,7 @@
+{# code: language=yaml insertSpaces=true tabSize=2 -#}
+base.context:
+  experiment:
+    schedule:
+      leg:
+        start: {{experiment.schedule.leg.end}}
+        num: {{experiment.schedule.leg.num+1}}

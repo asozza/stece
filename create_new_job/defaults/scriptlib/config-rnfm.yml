@@ -1,0 +1,4 @@
+- base.context:
+    job:
+      rnfm:
+        exe: "{{experiment.src_dir}}/runoff-mapper/bin/runoff-mapper.exe"

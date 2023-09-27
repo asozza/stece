@@ -1,0 +1,134 @@
+# =================================================================================================
+# General OASIS configuration
+# =================================================================================================
+
+# The number of coupling fields. If more than one field are described on the
+# same line, this counts as only one entry.
+$NFIELDS
+{%- if 'oifs' in model_config.components and 'nemo' in model_config.components %}
+    8
+{%- elif 'oifs' in model_config.components and 'amipfr' in model_config.components %}
+    1
+{%- endif %}
+
+# The total run time, in seconds
+$RUNTIME
+    {{(24*3600*(experiment.schedule.leg.end-experiment.schedule.leg.start).days)|int}}
+
+# Verbosity of debugging output
+$NLOGPRT
+    1 0
+
+# Non-existing restart files default to zero fields
+# (used for OIFS fluxes, which are zero at startup)
+# Use with caution! Not recommended for production by OASIS people!
+$NNOREST
+    True
+
+
+# =================================================================================================
+# Coupling field definitions
+# =================================================================================================
+$STRINGS
+
+{% if 'oifs' in model_config.components and 'nemo' in model_config.components -%}
+# =================================================================================================
+# Fields send from Atmosphere to Ocean
+# =================================================================================================
+# Momentum fluxes for oce and ice on U grid
+  A_TauX_oce:A_TauY_oce:A_TauX_ice:A_TauY_ice O_OTaux1:O_OTauy1:O_ITaux1:O_ITauy1 1 {{model_config.oasis.oifs_nemo.dt}} 2 rstas.nc EXPORTED
+  IO{{model_config.oifs.grid.cpl_grid_ext}} NEUM LAG={{model_config.oasis.oifs_nemo.dt}}
+  P  0  P  2
+  LOCTRANS SCRIPR
+   AVERAGE
+   GAUSWGT D SCALAR LATITUDE 1 9 2.0
+# Momentum fluxes for oce and ice on V grid
+  A_TauX_oce:A_TauY_oce:A_TauX_ice:A_TauY_ice O_OTaux2:O_OTauy2:O_ITaux2:O_ITauy2 1 {{model_config.oasis.oifs_nemo.dt}} 2 rstas.nc EXPORTED
+  IO{{model_config.oifs.grid.cpl_grid_ext}} NEVM LAG={{model_config.oasis.oifs_nemo.dt}}
+  P  0  P  2
+  LOCTRANS SCRIPR
+   AVERAGE
+   GAUSWGT D SCALAR LATITUDE 1 9 2.0
+# Non-solar and solar radiation over ocean+ice, total evaporation, precipitation (conserved, preserved sign)
+  A_Qns_mix:A_Qs_mix:A_Evap_total:A_Precip_liquid:A_Precip_solid O_QnsMix:O_QsrMix:OTotEvap:OTotRain:OTotSnow 1 {{model_config.oasis.oifs_nemo.dt}} 3 rstas.nc EXPORTED
+  IO{{model_config.oifs.grid.cpl_grid_ext}} NETM LAG={{model_config.oasis.oifs_nemo.dt}}
+  P  0  P  2
+  LOCTRANS SCRIPR CONSERV
+   AVERAGE
+   GAUSWGT D SCALAR LATITUDE 1 9 2.0
+   GLBPOS opt
+# Solar/non-solar radiation over ice, dQns/dT, evaporation over ice (not conserved)
+  A_Qs_ice:A_Qns_ice:A_dQns_dT:A_Evap_ice O_QsrIce:O_QnsIce:O_dQnsdT:OIceEvap 1 {{model_config.oasis.oifs_nemo.dt}} 2 rstas.nc EXPORTED
+  IO{{model_config.oifs.grid.cpl_grid_ext}} NETM LAG={{model_config.oasis.oifs_nemo.dt}}
+  P  0  P  2
+  LOCTRANS SCRIPR
+   AVERAGE
+   GAUSWGT D SCALAR LATITUDE 1 9 2.0
+{% endif -%}
+
+{% if 'oifs' in model_config.components and 'rnfm' in model_config.components -%}
+# =================================================================================================
+# Fields send from Atmosphere to Runoff mapper
+# =================================================================================================
+# Runoff + Calving
+# A_Runoff:A_Calving R_Runoff_atm:R_Calving_atm 1 {{model_config.oasis.oifs_nemo.dt}} 3 rstas.nc EXPORTED
+  A_Runoff R_Runoff_atm 1 {{model_config.oasis.oifs_nemo.dt}} 3 rstas.nc EXPORTED
+  IL{{model_config.oifs.grid.cpl_grid_ext}} RNFA LAG={{model_config.oasis.oifs_nemo.dt}}
+  P  0  P  0
+  LOCTRANS SCRIPR CONSERV
+   AVERAGE
+   GAUSWGT D SCALAR LATITUDE 1 9 2.0
+   GLBPOS opt
+{% endif -%}
+
+{% if 'rnfm' in model_config.components and 'nemo' in model_config.components -%}
+# =================================================================================================
+# Fields send from Runoff mapper to the Ocean
+# =================================================================================================
+# Runoff
+  R_Runoff_oce O_Runoff 1 {{model_config.oasis.oifs_nemo.dt}} 3 no_restart_file EXPORTED
+  RNFA NETM LAG=0
+  P  0  P  2
+  SCRIPR CONSERV BLASNEW
+   GAUSWGT LR SCALAR LATITUDE 1 9 2.0
+   GLBPOS opt
+   1.07945 0
+# Calving
+  R_Calving_oce OCalving 1 {{model_config.oasis.oifs_nemo.dt}} 2 no_restart_file EXPORTED
+  RNFA NETM LAG=0
+  P  0  P  2
+  SCRIPR CONSERV
+   GAUSWGT LR SCALAR LATITUDE 1 9 2.0
+   GLBPOS opt
+{% endif -%}
+
+{% if 'nemo' in model_config.components and 'oifs' in model_config.components -%}
+# =================================================================================================
+# Fields send from Ocean to Atmosphere
+# =================================================================================================
+# SST, ice temperature, albedo, fraction, thickness; snow thickness over ice
+  O_SSTSST:O_TepIce:O_AlbIce:OIceFrc:OIceTck:OSnwTck A_SST:A_Ice_temp:A_Ice_albedo:A_Ice_frac:A_Ice_thickness:A_Snow_thickness 1 {{model_config.oasis.oifs_nemo.dt}} 2 rstos.nc EXPORTED
+  NETM IO{{model_config.oifs.grid.cpl_grid_ext}} LAG={{model_config.oasis.oifs_nemo.dt}}
+  P  2  P  0
+  LOCTRANS SCRIPR
+   AVERAGE
+   GAUSWGT LR SCALAR LATITUDE 1 9 2.0
+{% endif -%}
+
+{% if 'amipfr' in model_config.components and 'oifs' in model_config.components -%}
+# =================================================================================================
+# Fields send from AMIP-forcing reader to Atmosphere
+# =================================================================================================
+# SST, sea-ice fraction
+  AMIP_sst:AMIP_sic A_SST:A_Ice_frac 1 {{model_config.oasis.amipfr_oifs.dt}} 1 no_restart_file EXPORTED
+  AMIP IO{{model_config.oifs.grid.cpl_grid_ext}} LAG=0
+  P  0  P  0
+  SCRIPR
+   GAUSWGT LR SCALAR LATITUDE 1 9 2.0
+#  BILINEAR LR SCALAR LATITUDE 1
+{% endif -%}
+
+
+# =================================================================================================
+$END
+# =================================================================================================

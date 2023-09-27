@@ -1,0 +1,81 @@
+- base.copy:
+    src: "{{job.nemo.exe}}"
+    dst: nemo.exe
+- base.link:
+    target: "{{job.nemo.exe}}"
+    link: nemo.exe.lnk
+
+# Create namelists
+- base.copy:
+    src: "{{se.cli.cwd}}/templates/nemo/nemo-{{item}}.namelist.j2"
+    dst: "templates/nemo-{{item}}.namelist.j2"
+  loop: [oce, ice]
+- base.template:
+    src: nemo/nemo-ice.namelist.j2
+    dst: namelist_ice_ref
+- base.command:
+    name: touch
+    args: [namelist_cfg, namelist_ice_cfg]
+
+# Domain description files
+- base.copy:
+    src: "{{experiment.ini_dir}}/nemo/domain/eORCA1/{{item}}.nc"
+    dst: .
+  loop:
+    - domain_cfg
+    - maskutil
+
+# Initial and climatology data
+- base.copy:
+    src: "{{experiment.ini_dir}}/nemo/initial/EMPave_old.dat"
+    dst: .
+- base.link:
+    target: "{{experiment.ini_dir}}/nemo/initial/Goutorbe_ghflux.nc"
+    link: Goutorbe_ghflux.nc
+- base.link:
+    target: "{{experiment.ini_dir}}/nemo/initial/eORCA1/{{item}}.nc"
+    link: "{{item}}.nc"
+  loop:
+    - mixing_power_bot
+    - mixing_power_cri
+    - mixing_power_pyc
+    - decay_scale_bot
+    - decay_scale_cri
+- base.link:
+    target: "{{experiment.ini_dir}}/nemo/climatology/eORCA1/runoff-icb_DaiTrenberth_Depoorter_eORCA1_JD.nc"
+    link: runoff-icb_DaiTrenberth_Depoorter_eORCA1_JD.nc
+
+# Weight files
+- base.link:
+    target: "{{experiment.ini_dir}}/nemo/weights/{{item}}.nc"
+    link: "{{item}}.nc"
+  loop:
+    - weights_Goutorbe1_2_eorca1_bilinear
+    - weights_WOA13d1_2_eorca1_bilinear
+
+# Initial state
+- when: experiment.nemo.initial_state
+  base.link:
+    target: "{{experiment.nemo.initial_state}}"
+    link: nemo-initial-state.nc
+
+# Forcing files for NEMO standalone
+- when: "{{'oifs' not in model_config.components}}"
+  do:
+    - base.link:
+        target: "{{experiment.ini_dir}}/nemo/forcing/CORE_CNYF_2.0/{{item}}.nc"
+        link: "{{item}}.nc"
+      loop:
+        - u_10.15JUNE2009
+        - v_10.15JUNE2009
+        - t_10.15JUNE2009
+        - q_10.15JUNE2009
+        - ncar_rad.15JUNE2009
+        - ncar_precip.15JUNE2009
+        - slp.15JUNE2009
+    - base.link:
+        target: "{{experiment.ini_dir}}/nemo/weights/{{item}}.nc"
+        link: "{{item}}.nc"
+      loop:
+        - weights_coreII_2_orca1_bicubic
+        - weights_coreII_2_orca1_bilinear

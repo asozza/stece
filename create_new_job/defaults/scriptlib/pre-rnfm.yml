@@ -1,0 +1,3 @@
+- base.template:
+    src: "namelist.rnfm.j2"
+    dst: "namelist.runoffmapper"

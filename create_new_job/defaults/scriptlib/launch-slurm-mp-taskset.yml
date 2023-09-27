@@ -1,0 +1,25 @@
+- base.command:
+    name: scontrol
+    args: [show, hostnames]
+    stdout: slurm_hostnames
+
+- base.template:
+    src: "templates/slurm/{{item}}.j2"
+    dst: "{{item}}"
+  loop: [hostfile, mp.conf]
+
+- base.setenv:
+    DR_HOOK: 0
+    GRIB_SAMPLES_PATH: "{{build.deps.grib.samples_path}}"
+    SLURM_HOSTFILE: "{{experiment.run_dir}}/hostfile"
+
+# Add(!) multi-prog argument to srun
+- base.context:
+    job:
+      slurm:
+        srun:
+          args: [--multi-prog, mp.conf]
+
+- base.command:
+    name: srun
+    args: "{{job.slurm.srun.args}}"

@@ -1,0 +1,8 @@
+# Copy OASIS restart files to subdir
+- base.copy:
+    src: "{{item}}"
+    dst: 'restart/{{"%03d" % (experiment.schedule.leg.num|int+1)}}/'
+    ignore_not_found: true
+  loop:
+    - rstas.nc
+    - rstos.nc

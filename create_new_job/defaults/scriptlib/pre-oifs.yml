@@ -1,0 +1,3 @@
+- base.template:
+    src: "namelist.oifs.j2"
+    dst: "fort.4"

@@ -1,0 +1,39 @@
+# Remove and re-create the rundir
+# - remove:   {path: "{{experiment.run_dir}}"}
+- base.make_dir: { path: "{{experiment.run_dir}}" }
+- base.chdir: { path: "{{experiment.run_dir}}" }
+
+# Create main subdirectories
+- base.make_dir:
+    path: "{{item}}"
+  loop:
+    with: item
+    in: [templates, output, log, restart]
+
+# Create output subdirs for all components
+- base.make_dir:
+    path: "output/{{item}}"
+  loop: "{{model_config.components}}"
+
+# Setup for launch method
+- base.include:
+    src: "scriptlib/setup-{{job.launch.method}}.yml"
+    ignore_not_found: true
+
+# Copy some templates to rundir
+- base.copy:
+    src: "{{se.cli.cwd}}/templates/{{item}}"
+    dst: templates/
+  loop:
+    - sbatch.yml.j2
+    - leginfo.yml.j2
+    - timing.log.j2
+
+# Copy monitoring templates to rundir
+- when: experiment.monitoring.activate
+  base.copy:
+    src: "{{se.cli.cwd}}/templates/monitoring/{{item}}"
+    dst: templates/
+  loop:
+    - markdown.md.j2
+    - redmine.md.j2

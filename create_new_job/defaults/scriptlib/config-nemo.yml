@@ -1,0 +1,8 @@
+- base.context:
+    job:
+      nemo:
+        exe: "{{experiment.src_dir}}/nemo-4.2/cfgs/ECEARTH/BLD/bin/nemo.exe"
+    model_config:
+      nemo:
+        grid: {name: eORCA1}
+        dt: 2700

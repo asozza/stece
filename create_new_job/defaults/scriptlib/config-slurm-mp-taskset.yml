@@ -1,0 +1,26 @@
+- base.context:
+    job: {xios: {nnodes: 0}, nemo: {nnodes: 0}, oifs: {nnodes: 0}, amipfr: {nnodes: 0}}
+
+- when: '"xios" in model_config.components'
+  base.context:
+    job:
+      xios:
+        nnodes: '{{(job.xios.ntasks/job.xios.ntasks_per_node)|round(0, "ceil")|int}}'
+- when: '"nemo" in model_config.components'
+  base.context:
+    job:
+      nemo:
+        nnodes: '{{(job.nemo.ntasks/job.nemo.ntasks_per_node)|round(0, "ceil")|int}}'
+- when: '"oifs" in model_config.components'
+  base.context:
+    job:
+      oifs:
+        nnodes: '{{(job.oifs.ntasks/job.oifs.ntasks_per_node)|round(0, "ceil")|int}}'
+
+- base.context:
+    job:
+      slurm:
+        sbatch:
+          opts:
+            nodes: "{{ job.xios.nnodes + (job.nemo.nnodes if 'nemo' in model_config.components else 0) + (job.oifs.nnodes if 'oifs' in model_config.components else 0) }}"
+            ntasks: "{{ job.xios.ntasks + (job.nemo.ntasks if 'nemo' in model_config.components else 0) + (job.oifs.ntasks if 'oifs' in model_config.components else 0) + 1 }}"

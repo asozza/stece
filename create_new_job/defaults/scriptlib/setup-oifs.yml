@@ -1,0 +1,25 @@
+- base.copy:
+    src: "{{job.oifs.exe}}"
+    dst: oifs.exe
+- base.link:
+    target: "{{job.oifs.exe}}"
+    link: oifs.exe.lnk
+
+- base.copy:
+    src: "{{se.cli.cwd}}/templates/oifs/namelist.oifs.j2"
+    dst: templates/namelist.oifs.j2
+
+- base.link:
+    target: "{{experiment.ini_dir}}/oifs/{{item}}"
+    link: "{{item}}"
+  loop: [ifsdata, rtables]
+- base.copy:
+    src: "{{experiment.ini_dir}}/oifs/{{model_config.oifs.grid.name}}L{{model_config.oifs.grid.level}}/{{experiment.schedule.start.strftime('%Y%m%d')}}/{{item}}"
+    dst: "{{item|replace('ECE4', experiment.id)}}"
+  loop:
+    - ICMGGECE4INIT
+    - ICMGGECE4INIUA
+    - ICMSHECE4INIT
+- base.link:
+    target: "{{model_config.oifs.icmcl_file}}"
+    link: "ICMCL{{experiment.id}}INIT"

@@ -1,0 +1,72 @@
+- when: '"xios" in model_config.components'
+  base.context:
+    job:
+      slurm:
+        srun:
+          args:
+            [
+              --ntasks,
+              "{{job.xios.ntasks}}",
+              --ntasks-per-node,
+              "{{job.xios.ntasks_per_node}}",
+              ./xios_server.exe,
+              ":",
+            ]
+
+- when: '"nemo" in model_config.components'
+  base.context:
+    job:
+      slurm:
+        srun:
+          args:
+            [
+              --ntasks,
+              "{{job.nemo.ntasks}}",
+              --ntasks-per-node,
+              "{{job.nemo.ntasks_per_node}}",
+              ./nemo.exe,
+              ":",
+            ]
+
+- when: '"rnfm" in model_config.components'
+  base.context:
+    job:
+      slurm:
+        srun:
+          args: [./runoff-mapper.exe, ":"]
+
+- when: '"amipfr" in model_config.components'
+  base.context:
+    job:
+      slurm:
+        srun:
+          args: [./amip-reader.exe, ":"]
+
+- when: '"oifs" in model_config.components'
+  base.context:
+    job:
+      slurm:
+        srun:
+          args:
+            [
+              --ntasks,
+              "{{job.oifs.ntasks}}",
+              --ntasks-per-node,
+              "{{job.oifs.ntasks_per_node}}",
+              --cpus-per-task,
+              "{{job.oifs.omp_num_threads}}",
+              "--export=ALL,OMP_STACK_SIZE=512M,OMP_NUM_THREADS={{job.oifs.omp_num_threads}}",
+              ./oifs.exe,
+              -e,
+              "{{experiment.id}}",
+            ]
+
+- base.setenv:
+    DR_HOOK: 0
+    DR_HOOK_OPT: prof
+    DR_HOOK_PROFILE_LIMIT: 2.5
+    GRIB_SAMPLES_PATH: "{{build.deps.grib.samples_path}}"
+
+- base.command:
+    name: srun
+    args: "{{job.slurm.srun.args}}"

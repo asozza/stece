@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#  Run EC-Earth4 GCM coupled
+
+set -ex
+
+#  DR_HOOK controls the tracing facility in OpenIFS.
+#  0 = off, 1 = on.
+export DR_HOOK=0
+export DR_HOOK_IGNORE_SIGNALS='-1'
+
+#  Set number of OpenMP threads to use. Must be compiled
+#  with openmp for this to have any effect.
+export OMP_NUM_THREADS=1
+
+#  Increase stacksize as default too small
+export OMP_STACKSIZE=64M
+
+#  Set the GRIB_SAMPLES_PATH to your installation.
+#  Make sure LD_LIBRARY_PATH contains the grib_api 'lib' directory.
+export GRIB_SAMPLES_PATH={{build.deps.grib.samples_path}}
+
+export OASIS_OMP_NUM_THREADS=12
+
+# Stack and core size limits
+ulimit -s unlimited
+ulimit -c unlimited
+
+# Set tetralith specific environment
+export I_MPI_FABRICS=shm:tmi
+
+# ddt --connect \
+mpiexec.hydra \
+    -genvall \
+    -prepend-rank \
+    -ordered-output \
+    -print-rank-map \
+    -print-all-exitcodes \
+    -bootstrap slurm \
+    \
+    -np {{job.xios.nnodes}} ./xios_server.exe : \
+    -np {{job.nemo.nnodes}} ./nemo.exe : \
+    -np 1 ./runoff-mapper.exe : \
+    -np {{job.oifs.nnodes}} ./oifs.exe -e {{experiment.id}}

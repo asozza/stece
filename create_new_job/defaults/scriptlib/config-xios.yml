@@ -1,0 +1,4 @@
+- base.context:
+    job:
+      xios:
+        exe: "{{experiment.src_dir}}/xios-2.5+/bin/xios_server.exe"

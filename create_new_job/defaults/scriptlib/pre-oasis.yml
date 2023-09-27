@@ -1,0 +1,3 @@
+- base.template:
+    src: "namcouple.j2"
+    dst: "namcouple"

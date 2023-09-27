@@ -1,0 +1,3 @@
+- base.template:
+    src: "launch/{{job.launch.shell.script}}.j2"
+    dst: "{{job.launch.shell.script}}"

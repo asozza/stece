@@ -1,0 +1,36 @@
+{% set rank_offset = 0 -%}
+
+{% if "xios" in model_config.components -%}
+# XIOS
+{% for i in range(0, job.xios.ntasks, job.xios.ntasks_per_node) -%}
+{{ rank_offset+i }}-{{ rank_offset+i+job.xios.ntasks_per_node-1 }} ./xios_server.exe
+{% endfor %}
+{%- set rank_offset = rank_offset+job.xios.ntasks -%}
+{% endif -%}
+
+{% if "nemo" in model_config.components -%}
+# NEMO
+{% for i in range(0, job.nemo.ntasks, job.nemo.ntasks_per_node) -%}
+{{ rank_offset+i }}-{{ rank_offset+i+job.nemo.ntasks_per_node-1 }} ./nemo.exe
+{% endfor %}
+{%- set rank_offset = rank_offset+job.nemo.ntasks -%}
+{% endif -%}
+
+{% if "rnfm" in model_config.components -%}
+# RNFM
+{{ rank_offset }} ./runoff-mapper.exe
+{%- set rank_offset = rank_offset+1 %}
+{% endif -%}
+
+{% if "amipfr" in model_config.components -%}
+# AMIPFR
+{{ rank_offset }} ./amip-reader.exe
+{%- set rank_offset = rank_offset+1 %}
+{% endif -%}
+
+{% if "oifs" in model_config.components -%}
+# OIFS
+{% for i in range(0, job.oifs.ntasks, job.oifs.ntasks_per_node) -%}
+{{ rank_offset+i }}-{{ rank_offset+i+job.oifs.ntasks_per_node-1 }} bash -c OMP_NUM_THREADS={{job.oifs.omp_num_threads}}\ taskset\ -c\ $(({{job.oifs.omp_num_threads}}*%o))-$(({{job.oifs.omp_num_threads}}*(%o+1)-1))\ ./oifs.exe\ -e\ {{experiment.id}}
+{% endfor %}
+{% endif -%}

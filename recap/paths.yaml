@@ -1,0 +1,5 @@
+---
+folders:
+- path: /ec/res4/hpcperm/itas/runs
+  simulations: [ oass, oasx, oasy, oast, oasu, oasw, oasv, oasz ]
+

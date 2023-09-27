@@ -1,0 +1,27 @@
+h2. Experiment status
+
+{% for item in presentation_list -%}
+{% if item["presentation_type"] == "text" -%}
+**{{ item["title"] }}**: {{ item["value"] }}
+{% if "comment" in item %}{{item["comment"]}}{% endif %}
+
+{% endif -%}
+{% endfor %}
+
+h2. Short-links to diagnostic plots below
+
+{% for item in presentation_list -%}
+{% if item["presentation_type"] == "image" -%}
+* "{{item["title"]}}":{{issue_url}}#{{"-".join(item["title"].replace("(","").replace(")","").split())}}
+{% endif -%}
+{% endfor %}
+
+{% for item in presentation_list -%}
+{% if item["presentation_type"] == "image" %}
+h2. {{item["title"]}}
+
+!{{item["path"][2:]}}!  {# [2:] removes the characters "./" from the path string #}
+
+{{item["comment"]}}
+{% endif -%}
+{% endfor %}

@@ -1,0 +1,33 @@
+- base.context:
+    job: {xios: {nnodes: 0}, nemo: {nnodes: 0}, oifs: {nnodes: 0}, amipfr: {nnodes: 0}}
+
+- when: '"xios" in model_config.components'
+  base.context:
+    job:
+      xios:
+        nnodes: '{{(job.xios.ntasks/job.xios.ntasks_per_node)|round(0, "ceil")|int}}'
+      slurm: {sbatch: {hetjob_spec: [{nodes: !noparse "{{job.xios.nnodes}}"}]}}
+- when: '"nemo" in model_config.components'
+  base.context:
+    job:
+      nemo:
+        nnodes: '{{(job.nemo.ntasks/job.nemo.ntasks_per_node)|round(0, "ceil")|int}}'
+      slurm: {sbatch: {hetjob_spec: [{nodes: !noparse "{{job.nemo.nnodes}}"}]}}
+- when: '"rnfm" in model_config.components'
+  base.context:
+    job:
+      nemo:
+        nnodes: '{{(job.nemo.ntasks/job.nemo.ntasks_per_node)|round(0, "ceil")|int}}'
+      slurm: {sbatch: {hetjob_spec: [{nodes: 1}]}}
+- when: '"amipfr" in model_config.components'
+  base.context:
+    job:
+      nemo:
+        nnodes: '{{(job.nemo.ntasks/job.nemo.ntasks_per_node)|round(0, "ceil")|int}}'
+      slurm: {sbatch: {hetjob_spec: [{nodes: 1}]}}
+- when: '"oifs" in model_config.components'
+  base.context:
+    job:
+      oifs:
+        nnodes: '{{(job.oifs.ntasks/job.oifs.ntasks_per_node)|round(0, "ceil")|int}}'
+      slurm: {sbatch: {hetjob_spec: [{nodes: !noparse "{{job.oifs.nnodes}}"}]}}

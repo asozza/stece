@@ -1,0 +1,51 @@
+- base.copy:
+    src: "{{se.cli.cwd}}/templates/oasis/namcouple.j2"
+    dst: templates/
+
+- when: '"nemo" in model_config.components'
+  ocpt.main:
+    oifs_grid_type: "{{model_config.oifs.grid.name}}"
+    oifs_mask_file: "ICMGG{{experiment.id}}INIT"
+    nemo_grid_file: domain_cfg.nc
+    nemo_mask_file: maskutil.nc
+
+- when: '"nemo" not in model_config.components'
+  ocpt.main:
+    oifs_grid_type: "{{model_config.oifs.grid.name}}"
+    oifs_mask_file: "ICMGG{{experiment.id}}INIT"
+
+# Deactivate pre-computed grids etc in favour of OCPT
+# - base.link:
+#     target: "{{experiment.ini_dir}}/oasis/TL255-ORCA1/{{item}}.nc"
+#     link: "{{item}}.nc"
+#   loop:
+#     - areas
+#     - masks
+#     - grids
+
+# Copy pre-computed weights from ini_dir when requested, instead of computing on-the-fly
+- when: model_config.oasis.copy_weights and "nemo" in model_config.components and "oifs" in model_config.components
+  base.copy:
+    src: "{{experiment.ini_dir}}/oasis/{{model_config.oifs.grid.name}}-eORCA1/rmp_{{item[0]}}_to_{{item[1]}}_{{item[2]}}.nc"
+    dst: .
+  loop:
+    - ["IO{{model_config.oifs.grid.cpl_grid_ext}}", NETM, GAUSWGT]
+    - ["IO{{model_config.oifs.grid.cpl_grid_ext}}", NEUM, GAUSWGT]
+    - ["IO{{model_config.oifs.grid.cpl_grid_ext}}", NEVM, GAUSWGT]
+    - [NETM, "IO{{model_config.oifs.grid.cpl_grid_ext}}", GAUSWGT]
+    - ["IL{{model_config.oifs.grid.cpl_grid_ext}}", RNFA, GAUSWGT]
+    - [RNFA, NETM, GAUSWGT]
+
+- when: model_config.oasis.copy_weights and "nemo" not in model_config.components and "oifs" in model_config.components
+  base.copy:
+    src: "{{experiment.ini_dir}}/oasis/{{model_config.oifs.grid.name}}/rmp_{{item[0]}}_to_{{item[1]}}_{{item[2]}}.nc"
+    dst: .
+  loop:
+    - [AMIP, "IO{{model_config.oifs.grid.cpl_grid_ext}}", GAUSWGT]
+
+# Copy initial restart file for NEMO fields
+# (Note: OIFS fields start from zero and $NNOREST is used in namcouple)
+- when: '"nemo" in model_config.components'
+  base.command:
+    name: cp
+    args: [--no-preserve=all, "{{experiment.ini_dir}}/oasis/eORCA1/rstos.nc", .]

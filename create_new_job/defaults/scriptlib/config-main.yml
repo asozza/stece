@@ -1,0 +1,18 @@
+- base.context:
+    experiment:
+      src_dir: !noparse "{{experiment.base_dir}}/sources"
+      schedule:
+        start: "{{experiment.schedule.all[0]}}"
+        end:   "{{experiment.schedule.all[-1]}}"
+        leg:
+          start: "{{experiment.schedule.all[0]}}"
+        # num:   "{{experiment.schedule.all[0].year}}"
+          num:   1
+- base.include:
+    src: "{{experiment.run_dir}}/leginfo.yml"
+    ignore_not_found: true
+- base.context:
+    experiment:
+      schedule:
+        leg:
+          end: "{{experiment.schedule.all.after(experiment.schedule.leg.start) or null}}"

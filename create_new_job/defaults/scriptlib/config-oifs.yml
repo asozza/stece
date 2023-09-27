@@ -1,0 +1,57 @@
+- base.context:
+    model_config:
+      oifs:
+        all_grids:
+          TL159L91:
+            name: TL159
+            level: 91
+            cpl_grid_ext: LL
+            dt: 3600
+          TL255L91:
+            name: TL255
+            level: 91
+            cpl_grid_ext: LM
+            dt: 2700
+          TCO159L91:
+            name: TCO159
+            level: 91
+            cpl_grid_ext: CM
+            dt: 1200
+          TCO199L91:
+            name: TCO199
+            level: 91
+            cpl_grid_ext: CH
+            dt: 1200
+          TCO95L91:
+            name: TCO95
+            level: 91
+            cpl_grid_ext: CL
+            dt: 2700
+          TCO95L137:
+            name: TCO95
+            level: 137
+            cpl_grid_ext: CL
+            dt: 2700
+        output:
+          # Sample_rate for OIFS-XIOS output (FULLPOS freq):
+          #   if sample_rate>0, it is in time steps
+          #   if sample_rate<0, it is in hours
+          sample_rate: 1
+          sample_rate_sec: !noparse "{{model_config.oifs.output.sample_rate*model_config.oifs.grid.dt if model_config.oifs.output.sample_rate>0 else -model_config.oifs.output.sample_rate*3600}}"
+
+          # Pressure level output:
+          #   "plev8"  3d output on 8 CMIP6 compatible pressure levels
+          #   "plev19"  3d output on 19 CMIP6 compatible pressure levels
+          #   "plev39"  3d output on 39 pressure levels
+          #   "no"  3d pressure level output disabled
+          # See axis_def_oifs.xml.j2 for definition of pressure levels
+          pressure_levels: plev19
+        icmcl_file: !noparse "{{experiment.ini_dir}}/oifs/{{model_config.oifs.grid.name}}L{{model_config.oifs.grid.level}}/climate/ICMCLECE4-1990"
+- base.context:
+    model_config:
+      oifs:
+        grid: "{{model_config.oifs.grid or model_config.oifs.all_grids.TCO95L91}}"
+- base.context:
+    job:
+      oifs:
+        exe: "{{experiment.src_dir}}/oifs-43r3v2/make/ecearth/oifs/bin/master.exe"

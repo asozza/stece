@@ -1,0 +1,5 @@
+- base.template:
+    src: sbatch.yml.j2
+    dst: sbatch.tmp.yml
+- base.include:
+    src: sbatch.tmp.yml
