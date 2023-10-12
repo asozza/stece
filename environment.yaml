@@ -14,5 +14,6 @@ dependencies:
   - xarray
   - ipykernel
   - dask
+  - pandas
   - matplotlib
   - netcdf4
