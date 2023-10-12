@@ -37,7 +37,6 @@ def get_nemo_timestep(filename):
 
     return os.path.basename(filename).split('_')[1]
 
-
 def rebuild_nemo(expname, leg, dirs):
     """Minimal nemo rebuilder in a temporary path"""
 
@@ -58,6 +57,8 @@ def rebuild_nemo(expname, leg, dirs):
         rebuild_command = [rebuilder, os.path.join(dirs['tmp'],  expname + "_" + tstep + "_" + kind ), str(len(flist))]
         try:
             subprocess.run(rebuild_command, stderr=subprocess.PIPE, text=True, check=True)
+            for file in glob.glob('nam_rebuld_*') : 
+                os.remove(file)
         except subprocess.CalledProcessError as e:
             error_message = e.stderr
             print(error_message) 
