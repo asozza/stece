@@ -24,6 +24,7 @@ def parse_args():
 
     # optional to activate nemo rebuild
     parser.add_argument("--rerun", action="store_true", help="Restore the a backup of the leginfo")
+    parser.add_argument("--backup", action="store_true", help="Before running, create a backup of the entire folder. It might be slow!")
 
 
     parsed = parser.parse_args()
@@ -42,6 +43,10 @@ if __name__ == "__main__":
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/ccpd/ece4", expname)
     }
+
+    if args.backup:
+        print('Creating a backup, it can be VERY LONG...')
+        shutil.copytree(dirs['exp'], dirs['exp']+'-backup', symlinks=True)
 
     # cleaning
     # create list of files
