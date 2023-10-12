@@ -13,3 +13,6 @@ dependencies:
   - ecCodes
   - xarray
   - ipykernel
+  - dask
+  - matplotlib
+  - netcdf4
