@@ -1,0 +1,18 @@
+# Create the environment:
+# mamba env create -f environment-common.yml 
+# or if you really want to use conda
+# conda env create -f environment-common.yml
+
+name: stece
+channels:
+  - conda-forge
+# please note that some of these dependencies are made explicit on purpose, but are not directly required by conda/mamba
+dependencies:
+  - python>=3.9,<3.12
+  - cdo
+  - ecCodes
+  - xarray
+  - ipykernel
+  - dask
+  - matplotlib
+  - netcdf4
