@@ -8,6 +8,7 @@ nemo-restart player
 import subprocess
 import os
 import glob
+import shutil
 import argparse
 import xarray as xr
 
@@ -84,10 +85,15 @@ if __name__ == "__main__":
     xfield = xr.open_dataset(oce)
     varlist = ['tn', 'tb']
     for var in varlist: 
-        xfield[var] = xfield[var].where(xfield[var] != 0, xfield[var] - 0.5)
+        xfield[var] = xr.where(xfield[var]!=0, xfield[var] - 0.5, 0.)
     
-    oceout = os.path.join(TMP_DIR, 'test.nc')
+    # ocean restart creation
+    oceout = os.path.join(TMP_DIR, 'restart.nc')
     xfield.to_netcdf(oceout)
+
+    # ice restaart copy
+    shutil.copy(os.path.join(TMP_DIR, expname + '_' + timestep + '_restart_ice.nc'), os.path.join(TMP_DIR, 'restart_ice.nc'))
+
 
 
 
