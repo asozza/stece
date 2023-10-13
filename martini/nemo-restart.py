@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-nemo-restart player
+This is a command line tool to modfy the NEMO restart files from a specific EC-Eart4
+experiment, given a specific experiment and leg. 
+
+Authors
+Alessandro Sozza and Paolo Davini (CNR-ISAC, Oct 2023)
 """
 
 import subprocess

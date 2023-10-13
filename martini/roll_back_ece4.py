@@ -2,8 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-roll back restart for EC-Earth3
-If you want to restore the model to a specific date, just run this tool
+This is a simple tool to roll back a restart for EC-Earth4 experiment to a given leg
+If you want to restore the model to a specific date, just run this tool defining 
+at which leg you want to go. It is important to define the directory where the data is, 
+so please check the RUNDIR variable here below
+
+There is also the option of creating a backup (--backup) and to rerun from this backup
+if something went south (--rurun)
+
+Paolo Davini, CNR-ISAC (Oct 2023)
 """
 
 import argparse
@@ -13,6 +20,9 @@ import sys
 import shutil
 import yaml
 from dateutil.relativedelta import relativedelta
+
+# important: the folder where the experiments are
+RUNDIR="/ec/res4/scratch/ccpd/ece4"
 
 
 def parse_args():
@@ -43,8 +53,8 @@ if __name__ == "__main__":
 
     # define directories
     dirs = {
-        'exp': os.path.join("/ec/res4/scratch/ccpd/ece4", expname),
-        'backup': os.path.join("/ec/res4/scratch/ccpd/ece4", expname + "-backup")
+        'exp': os.path.join(RUNDIR, expname),
+        'backup': os.path.join(RUNDIR, expname + "-backup")
     }
 
     # if I have been asked to rerun everything, copy from the backup
