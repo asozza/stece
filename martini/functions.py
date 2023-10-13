@@ -3,6 +3,7 @@ import time
 import numpy as np
 
 def preproc_nemo(field):
+    """preprocessing routine for nemo"""
 
     field = field.rename_dims({'deptht': 'z','x_grid_T': 'x', 'y_grid_T': 'y', 'time_counter': 'time'})
     field = field.rename({'deptht': 'z','time_counter': 'time'})
@@ -24,3 +25,4 @@ def yearFraction(date):
     Frac = yearElapsed/yearDuration
 
     return  date.year + Frac
+    return field
