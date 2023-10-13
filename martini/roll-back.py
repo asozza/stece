@@ -8,10 +8,12 @@ If you want to restore the model to a specific date, just run this tool
 
 import argparse
 import os
-import yaml
-import shutil
-from dateutil.relativedelta import relativedelta
 import glob
+import sys
+import shutil
+import yaml
+from dateutil.relativedelta import relativedelta
+
 
 def parse_args():
     """Command line parser for nemo-restart"""
@@ -20,10 +22,10 @@ def parse_args():
 
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
-    parser.add_argument("leg", metavar="LEG", help="The leg you want roll back", type=str)
+    parser.add_argument("leg", metavar="LEG", help="The leg you want roll back to restart your experiment", type=str)
 
     # optional to activate nemo rebuild
-    parser.add_argument("--rerun", action="store_true", help="Restore the a backup of the leginfo")
+    parser.add_argument("--rerun", action="store_true", help="Restore the a backup (if available)")
     parser.add_argument("--backup", action="store_true", help="Before running, create a backup of the entire folder. It might be slow!")
 
 
@@ -41,28 +43,38 @@ if __name__ == "__main__":
 
     # define directories
     dirs = {
-        'exp': os.path.join("/ec/res4/scratch/ccpd/ece4", expname)
+        'exp': os.path.join("/ec/res4/scratch/ccpd/ece4", expname),
+        'backup': os.path.join("/ec/res4/scratch/ccpd/ece4", expname + "-backup")
     }
 
+    # if I have been asked to rerun everything, copy from the backup
+    if args.rerun:
+        if os.path.isdir(dirs['backup']):
+            print('Rerunning required, copying backup to exp folder, it can be VERY LONG...')
+            shutil.copytree(dirs['backup'], dirs['exp'], symlinks=True)
+        else:
+            sys.exit('Cannot exploit the backup, you need to create it before with --backup')
+
+    # if a backup has been asked, create it if necessary
     if args.backup:
-        print('Creating a backup, it can be VERY LONG...')
-        shutil.copytree(dirs['exp'], dirs['exp']+'-backup', symlinks=True)
+        if os.path.isdir(dirs['backup']):
+            print('Backup directory found, no need to recreate it!')
+        else:
+            print('Creating a backup, it can be VERY LONG...')
+            shutil.copytree(dirs['exp'], dirs['backup'], symlinks=True)
 
     # cleaning
-    # create list of files
+    # create list of files to be remove in the run folder
     browser = ['rstas.nc', 'rstos.nc',  'srf000*.????', 'restart*.nc', 'rcf']
-    for file in browser: 
+    for file in browser:
         filelist = sorted(glob.glob(os.path.join(dirs['exp'], file)))
         for file in filelist:
             if os.path.isfile(file):
                 print('Removing' + file)
                 os.remove(file)
 
-    # update the leginfo
+    # update the leginfo rolling back to the require leg
     legfile = os.path.join(dirs['exp'], 'leginfo.yml')
-    backup = os.path.join(dirs['exp'], 'leginfo.yml.backup')
-    if os.path.isfile(backup) and rerun:
-        shutil.copy(backup, legfile)
     with open(legfile, 'r', encoding='utf-8') as file:
         leginfo = yaml.load(file, Loader=yaml.FullLoader)
 
@@ -75,48 +87,48 @@ if __name__ == "__main__":
     # modify the file only if it is necessary
     if int(leg) < info['num']:
 
-        # create a backup
-        shutil.copy(legfile, backup)
         #print(info['start'] + relativedelta(years=deltayear))
 
         leginfo['base.context']['experiment']['schedule']['leg']['num'] = int(leg)
         leginfo['base.context']['experiment']['schedule']['leg']['start'] = newdate
 
         print("Updating the leginfo to leg number " + leg)
-        with open(legfile, 'w') as outfile:
+        with open(legfile, 'w', encoding='utf8') as outfile:
             yaml.dump(leginfo, outfile, default_flow_style=False)
-    
+
     elif int(leg) == info['num']:
         print("Nothing to do on the leginfo.yaml")
     else:
         raise ValueError("I cannot go forward in time...")
-    
-    # copying old restart 
-    browser = ['rstas.nc', 'rstos.nc',  'srf000*.????', expname + '_restart*.nc', 'rcf']
-    for file in browser: 
+
+    # copying from the restart folder required for the leg you asked
+    browser = ['rstas.nc', 'rstos.nc',  'srf000*.????', 'rcf', '*restart*']
+    for file in browser:
         filelist = sorted(glob.glob(os.path.join(dirs['exp'],  'restart', leg.zfill(3), file)))
         for file in filelist:
-            targetfile = os.path.join(dirs['exp'], os.path.basename(file))
+            basefile = os.path.basename(file)
+            targetfile = os.path.join(dirs['exp'], basefile)
             if not os.path.isfile(targetfile):
-                print("Copying restart", file)
-                if os.path.basename(file) is ['rstas.nc', 'rstos.nc', 'rcf']:
+                # copy rcf and oasis file
+                if basefile in ['rstas.nc', 'rstos.nc', 'rcf']:
+                    print("Copying restart", file)
                     shutil.copy(file, targetfile)
-                else:
+                # link oifs files
+                elif 'srf' in basefile:
+                    print("Linking IFS restart", file)
                     os.symlink(file, targetfile)
+                # link and rename nemo files
+                elif 'restart' in basefile:
+                    newfile = os.path.join(dirs['exp'], '_'.join(basefile.split('_')[2:]))
+                    print("Linking NEMO restart", file)
+                    os.symlink(file, newfile)
 
-    # removing old output: this is irreversible
+    # removing old output to avoid mess
     browser = list(range(newdate.year, orgdate.year))
     for year in browser:
         filelist = sorted(glob.glob(os.path.join(dirs['exp'],  'output', '*', '*' + str(year) + '*')))
-        for file in filelist: 
+        for file in filelist:
             if os.path.isfile(file):
                 print('Removing output file', file)
                 os.remove(file)
-
-    
-
-
-    
-
-
 
