@@ -15,7 +15,7 @@ import subprocess
 
 
 # grid list
-grids = ['TL63', 'TL95', 'TCO319', 'TCO399']
+grids = ['TL63', 'TL95', 'TCO95', 'TL159', 'TCO199', 'TCO319', 'TCO399']
 
 # this runs only on Atos if you have the rights to read this folder
 OIFS_BC="/lus/h2resw01/fws1/mirror/lb/project/rdxdata/climate/climate.v015"
