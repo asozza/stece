@@ -10,30 +10,14 @@ Paolo Davini (CNR-ISAC, Nov 2023)
 """
 
 import os
-import re
 import subprocess
-
+from utils import get_info_grid
 
 # grid list
 grids = ['TL63', 'TL95', 'TCO95', 'TL159', 'TCO199', 'TCO319', 'TCO399']
 
 # this runs only on Atos if you have the rights to read this folder
 OIFS_BC="/lus/h2resw01/fws1/mirror/lb/project/rdxdata/climate/climate.v015"
-
-
-def get_info_grid(gridname):
-
-    """Get the info on the grid to find the right ECMWF file"""
-
-    kind = re.sub("[0-9]", "", gridname)[1:].upper()
-    spectral = re.sub("[^0-9]", "", gridname)
-    ecmwf_name = {
-        'L': 'l_2',
-        'CO': '_4',
-        'Q': '_2'
-    }
-
-    return spectral, ecmwf_name[kind]
 
 
 for grid in grids:
