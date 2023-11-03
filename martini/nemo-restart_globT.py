@@ -17,7 +17,7 @@ import argparse
 import xarray as xr
 
 # on atos, you will need to have
-# module load intel/2021.4.0 intel-mkl/19.0.5 prgenv/intel hdf5 netcdf4 
+# module load intel 
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/apps/netcdf4/4.9.1/INTEL/2021.4/lib:/usr/local/apps/hdf5/1.12.2/INTEL/2021.4/lib
 
 def parse_args():
@@ -91,13 +91,17 @@ if __name__ == "__main__":
     if args.rebuild:
         rebuild_nemo(expname=expname, leg=leg, dirs=dirs)
 
+    # project global temperature in the future
+    global_temp(expname=expname, dirs=dirs)
+
+    # modify temperature in the restart files
     filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
     timestep = get_nemo_timestep(filelist[0])
     oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
     xfield = xr.open_dataset(oce)
     varlist = ['tn', 'tb']
     for var in varlist:
-        xfield[var] = xr.where(xfield[var]!=0, xfield[var] - 1.0, 0.)
+        xfield[var] = xr.where(xfield[var]!=0, xfield[var] - 0.5, 0.)
     
     # ocean restart creation
     oceout = os.path.join(dirs['tmp'], 'restart.nc')

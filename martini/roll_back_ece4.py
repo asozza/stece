@@ -22,7 +22,7 @@ import yaml
 from dateutil.relativedelta import relativedelta
 
 # important: the folder where the experiments are
-RUNDIR="/ec/res4/scratch/ccpd/ece4"
+RUNDIR="/ec/res4/scratch/itas/ece4"
 
 
 def parse_args():
@@ -35,9 +35,8 @@ def parse_args():
     parser.add_argument("leg", metavar="LEG", help="The leg you want roll back to restart your experiment", type=str)
 
     # optional to activate nemo rebuild
-    parser.add_argument("--rerun", action="store_true", help="Restore the a backup (if available)")
+    parser.add_argument("--rerun", action="store_true", help="Restore the backup (if available)")
     parser.add_argument("--backup", action="store_true", help="Before running, create a backup of the entire folder. It might be slow!")
-
 
     parsed = parser.parse_args()
 
