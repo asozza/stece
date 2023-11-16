@@ -29,7 +29,7 @@ RUNDIR="/ec/res4/scratch/itas/ece4"
 def parse_args():
     """Command line parser for mean profile"""
 
-    parser = argparse.ArgumentParser(description="Command Line Parser for global ocean analysis")
+    parser = argparse.ArgumentParser(description="Command Line Parser for mean profiles")
 
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")

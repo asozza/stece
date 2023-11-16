@@ -60,14 +60,8 @@ def moving_average(ydata, N):
 
     return y_smooth
 
-def linear_fit(Xd, Yd, X1, X2):
-
-    Xr=[]; Yr=[]
-    for i in range(len(Xd)):
-        if ((Xd[i] >= X1) and (Xd[i]<= X2)):
-            Xr.append(Xd[i])
-            Yr.append(Yd[i])
-
+def linear_fit(Xd, Yd):
+    
     model=LinearRegression()
     model.fit(Xr, Yr)    
     mp = model.coef_[0][0]
