@@ -7,8 +7,9 @@ jobname=$1
 kind=$2
 machine=ecmwf-hpc2020-intel+openmpi
 
-ecedir=/ec/hpcperm/itmn/src/ecearth4-epochal
+ecedir=/ec/res4/hpcperm/itmn/src/ecearth4-epochal
 default=$ecedir/runtime/se
+expdir=/ec/res4/hpcperm/itmn/jobs
 rundir=/ec/res4/scratch/itas/ece4
 inidir=/ec/res4/hpcperm/itas/data/v4-trunk
 
@@ -23,18 +24,18 @@ if [ -z $kind ] ; then
         exit 1
 fi
 
-mkdir -p $jobname
-cp -r $default/scriptlib $jobname
-cp -r $default/templates $jobname
+mkdir -p $expdir/$jobname
+cp -r $default/scriptlib $expdir/$jobname
+cp -r $default/templates $expdir/$jobname
 
-cp $default/experiment-config-$kind.yml $jobname/$jobname.yml
-sed -i "s/TEST/${jobname}/g" $jobname/$jobname.yml
+cp $default/experiment-config-$kind.yml $expdir/$jobname/$jobname.yml
+sed -i "s/TEST/${jobname}/g" $expdir/$jobname/$jobname.yml
 
-cp $default/user-config.yml $jobname
-sed -i "s@RUNDIR@${rundir}@g" $jobname/user-config.yml
-sed -i "s@BASEDIR@${ecedir}@g" $jobname/user-config.yml
-sed -i "s@INIDIR@${inidir}@g" $jobname/user-config.yml
+cp $default/user-config.yml $expdir/$jobname
+sed -i "s@RUNDIR@${rundir}@g" $expdir/$jobname/user-config.yml
+sed -i "s@BASEDIR@${ecedir}@g" $expdir/$jobname/user-config.yml
+sed -i "s@INIDIR@${inidir}@g" $expdir/$jobname/user-config.yml
 
-cp $default/launch.sh $jobname
-sed -i "s@TEST@${jobname}@g" $jobname/launch.sh
-sed -i "s@BASEDIR@${ecedir}@g" $jobname/launch.sh
+cp $default/launch.sh $expdir/$jobname
+sed -i "s@TEST@${jobname}@g" $expdir/$jobname/launch.sh
+sed -i "s@BASEDIR@${ecedir}@g" $expdir/$jobname/launch.sh
