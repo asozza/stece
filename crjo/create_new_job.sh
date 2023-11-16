@@ -6,7 +6,12 @@
 jobname=$1
 kind=$2
 machine=ecmwf-hpc2020-intel+openmpi
-stecedir=/ec/hpcperm/itmn/src/stece/
+
+ecedir=/ec/hpcperm/itmn/src/ecearth4-epochal
+default=$ecedir/runtime/se
+rundir=/ec/res4/scratch/itas/ece4
+inidir=/ec/res4/hpcperm/itas/data/v4-trunk
+
 
 if [ -z $jobname ] ; then
 	echo " usage ./create_new_job.sh jobname kind ('amip' or 'cpld') "
@@ -19,10 +24,17 @@ if [ -z $kind ] ; then
 fi
 
 mkdir -p $jobname
-cp -r ${stecedir}/crjo/defaults/scriptlib $jobname
-cp -r ${stecedir}/crjo/defaults/templates $jobname
-cp ${stecedir}/crjo/defaults/experiment-config-$kind.yml $jobname/$jobname.yml
+cp -r $default/scriptlib $jobname
+cp -r $default/templates $jobname
+
+cp $default/experiment-config-$kind.yml $jobname/$jobname.yml
 sed -i "s/TEST/${jobname}/g" $jobname/$jobname.yml
-cp ${stecedir}/crjo/defaults/user-config.yml $jobname
-cp ${stecedir}/crjo/defaults/launch.sh $jobname
-sed -i "s/TEST/${jobname}/g" $jobname/launch.sh
+
+cp $default/user-config.yml $jobname
+sed -i "s@RUNDIR@${rundir}@g" $jobname/user-config.yml
+sed -i "s@BASEDIR@${ecedir}@g" $jobname/user-config.yml
+sed -i "s@INIDIR@${inidir}@g" $jobname/user-config.yml
+
+cp $default/launch.sh $jobname
+sed -i "s@TEST@${jobname}@g" $jobname/launch.sh
+sed -i "s@BASEDIR@${ecedir}@g" $jobname/launch.sh
