@@ -39,7 +39,7 @@ mkdir -p $expdir/$jobname
 cp -r $default/scriptlib $expdir/$jobname
 cp -r $default/templates $expdir/$jobname
 
-cp $default/experiment-config-$kind.yml $expdir/$jobname/$jobname.yml
+cp experiment-config-$kind.yml $expdir/$jobname/$jobname.yml
 sed -i "s/TEST/${jobname}/g" $expdir/$jobname/$jobname.yml
 
 cp $default/user-config.yml $expdir/$jobname
