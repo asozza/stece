@@ -22,7 +22,7 @@ default=$ecedir/runtime/se
 rundir=$SCRATCH/ece4
 
 # hard-coded to use Ale new updated files
-inidir=/ec/res4/hpcperm/itas/data/v4-trunk
+inidir=/ec/res4/hpcperm/itas/data/ECE4-DATA
 
 
 if [ -z $jobname ] ; then
@@ -42,11 +42,11 @@ cp -r $default/templates $expdir/$jobname
 cp experiment-config-$kind.yml $expdir/$jobname/$jobname.yml
 sed -i "s/TEST/${jobname}/g" $expdir/$jobname/$jobname.yml
 
-cp $default/user-config.yml $expdir/$jobname
+cp user-config.yml $expdir/$jobname
 sed -i "s@RUNDIR@${rundir}@g" $expdir/$jobname/user-config.yml
 sed -i "s@BASEDIR@${ecedir}@g" $expdir/$jobname/user-config.yml
 sed -i "s@INIDIR@${inidir}@g" $expdir/$jobname/user-config.yml
 
-cp $default/launch.sh $expdir/$jobname
+cp launch.sh $expdir/$jobname
 sed -i "s@TEST@${jobname}@g" $expdir/$jobname/launch.sh
 sed -i "s@BASEDIR@${ecedir}@g" $expdir/$jobname/launch.sh
