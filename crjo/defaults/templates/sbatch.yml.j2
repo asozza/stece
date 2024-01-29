@@ -1,9 +1,0 @@
-{# code: language=yaml insertSpaces=true tabSize=2 -#}
-- base.context:
-    _: &SBATCH_OPTS {{job.slurm.sbatch.opts}}
-    _: &SBATCH_EXTRA
-      hetjob_spec: {{job.slurm.sbatch.hetjob_spec}}
-      sbatch_command: {{job.slurm.sbatch.sbatch_command or "sbatch"}}
-- hpc.slurm.sbatch:
-    <<: *SBATCH_OPTS
-    <<: *SBATCH_EXTRA

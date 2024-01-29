@@ -5,12 +5,23 @@
 
 jobname=$1
 kind=$2
+
+# only this one is supported
 machine=ecmwf-hpc2020-intel+openmpi
 
-ecedir=/ec/res4/hpcperm/itmn/src/ecearth4-epochal
+# please define where the source code is
+#ecedir=$HPCPERM/src/ecearth4-epochal
+#ecedir=$HPCPERM/src/gitlab/ecearth4-fork
+ecedir=$HPCPERM/ecearth4/revisions/epochal
+
+# please define where the jobs are
+expdir=$HPCPERM/ecearth4/jobs
+
+
 default=$ecedir/runtime/se
-expdir=/ec/res4/hpcperm/itmn/jobs
-rundir=/ec/res4/scratch/itmn/ece4
+rundir=$SCRATCH/ece4
+
+# hard-coded to use Ale new updated files
 inidir=/ec/res4/hpcperm/itas/data/v4-trunk
 
 
