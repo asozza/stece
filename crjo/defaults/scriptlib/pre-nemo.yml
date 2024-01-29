@@ -1,4 +1,0 @@
-# Prepare NEMO ocean namelist
-- base.template:
-    src: "nemo-oce.namelist.j2"
-    dst: "namelist_ref"

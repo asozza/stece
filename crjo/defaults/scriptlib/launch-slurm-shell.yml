@@ -1,4 +1,0 @@
--
-  base.command:
-    name: sh
-    args: [ "{{job.launch.shell.script}}" ]
