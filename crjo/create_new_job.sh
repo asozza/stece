@@ -10,7 +10,7 @@ machine=ecmwf-hpc2020-intel+openmpi
 ecedir=/ec/res4/hpcperm/itmn/src/ecearth4-epochal
 default=$ecedir/runtime/se
 expdir=/ec/res4/hpcperm/itmn/jobs
-rundir=/ec/res4/scratch/itas/ece4
+rundir=/ec/res4/scratch/itmn/ece4
 inidir=/ec/res4/hpcperm/itas/data/v4-trunk
 
 
