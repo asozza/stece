@@ -29,7 +29,7 @@ def readmf_T(expname, startyear, endyear):
     dirs = folders(expname)
     filelist = []
     for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_1m_T_{year}-{year}.nc")
+        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T)
@@ -41,7 +41,7 @@ def readmf_ice(expname, startyear, endyear):
     dirs = folders(expname)
     filelist = []
     for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_ice_1m_{year}-{year}.nc")
+        pattern = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice)
@@ -51,7 +51,7 @@ def readmf_ice(expname, startyear, endyear):
 def read_T(expname, year):
 
     dirs = folders(expname)
-    filelist = os.path.join(dirs['nemo'], f"{expname}_oce_1m_T_{year}-{year}.nc")
+    filelist = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T)
 
     return data
@@ -59,7 +59,7 @@ def read_T(expname, year):
 def read_ice(expname, year):
 
     dirs = folders(expname)
-    filelist = os.path.join(dirs['nemo'], f"{expname}_ice_1m_{year}-{year}.nc")
+    filelist = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice)
 
     return data

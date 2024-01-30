@@ -17,7 +17,6 @@ import yaml
 import argparse
 import xarray as xr
 from functions import preproc_nemo_T
-from functions import moving_average
 from functions import dateDecimal
 
 # on atos, you will need to have
@@ -32,11 +31,13 @@ def parse_args():
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
     parser.add_argument("leg", metavar="LEG", help="The leg you want to process for rebuilding", type=str)
-    parser.add_argument("temp", metavar="TEMP", help="New temperature to be applied uniformly", type=int)
+    parser.add_argument("yearspan", metavar="YEARSPAN", help="Year span for fitting global temperature", type=int)
+    parser.add_argument("yearleap", metavar="YEARLEAP", help="Year leap for projecting global temperature", type=int)
 
     # optional to activate nemo rebuild
     parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")
     parser.add_argument("--replace", action="store_true", help="Replace nemo restart files")
+
 
     parsed = parser.parse_args()
 
@@ -58,13 +59,13 @@ def rebuild_nemo(expname, leg, dirs):
         tstep = get_nemo_timestep(flist[0])
 
         for filename in flist:
-            destination_path = os.path.join(dirs['tmp'], os.path.basename(filename))
+            destination_path = os.path.join(dirs['tmp'], leg.zfill(3), os.path.basename(filename))
             try:
                 os.symlink(filename, destination_path)
             except FileExistsError:
                 pass
 
-        rebuild_command = [rebuilder, os.path.join(dirs['tmp'],  expname + "_" + tstep + "_" + kind ), str(len(flist))]
+        rebuild_command = [rebuilder, os.path.join(dirs['tmp'], leg.zfill(3), expname + "_" + tstep + "_" + kind ), str(len(flist))]
         try:
             subprocess.run(rebuild_command, stderr=subprocess.PIPE, text=True, check=True)
             for file in glob.glob('nam_rebuld_*') : 
@@ -74,7 +75,7 @@ def rebuild_nemo(expname, leg, dirs):
             print(error_message) 
 
         for filename in flist:
-            destination_path = os.path.join(dirs['tmp'], os.path.basename(filename))
+            destination_path = os.path.join(dirs['tmp'], leg.zfill(3), os.path.basename(filename))
             os.remove(destination_path)
 
 
@@ -84,37 +85,65 @@ if __name__ == "__main__":
     args = parse_args()
     expname = args.expname
     leg = args.leg
-    temp = args.temp
-    
+    yearspan = args.yearspan
+    yearleap = args.yearleap
+    legstart = str(int(leg)-yearspan)
+
     # define directories
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
         'nemo': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "nemo"),
-        'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname, leg.zfill(3)),
+        'restart': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "restart"),
+        'tmp': os.path.join("/ec/res4/scratch/itas/martini", expname),
         'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo"
     }
 
-    os.makedirs(dirs['tmp'], exist_ok=True)
+    tmpleg = os.path.join(dirs['tmp'], leg.zfill(3))
+    tmpleg0 = os.path.join(dirs['tmp'], legstart.zfill(3))
+
+    os.makedirs(tmpleg, exist_ok=True)
+    os.makedirs(tmpleg0, exist_ok=True)
 
     # rebuild nemo restart files
     if args.rebuild:
         rebuild_nemo(expname=expname, leg=leg, dirs=dirs)
+        rebuild_nemo(expname=expname, leg=legstart, dirs=dirs)
+
+    # extrapolate future global temperature
+    legfile = os.path.join(dirs['exp'], 'leginfo.yml')
+    with open(legfile, 'r', encoding='utf-8') as file:
+        leginfo = yaml.load(file, Loader=yaml.FullLoader)
+    info = leginfo['base.context']['experiment']['schedule']['leg']
+    endyear = info['start'].year - 1
+    startyear = endyear - yearspan
+    print('Working in the range: ',startyear,endyear)
 
     # modify restart files
-    filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
-    timestep = get_nemo_timestep(filelist[0])
-    oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
+    flist = glob.glob(os.path.join(dirs['tmp'], legstart.zfill(3), expname + '*_restart.nc'))
+    tstep = get_nemo_timestep(flist[0])
+    oce = os.path.join(dirs['tmp'], legstart.zfill(3), expname + '_' + tstep + '_restart.nc')
+    xfield0 = xr.open_dataset(oce)
+    flist = glob.glob(os.path.join(dirs['tmp'], leg.zfill(3), expname + '*_restart.nc'))
+    tstep = get_nemo_timestep(flist[0])
+    oce = os.path.join(dirs['tmp'], leg.zfill(3), expname + '_' + tstep + '_restart.nc')
     xfield = xr.open_dataset(oce)
+
     varlist = ['tn', 'tb']
     for var in varlist:
-        xfield[var] = xr.where(xfield[var]!=0, temp, 0.)
+        xt1 = xfield[var].values
+        xt0 = xfield0[var].values
+        #dxt = ((endyear+yearleap)*(xt1-xt0)+xt0*endyear-xt1*startyear)/(endyear-startyear)
+        dxt = xt1+yearleap*(xt1-xt0)/(endyear-startyear)
+        xfield[var] = xr.where(xfield[var]!=0, dxt, 0.0)
     
+    #################################################################################
+
     # ocean restart creation
-    oceout = os.path.join(dirs['tmp'], 'restart.nc')
+    oceout = os.path.join(dirs['tmp'], leg.zfill(3), 'restart.nc')
     xfield.to_netcdf(oceout)
 
     # ice restart copy
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
+    shutil.copy(os.path.join(dirs['tmp'], leg.zfill(3), expname + '_' + tstep + '_restart_ice.nc'), os.path.join(dirs['tmp'], leg.zfill(3), 'restart_ice.nc'))
 
     # replace nemo restart files
     if args.replace:
@@ -130,7 +159,7 @@ if __name__ == "__main__":
         # create new links
         browser = ['restart.nc', 'restart_ice.nc']
         for file in browser:
-            rebfile = os.path.join(dirs['tmp'], file)
+            rebfile = os.path.join(dirs['tmp'], leg.zfill(3), file)
             resfile = os.path.join(dirs['exp'], 'restart', leg.zfill(3), file)
             shutil.copy(rebfile, resfile)
             newfile = os.path.join(dirs['exp'], file)
