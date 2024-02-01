@@ -2,7 +2,7 @@
 
 ###############################################################################
 # 
-# LOBARE: Load Balancing Recap
+# LOBS: Load Balancing Script
 # ---------------------------------------
 # Input: + log files:
 #             - load_balancing_info.txt

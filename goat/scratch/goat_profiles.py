@@ -18,10 +18,7 @@ import subprocess
 import shutil
 import argparse
 import matplotlib.pyplot as plt
-from functions import preproc_nemo
-from functions import dateDecimal
-from functions import interp_average
-from functions import moving_average
+import goat_tool as gt
 
 # the folder where the experiments are
 RUNDIR="/ec/res4/scratch/itas/ece4"
@@ -29,7 +26,7 @@ RUNDIR="/ec/res4/scratch/itas/ece4"
 def parse_args():
     """Command line parser for mean profile"""
 
-    parser = argparse.ArgumentParser(description="Command Line Parser for global ocean analysis")
+    parser = argparse.ArgumentParser(description="Command Line Parser for mean profiles")
 
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
@@ -70,7 +67,7 @@ if __name__ == "__main__":
         pattern = os.path.join(expdir, f"{expname}_oce_1m_T_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo)
+    data = xr.open_mfdataset(filelist, preprocess=gt.preproc_nemo_T)
 
     # dictionaries for mean quantities
     profiles = {}  # with seasons - original

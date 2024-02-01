@@ -3,44 +3,45 @@
 
 """
 Generate a table with the time evolution of some global variables of the ocean 
-with and without seasonal filter: ws/ns
 
 Authors
 Alessandro Sozza (CNR-ISAC, Oct 2023)
 """
 
 import numpy as np
-from sklearn.linear_model import LinearRegression
 import xarray as xr
 import os
 import glob
+import time
 import datetime
 import subprocess
 import shutil
 import argparse
 import matplotlib.pyplot as plt
-from functions import preproc_nemo
-from functions import dateDecimal
-from functions import interp_average
-from functions import moving_average
+import goat_tool as gt
+
+start_time = time.time()
 
 # the folder where the experiments are
 RUNDIR="/ec/res4/scratch/itas/ece4"
 
 def parse_args():
-    """Command line parser for global ocean"""
+    """Command line parser for time series"""
 
-    parser = argparse.ArgumentParser(description="Command Line Parser for global ocean analysis")
+    parser = argparse.ArgumentParser(description="Command Line Parser for time series")
 
-    # add positional argument (mandatory)
+    # add positional arguments (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
     parser.add_argument("startyear", metavar="STARTYEAR", help="Start of the Window (year)", type=str)
     parser.add_argument("endyear", metavar="ENDYEAR", help="End of the Window (year)", type=str)
-
+    
     parsed = parser.parse_args()
 
     return parsed
 
+
+###########################################################################################
+# MAIN PROGRAM
 if __name__ == "__main__":
 
     # parser
@@ -71,44 +72,43 @@ if __name__ == "__main__":
         pattern = os.path.join(expdir, f"{expname}_oce_1m_T_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo)
+    data = xr.open_mfdataset(filelist, preprocess=gt.preproc_nemo_T)
 
-    # dictionaries for mean quantities
-    avews = {}  # with seasons - original
-    avens = {}  # no seasons - moving average
+    aux = {}
+    ave = {}  
     fieldnames = []
-
-    avews['time'] = dateDecimal(data['time'].values)
-    avens['time'] = dateDecimal(data['time'].values)
+    aux['time'] = data.time
+    ave['time'] = gt.dateDecimal(data['time'].values)
     timef = len(data['time'].values)
     fieldnames.append('time')
-
+    
     # 3d fields
     for field in ['to', 'so']:
-        avews[f'{field}g'] = data[f'{field}'].weighted(vol).mean(dim=['z', 'y', 'x']).values.flatten()
+        aux[f'{field}g'] = data[f'{field}'].weighted(vol).mean(dim=['z', 'y', 'x']).values.flatten()
         fieldnames.append(f'{field}g')
-        avews[f'{field}m'] = data[f'{field}'].isel(z=slice(0,23)).weighted(vol.isel(z=slice(0,23))).mean(dim=['z', 'y', 'x']).values.flatten()
-        fieldnames.append(f'{field}m')
-        avews[f'{field}p'] = data[f'{field}'].isel(z=slice(24,45)).weighted(vol.isel(z=slice(24,45))).mean(dim=['z', 'y', 'x']).values.flatten()
-        fieldnames.append(f'{field}p')
-        avews[f'{field}b'] = data[f'{field}'].isel(z=slice(46,74)).weighted(vol.isel(z=slice(46,74))).mean(dim=['z', 'y', 'x']).values.flatten()
-        fieldnames.append(f'{field}b')
-
+        
     # 2d fields
-    for field in ['tos', 'sos', 'heatc', 'saltc', 'qsr_oce', 'qns_oce', 'qt_oce']: #, 'sfx', 'wfo']:
-        avews[f'{field}g'] = data[f'{field}'].weighted(area).mean(dim=['y', 'x']).values.flatten()
+    for field in ['tos', 'sos', 'heatc', 'saltc', 'qsr_oce', 'qns_oce', 'qt_oce']:
+        aux[f'{field}g'] = data[f'{field}'].weighted(area).mean(dim=['y', 'x']).values.flatten()
         fieldnames.append(f'{field}g')
-
+        
     # compute moving average to remove the seasonal component from all fields (expect time)
     for field in fieldnames[1:]:
-        avens[f'{field}'] = moving_average(avews[f'{field}'], 12)
-
-    ############################
+        ave[f'{field}'] = gt.moving_average(aux[f'{field}'], 12)
+        
+    # write output
+    output = os.path.join('time_series_' + startyear + '-' + endyear + '_mave.dat')
+    with open( os.path.join(dirs['tmp'], output), 'w') as file:
+        for i in range(6,timef-6): # start from july | end in june
+            row = [f"{ave[field][i]:<5}" for field in fieldnames]
+            print(" ".join(row), file=file)
+            
+    ############################################################################
     # write legend in file    
     row = "# "
     i = 1
     try:
-        with open( os.path.join(dirs['tmp'], 'global_ocean_legend.dat'), 'w') as file: 
+        with open( os.path.join(dirs['tmp'], 'time_series_legend.dat'), 'w') as file: 
             for field in fieldnames:
                 row += f'{field}('+f'{i}'+') '
                 i += 1
@@ -116,13 +116,5 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    # write output
-    for kind in ['ws', 'ns']:
-        output = os.path.join('global_ocean_' + startyear + '-' + endyear + '_' + f'{kind}.dat')
-        with open( os.path.join(dirs['tmp'], output), 'w') as file:
-            for i in range(timef-1):
-                if kind == 'ws':
-                    row = [f"{avews[field][i]:<5}" for field in fieldnames]
-                if kind == 'ns':
-                    row = [f"{avens[field][i]:<5}" for field in fieldnames]
-                print(" ".join(row), file=file)
+    # print computing time
+    print("--- %s seconds ---" % (time.time() - start_time))
