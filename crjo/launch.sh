@@ -7,4 +7,4 @@ ECEDIR=BASEDIR
 SRCDIR=$ECEDIR/sources/se
 platform=ecmwf-hpc2020-intel+openmpi
 
-se $SRCDIR/platforms/$platform.yml ${expname}.yml user-config.yml scriptlib/main.yml --loglevel debug
+se user-config.yml ${expname}.yml $SRCDIR/platforms/$platform.yml scriptlib/main.yml --loglevel debug
