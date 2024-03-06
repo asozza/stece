@@ -2,17 +2,25 @@
 # -*- coding: utf-8 -*-
 
 """
+  ____   ____     _   _____
+ / __/  / __ \   / \ |_   _|
+| |  _ | |  | | / _ \  | |  
+| |_| || |  | |/ /__ \ | |  
+ \____| \____//_/   \_\|_|  
+
 GOAT library for i/o operations
 
 Authors
-Alessandro Sozza (CNR-ISAC, Dec 2023)
+Alessandro Sozza (CNR-ISAC, 2023-2024)
 """
 
 import subprocess
 import os
 import glob
+import yaml
 import numpy as np
 import xarray as xr
+import cftime
 from sklearn.linear_model import LinearRegression
 
 def folders(expname): 
@@ -32,7 +40,7 @@ def readmf_T(expname, startyear, endyear):
         pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T)
+    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
 
     return data
 
@@ -44,7 +52,7 @@ def readmf_ice(expname, startyear, endyear):
         pattern = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice)
+    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice, use_cftime=True)
 
     return data
 
@@ -52,7 +60,7 @@ def read_T(expname, year):
 
     dirs = folders(expname)
     filelist = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T)
+    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
 
     return data
 
@@ -60,7 +68,7 @@ def read_ice(expname, year):
 
     dirs = folders(expname)
     filelist = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice)
+    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice, use_cftime=True)
 
     return data
 

@@ -2,21 +2,28 @@
 # -*- coding: utf-8 -*-
 
 """
-GOAT library for mathematical operations 
-(averaging, transformations etc...)
+  ____   ____     _   _____
+ / __/  / __ \   / \ |_   _|
+| |  _ | |  | | / _ \  | |  
+| |_| || |  | |/ /__ \ | |  
+ \____| \____//_/   \_\|_|  
+
+GOAT library for averaging operations and other means
 
 Authors
-Alessandro Sozza (CNR-ISAC, Dec 2023)
+Alessandro Sozza (CNR-ISAC, 2023-2024)
 """
 
 import os
 import numpy as np
 import xarray as xr
+import cftime
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io
 
-
+# define differential forms for integrals
 def elements(expname):
 
     df = {}
@@ -29,6 +36,7 @@ def elements(expname):
 
     return df
 
+# interpolated moving average
 def intave(xdata, ydata, N):
 
     x_orig = np.array(gt.dateDecimal(xdata.values))
@@ -43,6 +51,7 @@ def intave(xdata, ydata, N):
     
     return y_smooth
 
+# moving/running average
 def movave(ydata, N):
 
     #y_list = np.array(ydata.values.flatten())
@@ -51,17 +60,16 @@ def movave(ydata, N):
 
     return y_smooth
 
-def runave(ydata):
-    
-    ym = [0] * len(ydata)
-    for i in range(len(ydata)):
-        if (i==0):
-            ym[i] = ydata[i]
-        else:
-            ym[i] = ym[i-1]+(ydata[i]-ym[i-1])/i
+# cumulative average
+def cumave(ydata):
+        
+    ave = np.cumsum(ydata)
+    for i in range(1,len(ydata)):
+        ave[i] = ave[i]/(i+1)
 
-    return ym
+    return ave
 
+# global average over space and time
 def ave_T(expname, year, var):
 
     df = elements(expname=expname)   
@@ -70,6 +78,7 @@ def ave_T(expname, year, var):
 
     return ave
 
+# global average in a vertical slab
 def ave_T_sub(expname, year, var, z1, z2):
 
     df = elements(expname=expname)
@@ -79,3 +88,28 @@ def ave_T_sub(expname, year, var, z1, z2):
     ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
 
     return ave
+
+# global average in a time window
+def ave_T_window(expname, startyear, endyear, var):
+
+    df = elements(expname=expname)   
+    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+    ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+
+    return ave
+
+# mean state
+def mean_state(expname, startyear, endyear):
+
+    df = elements(expname=expname)
+    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+    field = data.mean(dim=['time'])
+
+    return field
+
+def anomaly_local(expname, year, field, idx):
+    
+    data = io.read_T(expname=expname, year=year)
+    delta = gt.cost(data, field, idx)
+
+    return delta
