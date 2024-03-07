@@ -1,9 +1,9 @@
 - base.context:
     experiment:
-      run_dir: !noparse "/ec/res4/scratch/itas/ece4/{{experiment.id}}"
-      base_dir: !noparse "/ec/res4/hpcperm/itas/src/gitlab/ecearth4/"
-      src_dir: !noparse "{{experiment.base_dir}}/sources"
-      ini_dir: !noparse "/ec/res4/hpcperm/itas/data/v4-trunk"
+      run_dir:  !noparse "RUNDIR/{{experiment.id}}"
+      base_dir: !noparse "BASEDIR"
+      src_dir:  !noparse "{{experiment.base_dir}}/sources"
+      ini_dir:  !noparse "INIDIR"
 
       monitoring:
         # To activate monitoring, set

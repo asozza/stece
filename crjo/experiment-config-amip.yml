@@ -14,6 +14,8 @@
       monitoring:
         activate: false
 
+      force_from_scratch: false
+
     model_config:
       components: [oifs, amipfr, xios, oasis]
 
@@ -42,6 +44,7 @@
         ntasks: 253
         ntasks_per_node: 128
         omp_num_threads: 1
+        omp_stacksize: "512M"
       nemo:
         ntasks: 0
         ntasks_per_node: 128
