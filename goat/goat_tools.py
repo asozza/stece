@@ -2,18 +2,24 @@
 # -*- coding: utf-8 -*-
 
 """
+  ____   ____     _   _____
+ / __/  / __ \   / \ |_   _|
+| |  _ | |  | | / _ \  | |  
+| |_| || |  | |/ /__ \ | |  
+ \____| \____//_/   \_\|_|  
+
 GOAT library for tools
 (options, simple functions & miscellanea)
 
 Authors
-Alessandro Sozza (CNR-ISAC, Dec 2023)
+Alessandro Sozza (CNR-ISAC, 2023-2024)
 """
 
 import os
 import glob
 import numpy as np
 import xarray as xr
-import pandas as pd
+import cftime
 import datetime
 import time
 from sklearn.linear_model import LinearRegression
@@ -34,9 +40,37 @@ def yearFraction(date):
 
     return  date.year + Frac
 
-def dateDecimal(datatime):
+def dateDecimal(date):
 
-    d1 = pd.to_datetime(datatime)
-    x1 = [yearFraction(t) for t in d1]
+    x1 = [yearFraction(t) for t in date]
 
     return x1
+
+# container for multiple cost functions
+def cost(var, varref, idx):
+
+    # normalized
+    if idx == 'norm':
+        x = var/varref
+    # difference (with sign)
+    if idx == 'diff':
+        x = (var-varref)
+    # relative difference
+    if idx == 'rdiff':
+        x = (var-varref)/varref    
+    # absolute error
+    if idx == 'abs':
+        x = abs(var-varref)
+    # relative error
+    if idx == 'rel':
+        x = abs(var-varref)/varref
+    # variance
+    if idx == 'var':
+        x = pow(var-varref,2)
+    # normalized/relative variance
+    if idx == 'rvar':
+        x = pow(var-varref,2)/pow(varref,2)
+    # other cost functions: exp? or atan?
+
+    return x
+
