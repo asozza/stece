@@ -1,22 +1,15 @@
 # STECE 
-Scripts & Tools for EC-Earth (4)
-(new name: TEAQ - Tools for EC-Earth Quests)
+Scripts & tools for ece4
 
-- CRJO: Create new Job
-        -> create a new launch script
-
-- LOBS: Load Balancing Script
-        -> redact a recapituling table for inspecting the load balancing
-
+- CRJO: Create new job for ece4
+        
+- LOBS: Load balancing scripts for ece4
+        
 - GOAT: Global Ocean Analysis & Trends
-  	->for plots and post-processing of nemo fields
+        (for plots and post-processing of nemo fields)
 
-- RAPAX: Relaxation along Principal Axes
-  	 -> EOF approach
-
-- MARTINI (New name: OSPREY ocean spinup accerelator for earth climatology)
-          -> Tools for restarting a new coupled run
+- MARTINI: tools for spinup acceleration
 
 - EPOCHAL: scripts for paleoclimate
-           -> tools for the generation of new oifs and nemo grids
+           tools for the generation of new oifs and nemo grids
 
