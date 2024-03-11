@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-###############################################################################
-###############################################################################
-# 
-# LOBSTER: Load balancing script for ec-earth4
-# -----------------------------------------------------------------------------
-# Functions and tools
-# 
-# Author: A. Sozza (2024)
-#
-###############################################################################
-###############################################################################
+"""
+ _       _         _
+| |     | |  ___ _| |_  ___  _
+| | ___ | |_/ __|_   _|/ _ \| |__
+| |/ _ \| _ \__ \ | |_|  __/|  _/
+|_|\___/|___/___/ |____\___\|_|
+
+LOBSTER: Load balancing script for ec-earth4
+--------------------------------------------
+Functions and tools
+
+Authors
+Alessandro Sozza (CNR-ISAC, Mar 2024)
+"""
 
 import sys
 import os
@@ -37,7 +41,7 @@ def read_value_preceded_by_label(file_path, label):
         # if label is not found
         return None
     except FileNotFoundError:
-        print(path_file," not found")
+        print(file_path," not found")
         return None
 
 # search for values followed by label
@@ -53,7 +57,7 @@ def read_value_followed_by_label(file_path, label):
         # if label is not found
         return None
     except FileNotFoundError:
-        print(path_file," not found")
+        print(file_path," not found")
         return None
 
 # search for value constrained by two labels
@@ -75,7 +79,7 @@ def read_value_constrained_by_two_labels(file_path, label):
         # if label is not found
         return None, None
     except FileNotFoundError:
-        print(path_file," not found")
+        print(file_path," not found")
         return None, None
 
 # search for value below a label
@@ -92,7 +96,7 @@ def read_value_below_a_label(file_path, label):
         # if label is not found
         return None
     except FileNotFoundError:
-        print(path_file," not found")
+        print(file_path," not found")
         return None
 
 # read time (in format hh:mm:ss) preceded by label
@@ -114,118 +118,136 @@ def read_time_preceded_by_label(file_path, label):
         return None, None, None
 
 #############################################################
-# i/o operations
+# i/o operations, folders and legs
     
-def read_path():
+def mainpath():
 
     # read from yaml file
     with open('paths.yaml') as jf:
         config = yaml.load(jf, Loader=yaml.FullLoader)
     if 'folders' in config:
         folders = config['folders']
-    mainpath = folders.get('path', '')
+    for ifo in folders:
+        path = ifo.get('path', '')
 
-    return mainpath
+    return path
 
-def folders(mainpath, expname): 
+def folders(expname): 
 
+    path = mainpath()
     dirs = {
-        'exp': os.path.join(mainpath, expname),
-        'log': os.path.join(mainpath, expname, "log"),
+        'exp': os.path.join(path, expname),
+        'log': os.path.join(path, expname, "log"),
     }
 
     return dirs
 
+# extract final leg
+def readleg(dirs):
 
-############################################################
-# Variables
+    # extract final leg
+    legfile = os.path.join(dirs['exp'], 'leginfo.yml')
+    with open(legfile, 'r', encoding='utf-8') as file:
+        leginfo = yaml.load(file, Loader=yaml.FullLoader)
+    legs = leginfo['base.context']['experiment']['schedule']['leg']['num']
 
-def compute_vars(dirs, leg):
-
-    var = np.zeros(7)
-
-    # nprocs
-    path = os.path.join(dirs['log'], leg, 'NODE.001_01')
-    var[0] = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], leg, 'ocean.ouput')
-    var[1] = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
-    nptot = var[0]+var[1]+1 # total nprocs
-    
-    # times
-    path = os.path.join(dirs['log'], leg, 'timing.log')
-    hours, minutes, seconds = read_time_preceded_by_label(path, 'elapsed time')    
-    var[2] = read_value_followed_by_label(path, 'SYPD') # simulated year per day, sypd
-    var[3] = 24./var[2] # simulated year per hour, syph
-    var[4] = var[3]*nptot # core-hours per simulated year, chpsy
-    var[5] = hours*3600.+minutes*60.+seconds # elapsed time
-    var[6] = nptot*var[5]*470410408./(86400.*8098.*128.) # system billing units, sbu
-
-    return var #npa,npo,sypd,syph,chpsy,elapsedtime,sbu
-
-def compute_nprocs(dirs, leg):
-
-def multiple_legs(dirs, legs):
-
-    #append
-    vars = []
-    for leg in range(1,legs):
-        x = compute_vars(dirs, leg)
-        vars = np.append(vars, x)
-
-    return vars
-
-def multiple_runs(dirs, legs):
-
-    #append
-    vars = []
-
-    return vars
-
-def organize_by_nodes():
-
-    # total procs and nodes
-    nptot = vars[2]+vars[1]+1
-    nodes = np.ceil(nptot/128).astype(int)
-    # sort unique nodes in ascending order
-    unique_nodes = set(nodes)
-    sorted_nodes = sorted(unique_nodes)
-
-    return sorted_nodes
+    return legs
 
 #############################################################
-# Outputs: plots and tables
+# read variables
 
-def plot_singlerun(expname, xvar, yvar):
+def compute_nodes(dirs, leg):
 
-    pp = plt.plot(xvar, yvar)
+    # nprocs
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
+    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
+    nptot = npo+npa+1 # total nprocs
+
+    return npa,npo
+
+def compute_sypd(dirs, legs):
+
+    sypd = np.array([])
+    for leg in range(1,int(legs)):
+        path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
+        value = read_value_followed_by_label(path, 'SYPD') # simulated year per day, sypd
+        sypd = np.append(sypd, value)
+    
+    return sypd
+
+def compute_syph(dirs, legs):
+
+    syph = np.array([])
+    for leg in range(1,int(legs)):
+        path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
+        value = read_value_followed_by_label(path, 'SYPD') # simulated year per day, sypd
+        syph = np.append(syph, 24./value)
+    
+    return syph
+
+def compute_chpsy(dirs, legs):
+
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
+    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
+    nptot = npo+npa+1 # total nprocs
+
+    chpsy = np.array([])
+    for leg in range(1,int(legs)):
+        path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
+        value = read_value_followed_by_label(path, 'SYPD') # simulated year per day, sypd
+        chpsy = np.append(chpsy, 24.*nptot/value)
+    
+    return chpsy
+
+def compute_elapsedtime(dirs, legs):
+
+    elapsedtime = np.array([])
+    for leg in range(1,int(legs)):
+        path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
+        hours, minutes, seconds = read_time_preceded_by_label(path, 'elapsed time')    
+        value = hours*3600.+minutes*60.+seconds
+        elapsedtime = np.append(elapsedtime, value)
+
+    return elapsedtime
+
+def compute_sbu(dirs, legs):
+
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
+    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
+    nptot = npo+npa+1 # total nprocs
+
+    sbu = np.array([])
+    for leg in range(1,int(legs)):
+        path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
+        hours, minutes, seconds = read_time_preceded_by_label(path, 'elapsed time')    
+        time = hours*3600.+minutes*60.+seconds
+        value = nptot*time*470410408./(86400.*8098.*128.) # system billing units, sbu
+        sbu = np.append(sbu, value)
+
+    return sbu
+
+#############################################################
+# plots
+
+def plot_sypd(expname):
+
+    dirs = folders(expname)
+    legs = readleg(dirs)
+    sypd = compute_sypd(dirs, legs)
+    x = [leg for leg in range(1,int(legs))]
+    plt.xlabel("leg")
+    plt.ylabel("SYPD")
+    pp = plt.plot(x,sypd)
 
     return pp
 
-def plot_multirun(expname, xvar, yvar):
-
-    pp = plt.plot(xvar, yvar)
-
-    return pp
-
-def save_table(simulations):
-
-    # sort vectors based on oifs/nemo fraction
-    vectors = [ nodes, nfrac, npa, npo, sypd, syph, chpsy, elapsedtime, sbu ]
-    sorted_indices = np.argsort(nfrac)
-    sorted_vectors = [vector[sorted_indices] for vector in vectors]
-    sorted_simulations = [simulations[i] for i in sorted_indices]
-
-    # write output
-    with open('recap.txt', 'w') as file:
-        print('# nodes(1) npo/npa(2) npa(3) npo(4) tsa(5) cta(6) wta(7) tso(8) cto(9) wto(10) tsr(11) ctr(12) wtr(13) sypd(14) syph(15) chpsy(16) elapsed_time(17) sbu(18) ', file=file)
-        print('# ', file=file)
-        for node in sorted_nodes:
-            print('', file=file)
-            print(f'# N={node}', file=file)
-            for i in range(len(simulations)):
-                if sorted_vectors[0][i] == node: # checkes nodes[i]
-                    row = [f"{vector[i]:<5}" for vector in sorted_vectors]
-                    row.append(f"({sorted_simulations[i]})")
-                    print(" ".join(row), file=file)
-        print('', file=file)
+#  missing: averages and plots vs nptot e nfrac (for different expnames)
+#  create plot at fixed number of nodes, ordered by nfrac
+###############################################################
 
