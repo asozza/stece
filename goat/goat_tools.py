@@ -5,11 +5,12 @@
   ____   ____     _   _____
  / __/  / __ \   / \ |_   _|
 | |  _ | |  | | / _ \  | |  
-| |_| || |  | |/ /__ \ | |  
+| |_| || |__| |/ /_\ \ | |  
  \____| \____//_/   \_\|_|  
 
-GOAT library for tools
-(options, simple functions & miscellanea)
+GOAT: Global Ocean Analysis and Trends
+------------------------------------------------------
+GOAT library for tools (options, simple functions & miscellanea)
 
 Authors
 Alessandro Sozza (CNR-ISAC, 2023-2024)
