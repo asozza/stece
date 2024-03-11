@@ -10,7 +10,10 @@ so please check the RUNDIR variable here below
 There is also the option of creating a backup (--backup) and to rerun from this backup
 if something went south (--rurun)
 
+Beware! it works only if frequency is set to YEARLY (not MONTHLY or others)
+
 Paolo Davini, CNR-ISAC (Oct 2023)
+Alessandro Sozza, CNR-ISAC (Mar 2024)
 """
 
 import argparse
@@ -24,7 +27,6 @@ from dateutil.relativedelta import relativedelta
 # important: the folder where the experiments are
 RUNDIR="/ec/res4/scratch/itas/ece4"
 
-
 def parse_args():
     """Command line parser for nemo-restart"""
 
@@ -32,23 +34,27 @@ def parse_args():
 
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
-    parser.add_argument("leg", metavar="LEG", help="The leg you want roll back to restart your experiment", type=str)
-
+    parser.add_argument("leg", metavar="LEG", help="The leg you want roll back", type=str)
+    
     # optional to activate nemo rebuild
-    parser.add_argument("--rerun", action="store_true", help="Restore the backup (if available)")
+    parser.add_argument("--restore", action="store_true", help="Restore the backup (if available)")
     parser.add_argument("--backup", action="store_true", help="Before running, create a backup of the entire folder. It might be slow!")
 
     parsed = parser.parse_args()
 
     return parsed
 
+def get_nemo_timestep(filename):
+    """Minimal function to get the timestep from a nemo restart file"""
+
+    return os.path.basename(filename).split('_')[1]
+
 if __name__ == "__main__":
     
     # parser
     args = parse_args()
     expname = args.expname
-    leg = args.leg
-    rerun = args.rerun
+    leg = args.leg    
 
     # define directories
     dirs = {
@@ -56,8 +62,8 @@ if __name__ == "__main__":
         'backup': os.path.join(RUNDIR, expname + "-backup")
     }
 
-    # if I have been asked to rerun everything, copy from the backup
-    if args.rerun:
+    # if I have been asked to restore everything, copy from the backup
+    if args.restore:
         if os.path.isdir(dirs['backup']):
             print('Rerunning required, copying backup to exp folder, it can be VERY LONG...')
             shutil.copytree(dirs['backup'], dirs['exp'], symlinks=True)
@@ -82,25 +88,31 @@ if __name__ == "__main__":
                 print('Removing' + file)
                 os.remove(file)
 
+    # update time.step
+    flist = glob.glob(os.path.join(dirs['exp'], 'restart', leg.zfill(3), expname + '*_' + 'restart' + '_????.nc'))
+    timestep = get_nemo_timestep(flist[0])
+    tstepfile = os.path.join(dirs['exp'], 'time.step')
+    with open(tstepfile, 'w', encoding='utf-8') as file:
+        file.write(str(int(timestep)))
+
     # update the leginfo rolling back to the require leg
     legfile = os.path.join(dirs['exp'], 'leginfo.yml')
     with open(legfile, 'r', encoding='utf-8') as file:
         leginfo = yaml.load(file, Loader=yaml.FullLoader)
 
-    # get some time information
+    # get new date
     info = leginfo['base.context']['experiment']['schedule']['leg']
-    deltayear = int(leg) - info['num']
-    newdate = info['start'] + relativedelta(years=deltayear)
+    deltaleg = int(leg) - info['num']    
+    newdate = info['start'] + relativedelta(years=deltaleg)
     orgdate = info['start']
 
     # modify the file only if it is necessary
     if int(leg) < info['num']:
 
-        #print(info['start'] + relativedelta(years=deltayear))
-
-        leginfo['base.context']['experiment']['schedule']['leg']['num'] = int(leg)
+        #print(info['start'] + relativedelta(years=deltayear))        
         leginfo['base.context']['experiment']['schedule']['leg']['start'] = newdate
-
+        leginfo['base.context']['experiment']['schedule']['leg']['num'] = int(leg)
+        
         print("Updating the leginfo to leg number " + leg)
         with open(legfile, 'w', encoding='utf8') as outfile:
             yaml.dump(leginfo, outfile, default_flow_style=False)

@@ -95,7 +95,6 @@ if __name__ == "__main__":
     oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
 
     # ice restart copy
-
     shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
     shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
     os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
