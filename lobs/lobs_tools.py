@@ -153,8 +153,17 @@ def endleg(expname):
 
     return legs
 
+def selectleg(expname, leg):
+
+    if leg == 0:
+        legs = endleg(expname)
+    else:
+        legs = leg
+
+    return legs
+
 #############################################################
-# read single variables
+# actions: compute, group_by, collect
 
 def compute_nodes(expname):
 
@@ -191,14 +200,9 @@ def compute_syph(expname, legs):
 
 def compute_chpsy(expname, legs):
 
-    init=1
     dirs = folders(expname)
-    path = os.path.join(dirs['log'], str(init).zfill(3), 'NODE.001_01')
-    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(init).zfill(3), 'ocean.ouput')
-    npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
-    nptot = npo+npa+1 # total nprocs
-
+    npa,npo = compute_nodes(expname)
+    nptot=npa+npo+1
     chpsy = np.array([])
     for leg in range(1,int(legs)):
         path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
@@ -222,12 +226,8 @@ def compute_elapsedtime(expname, legs):
 def compute_sbu(expname, legs):
 
     dirs = folders(expname)
-    path = os.path.join(dirs['log'], str(legs).zfill(3), 'NODE.001_01')
-    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(legs).zfill(3), 'ocean.ouput')
-    npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
-    nptot = npo+npa+1 # total nprocs
-
+    npa,npo = compute_nodes(expname)
+    nptot=npa+npo+1
     sbu = np.array([])
     for leg in range(1,int(legs)):
         path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
@@ -252,24 +252,29 @@ def group_by_nptot_sypd(expnames, leg):
 
     ave=np.array([])
     for expname in expnames:
-        if leg == 0:
-            legs = endleg(expname)
-        else:
-            legs = leg
+        legs = selectleg(expname, leg)
         sypd = compute_sypd(expname, legs)
         ave = np.append(ave,np.mean(sypd))
 
     return nptot,ave
 
+def collect_sypd(expnames, leg):
+
+    ave=np.array([])
+    for expname in expnames:        
+        legs = selectleg(expname, leg)
+        sypd = compute_sypd(expname, legs)
+        ave = np.append(ave,np.mean(sypd))
+
+    return ave
+
 #############################################################
 # plots
+# ISSUE --> generalize functions for any variable
 
 def plot_sypd_vs_time(expname, leg):
 
-    if leg == 0:
-        legs = endleg(expname)
-    else:
-        legs = leg
+    legs = selectleg(expname, leg)
     sypd = compute_sypd(expname, legs)
     x = [leg for leg in range(1,legs)]
     plt.xlabel("leg")
@@ -277,6 +282,31 @@ def plot_sypd_vs_time(expname, leg):
     pp = plt.plot(x,sypd)
 
     return pp
+
+# multiplot
+# ISSUE --> generalize with 4 labels
+def multiplot_vs_time(expname, leg):
+
+    legs = selectleg(expname, leg)
+    x = [leg for leg in range(1,legs)]
+    sypd = compute_sypd(expname, legs)
+    elapsedtime = compute_elapsedtime(expname, legs)
+    chpsy = compute_chpsy(expname, legs)
+    sbu = compute_sbu(expname, legs)
+
+    fig = plt.figure()
+    gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.35)
+    #    fig, axs = plt.subplots(2, 2, hspace=1.0, wspace=1.0)
+    (ax1, ax2), (ax3, ax4) = gs.subplots(sharex=False, sharey=False)
+    ax1.plot(x, sypd, 'tab:blue')
+    ax1.set(xlabel='leg', ylabel='SYPD')
+    ax2.plot(x, elapsedtime, 'tab:orange')
+    ax2.set(xlabel='leg', ylabel='Elapsed Time (sec)')
+    ax3.plot(x, chpsy, 'tab:green')
+    ax3.set(xlabel='leg', ylabel='CHPSY')
+    ax4.plot(x, sbu, 'tab:red')
+    ax4.set(xlabel='leg', ylabel='SBU')
+
 
 def plot_sypd_vs_nptot(expnames, leg):
 
@@ -288,8 +318,53 @@ def plot_sypd_vs_nptot(expnames, leg):
     
     return pp
 
+
 # multiplots
 #  missing: averages and plots vs nptot e nfrac (for different expnames)
 #  create plot at fixed number of nodes, ordered by nfrac
 ###############################################################
 
+# Save table
+# expnames = ['LB01', 'LB02', 'LB03', 'LB04', 'LB05', 'LB06', 'LB07', 'LB10', 'LB11', 'LB12', 'LB13', 'LB14', 'LB15', 'LB16', 'LB21', 'LB22', 'LB23', 'LB24', 'LB25', 'LB26', 'LB31', 'LB32', 'LB33', 'LB34', 'LB35', 'LB36', 'LB37', 'LC32' ]
+def save_table(expnames, leg):
+
+    npa=np.array([]); npo=np.array([])
+    sypd=np.array([]); syph=np.array([])
+    chpsy=np.array([]); elapsedtime=np.array([])
+    sbu=np.array([])
+    for expname in expnames:
+        legs = selectleg(expname, leg)
+        np1,np2 = compute_nodes(expname)
+        npa = np.append(npa,np1)
+        npo = np.append(npo,np2)
+        sypd = np.append(sypd,np.mean(compute_sypd(expname, legs)))
+        syph = np.append(syph,np.mean(compute_syph(expname, legs)))
+        chpsy = np.append(chpsy,np.mean(compute_chpsy(expname, legs)))
+        elapsedtime = np.append(elapsedtime,np.mean(compute_elapsedtime(expname, legs)))
+        sbu = np.append(sbu,np.mean(compute_sbu(expname, legs)))
+
+    nptot=npa+npo+1
+    nfrac = npo/npa
+    nodes = np.ceil(nptot/128).astype(int)    
+    unique_nodes = set(nodes)
+    sorted_nodes = sorted(unique_nodes)
+
+    # sort vectors based on oifs/nemo fraction
+    vars = [ nodes, nfrac, npa, npo, sypd, syph, chpsy, elapsedtime, sbu ]
+    sorted_idx = np.argsort(nfrac)
+    sorted_vars = [var[sorted_idx] for var in vars]
+    sorted_expnames = [expnames[i] for i in sorted_idx]
+
+    # write output
+    with open('table_lobs.txt', 'w') as file:
+        print('# Nodes(1) NPO/NPA(2) NPA(3) NPO(4) SYPD(5) SYPH(6) CHPSY(7) Elapsed_Time(8) SBU(9) expname(10) ', file=file)
+        print('# ', file=file)
+        for node in sorted_nodes:
+            print('', file=file)
+            print(f'# N={node}', file=file)
+            for i in range(len(expnames)):
+                if sorted_vars[0][i] == node: # checkes nodes[i]
+                    row = [f"{var[i]:<5}" for var in sorted_vars]
+                    row.append(f"({sorted_expnames[i]})")
+                    print(" ".join(row), file=file)
+        print('', file=file)
