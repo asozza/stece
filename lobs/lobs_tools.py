@@ -161,7 +161,7 @@ def compute_nodes(dirs, leg):
     # nprocs
     path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
     npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.output')
     npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
     nptot = npo+npa+1 # total nprocs
 
@@ -189,9 +189,9 @@ def compute_syph(dirs, legs):
 
 def compute_chpsy(dirs, legs):
 
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
-    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    path = os.path.join(dirs['log'], str(legs-1).zfill(3), 'NODE.001_01')
+    npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa   
+    path = os.path.join(dirs['log'], str(legs-1).zfill(3), 'ocean.output')
     npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
     nptot = npo+npa+1 # total nprocs
 
@@ -218,7 +218,7 @@ def compute_sbu(dirs, legs):
 
     path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
     npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.output')
     npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
     nptot = npo+npa+1 # total nprocs
 
