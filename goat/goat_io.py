@@ -99,7 +99,7 @@ def preproc_nemo_U(data):
     data = data.swap_dims({'x_grid_U_inner': 'x', 'y_grid_U_inner': 'y'})
     data.coords['z'] = -data['z']
     
-    return Tdata
+    return data
 
 def preproc_nemo_V(data):
     """preprocessing routine for nemo for V grid"""

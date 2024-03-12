@@ -2,27 +2,80 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |__| |/ /_\ \ | |  
- \____| \____//_/   \_\|_|  
+ _____  __________  ____  ______   __ 
+/  __ \/   __   _ \|  _ \|  ___ \ / / 
+| |  |    |_ | |_|   |_|   |__ \ V /  
+| |  | |\_  \|  __/|    /|  __| | |   
+| |__| |__|    |   | |\ \| |____| |   
+\___________/|_|   |_| \__________|   
 
-GOAT: Global Ocean Analysis and Trends
-------------------------------------------------------
-GOAT library for averaging operations and other means
+OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
+--------------------------------------------------------
+Osprey library for mathematical operations
 
 Authors
-Alessandro Sozza (CNR-ISAC, 2023-2024)
+Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
 import os
 import numpy as np
 import xarray as xr
 import cftime
+import datetime
+import time
 from sklearn.linear_model import LinearRegression
-import goat_tools as gt
-import goat_io as io
+import osprey_io as io
+
+
+def epoch(date):
+
+    s = time.mktime(date.timetuple())
+
+    return s
+
+def yearFraction(date):
+
+    StartOfYear = datetime.datetime(date.year,1,1,0,0,0)
+    EndOfYear = datetime.datetime(date.year+1,1,1,0,0,0)
+    yearElapsed = epoch(date)-epoch(StartOfYear)
+    yearDuration = epoch(EndOfYear)-epoch(StartOfYear)
+    Frac = yearElapsed/yearDuration
+
+    return  date.year + Frac
+
+def dateDecimal(date):
+
+    x1 = [yearFraction(t) for t in date]
+
+    return x1
+
+# container for multiple cost functions
+def cost(var, varref, idx):
+
+    # normalized
+    if idx == 'norm':
+        x = var/varref
+    # difference (with sign)
+    if idx == 'diff':
+        x = (var-varref)
+    # relative difference
+    if idx == 'rdiff':
+        x = (var-varref)/varref    
+    # absolute error
+    if idx == 'abs':
+        x = abs(var-varref)
+    # relative error
+    if idx == 'rel':
+        x = abs(var-varref)/varref
+    # variance
+    if idx == 'var':
+        x = pow(var-varref,2)
+    # normalized/relative variance
+    if idx == 'rvar':
+        x = pow(var-varref,2)/pow(varref,2)
+    # other cost functions: exp? or atan?
+
+    return x
 
 # define differential forms for integrals
 def elements(expname):
@@ -111,6 +164,6 @@ def mean_state(expname, startyear, endyear):
 def anomaly_local(expname, year, field, idx):
     
     data = io.read_T(expname=expname, year=year)
-    delta = gt.cost(data, field, idx)
+    delta = cost(data, field, idx)
 
     return delta

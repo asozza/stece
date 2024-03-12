@@ -112,7 +112,7 @@ if __name__ == "__main__":
     endyear = info['start'].year - 1
     startyear = endyear - yearspan
     print('Fitting in the range: ',startyear,endyear)
-
+    
     # load domain
     domain = xr.open_dataset(os.path.join(dirs['exp'], 'domain_cfg.nc'))
     vol = domain['e1t']*domain['e2t']*domain['e3t_0']
