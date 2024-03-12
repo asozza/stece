@@ -45,16 +45,16 @@ def plot_ts_ave3d(expname, startyear, endyear, var, norm, idx):
 
     return pp
 
-
 # time series with moving average
-def plot_ts_ma3d(expname, startyear, endyear, var, norm, idx):
+def plot_ts_ma3d(expname, startyear, endyear, var, offset, norm, idx):
     
     data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
     df = gm.elements(expname=expname)
     tt = gt.dateDecimal(data['time'].values)
     vv = gm.movave(data[var].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
     tt1 = tt[6:-6]; vv1 = vv[6:-6]
-    pp = plt.plot(tt1,gt.cost(vv1, norm, idx))
+    tt2 = [tt1[i]+offset for i in range(len(tt1))]
+    pp = plt.plot(tt2,gt.cost(vv1, norm, idx))
 
     return pp
 

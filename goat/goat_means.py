@@ -20,7 +20,6 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
-import pandas as pd
 from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io

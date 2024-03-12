@@ -132,7 +132,7 @@ def mainpath():
 
     return path
 
-def folders(expname): 
+def folders(expname):
 
     path = mainpath()
     dirs = {
@@ -143,9 +143,9 @@ def folders(expname):
     return dirs
 
 # extract final leg
-def readleg(dirs):
+def endleg(expname):
 
-    # extract final leg
+    dirs = folders(expname)
     legfile = os.path.join(dirs['exp'], 'leginfo.yml')
     with open(legfile, 'r', encoding='utf-8') as file:
         leginfo = yaml.load(file, Loader=yaml.FullLoader)
@@ -154,21 +154,22 @@ def readleg(dirs):
     return legs
 
 #############################################################
-# read variables
+# read single variables
 
-def compute_nodes(dirs, leg):
+def compute_nodes(expname):
 
-    # nprocs
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
+    init=1
+    dirs = folders(expname)
+    path = os.path.join(dirs['log'], str(init).zfill(3), 'NODE.001_01')
     npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    path = os.path.join(dirs['log'], str(init).zfill(3), 'ocean.output')
     npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
-    nptot = npo+npa+1 # total nprocs
 
     return npa,npo
 
-def compute_sypd(dirs, legs):
+def compute_sypd(expname, legs):
 
+    dirs = folders(expname)    
     sypd = np.array([])
     for leg in range(1,int(legs)):
         path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
@@ -177,8 +178,9 @@ def compute_sypd(dirs, legs):
     
     return sypd
 
-def compute_syph(dirs, legs):
+def compute_syph(expname, legs):
 
+    dirs = folders(expname)
     syph = np.array([])
     for leg in range(1,int(legs)):
         path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
@@ -187,11 +189,13 @@ def compute_syph(dirs, legs):
     
     return syph
 
-def compute_chpsy(dirs, legs):
+def compute_chpsy(expname, legs):
 
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
+    init=1
+    dirs = folders(expname)
+    path = os.path.join(dirs['log'], str(init).zfill(3), 'NODE.001_01')
     npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    path = os.path.join(dirs['log'], str(init).zfill(3), 'ocean.ouput')
     npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
     nptot = npo+npa+1 # total nprocs
 
@@ -203,8 +207,9 @@ def compute_chpsy(dirs, legs):
     
     return chpsy
 
-def compute_elapsedtime(dirs, legs):
+def compute_elapsedtime(expname, legs):
 
+    dirs = folders(expname)
     elapsedtime = np.array([])
     for leg in range(1,int(legs)):
         path = os.path.join(dirs['log'], str(leg).zfill(3), 'timing.log')
@@ -214,11 +219,12 @@ def compute_elapsedtime(dirs, legs):
 
     return elapsedtime
 
-def compute_sbu(dirs, legs):
+def compute_sbu(expname, legs):
 
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'NODE.001_01')
+    dirs = folders(expname)
+    path = os.path.join(dirs['log'], str(legs).zfill(3), 'NODE.001_01')
     npa = read_value_preceded_by_label(path, 'NPROC') # nprocs of oifs, npa    
-    path = os.path.join(dirs['log'], str(leg).zfill(3), 'ocean.ouput')
+    path = os.path.join(dirs['log'], str(legs).zfill(3), 'ocean.ouput')
     npo = read_value_preceded_by_label(path, 'jpnij') # nprocs of nemo, npo
     nptot = npo+npa+1 # total nprocs
 
@@ -233,20 +239,56 @@ def compute_sbu(dirs, legs):
     return sbu
 
 #############################################################
+# collect variables from multiple runs
+def group_by_nptot_sypd(expnames, leg):
+    
+    npo = np.array([])
+    npa = np.array([])
+    for expname in expnames:
+        np1,np2 = compute_nodes(expname)
+        npa = np.append(npa, np1)
+        npo = np.append(npo, np2)    
+    nptot = npo+npa+1
+
+    ave=np.array([])
+    for expname in expnames:
+        if leg == 0:
+            legs = endleg(expname)
+        else:
+            legs = leg
+        sypd = compute_sypd(expname, legs)
+        ave = np.append(ave,np.mean(sypd))
+
+    return nptot,ave
+
+#############################################################
 # plots
 
-def plot_sypd(expname):
+def plot_sypd_vs_time(expname, leg):
 
-    dirs = folders(expname)
-    legs = readleg(dirs)
-    sypd = compute_sypd(dirs, legs)
-    x = [leg for leg in range(1,int(legs))]
+    if leg == 0:
+        legs = endleg(expname)
+    else:
+        legs = leg
+    sypd = compute_sypd(expname, legs)
+    x = [leg for leg in range(1,legs)]
     plt.xlabel("leg")
     plt.ylabel("SYPD")
     pp = plt.plot(x,sypd)
 
     return pp
 
+def plot_sypd_vs_nptot(expnames, leg):
+
+    nptot,sypd = group_by_nptot_sypd(expnames, leg)
+    plt.xlabel("NPTOT")
+    plt.ylabel("SYPD")
+    pp = plt.scatter(nptot,sypd)
+    pp = plt.plot(nptot,sypd)
+    
+    return pp
+
+# multiplots
 #  missing: averages and plots vs nptot e nfrac (for different expnames)
 #  create plot at fixed number of nodes, ordered by nfrac
 ###############################################################
