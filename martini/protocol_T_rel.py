@@ -22,6 +22,7 @@ import argparse
 import xarray as xr
 import osprey_io as osi
 import osprey_actions as osa
+import osprey_means as osm
 
 
 def parse_args():
@@ -39,7 +40,6 @@ def parse_args():
     parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")
     parser.add_argument("--replace", action="store_true", help="Replace nemo restart files")
 
-
     parsed = parser.parse_args()
 
     return parsed
@@ -52,18 +52,21 @@ if __name__ == "__main__":
     leg = args.leg
     yearspan = args.yearspan
     yearleap = args.yearleap
+    leg0 = int(leg)-int(yearspan)
 
     # define folders
-    dirs = osi.folders(expname, leg)
+    dirs = osi.folders(expname)
 
     # rebuild nemo restart files
     if args.rebuild:
         osa.rebuild_nemo(expname, leg)
+        osa.rebuild_nemo(expname, leg0)
 
-    # manipulate based on global temperature
-    osa.manipulate_Tglob(expname, leg)
+    # manipulate local temperature based on relative change
+    rdata = osa.forecast_T_rel(expname, leg, yearspan, yearleap)
+    osi.write_nemo_restart(expname, rdata, leg)
 
     # replace nemo restart files
     if args.replace:
-        osa.nemo_replace()
+        osa.replace_nemo(expname, leg)
 

@@ -87,15 +87,15 @@ if __name__ == "__main__":
     if args.rebuild:
         rebuild_nemo(expname=expname, leg=leg, dirs=dirs)
 
-    filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
-    timestep = get_nemo_timestep(filelist[0])
-    oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
+    #filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
+    #timestep = get_nemo_timestep(filelist[0])
+    #oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
 
     # ice restart copy
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
-    os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
-    os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'))
+    #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
+    #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
+    #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
+    #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'))
 
     flist = glob.glob('nam_rebuild*')
     for file in flist:

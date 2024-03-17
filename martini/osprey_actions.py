@@ -27,30 +27,32 @@ import xarray as xr
 from dateutil.relativedelta import relativedelta
 from sklearn.linear_model import LinearRegression
 import osprey_io as io
-import osprey_means as om
+import osprey_means as osm
 
 
 # action: rebuild
-def rebuild_nemo(expname, leg, dirs):
+def rebuild_nemo(expname, leg):
     """Minimal nemo rebuilder in a temporary path"""
 
-    dirs = io.folders(expname, leg)
+    dirs = io.folders(expname)
+    
+    os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
 
     rebuilder = os.path.join(dirs['rebuild'], "rebuild_nemo")
   
     for kind in ['restart', 'restart_ice']:
-        print('Processing' + kind)
-        flist = glob.glob(os.path.join(dirs['exp'], 'restart', leg.zfill(3), expname + '*_' + kind + '_????.nc'))
+        print(' Processing ' + kind)
+        flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + kind + '_????.nc'))
         tstep = io.get_nemo_timestep(flist[0])
 
         for filename in flist:
-            destination_path = os.path.join(dirs['tmp'], os.path.basename(filename))
+            destination_path = os.path.join(dirs['tmp'], str(leg).zfill(3), os.path.basename(filename))
             try:
                 os.symlink(filename, destination_path)
             except FileExistsError:
                 pass
 
-        rebuild_command = [rebuilder, "-m", os.path.join(dirs['tmp'],  expname + "_" + tstep + "_" + kind ), str(len(flist))]
+        rebuild_command = [rebuilder, "-m", os.path.join(dirs['tmp'], str(leg).zfill(3), expname + "_" + tstep + "_" + kind ), str(len(flist))]
         try:
             subprocess.run(rebuild_command, stderr=subprocess.PIPE, text=True, check=True)
             for file in glob.glob('nam_rebuld_*') : 
@@ -60,20 +62,20 @@ def rebuild_nemo(expname, leg, dirs):
             print(error_message) 
 
         for filename in flist:
-            destination_path = os.path.join(dirs['tmp'], os.path.basename(filename))
+            destination_path = os.path.join(dirs['tmp'], str(leg).zfill(3), os.path.basename(filename))
             os.remove(destination_path)
 
     # read timestep
-    filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
+    filelist = glob.glob(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'))
     timestep = io.get_nemo_timestep(filelist[0])
 
     # copy restart
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
+    #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
+    #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
 
     # remove 
-    os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
-    os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'))
+    #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
+    #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'))
 
     flist = glob.glob('nam_rebuild*')
     for file in flist:
@@ -81,10 +83,10 @@ def rebuild_nemo(expname, leg, dirs):
 
 
 # action rollback
-def rollback_ece4(expname, leg, dirs):
+def rollback_ece4(expname, leg):
     
     # define directories
-    dirs = io.folders(expname, leg)
+    dirs = io.folders(expname)
 
     # cleaning
     # create list of files to be remove in the run folder
@@ -97,7 +99,7 @@ def rollback_ece4(expname, leg, dirs):
                 os.remove(file)
 
     # update time.step
-    flist = glob.glob(os.path.join(dirs['exp'], 'restart', leg.zfill(3), expname + '*_' + 'restart' + '_????.nc'))
+    flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
     timestep = io.get_nemo_timestep(flist[0])
     tstepfile = os.path.join(dirs['exp'], 'time.step')
     with open(tstepfile, 'w', encoding='utf-8') as file:
@@ -133,7 +135,7 @@ def rollback_ece4(expname, leg, dirs):
     # copying from the restart folder required for the leg you asked
     browser = ['rstas.nc', 'rstos.nc',  'srf000*.????', 'rcf', '*restart*']
     for file in browser:
-        filelist = sorted(glob.glob(os.path.join(dirs['exp'],  'restart', leg.zfill(3), file)))
+        filelist = sorted(glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), file)))
         for file in filelist:
             basefile = os.path.basename(file)
             targetfile = os.path.join(dirs['exp'], basefile)
@@ -165,7 +167,7 @@ def rollback_ece4(expname, leg, dirs):
 # action: replace 
 def replace_nemo(expname, leg):
 
-    dirs = io.folders(expname, leg)
+    dirs = io.folders(expname)
 
     # cleaning
     browser = ['restart*.nc']
@@ -179,8 +181,8 @@ def replace_nemo(expname, leg):
     # create new links
     browser = ['restart.nc', 'restart_ice.nc']
     for file in browser:
-        rebfile = os.path.join(dirs['tmp'], file)
-        resfile = os.path.join(dirs['exp'], 'restart', leg.zfill(3), file)
+        rebfile = os.path.join(dirs['tmp'], str(leg).zfill(3), file)
+        resfile = os.path.join(dirs['restart'], str(leg).zfill(3), file)
         shutil.copy(rebfile, resfile)
         newfile = os.path.join(dirs['exp'], file)
         print("Linking rebuilt NEMO restart", file)            
@@ -190,97 +192,83 @@ def replace_nemo(expname, leg):
 # action: forecast (diversify: constant, local, eof)
 def forecast_T_ave(expname, leg, yearspan, yearleap):
 
-    dirs = io.folders(expname, leg)
-    df = om.elements(expname)
-
-    # extrapolate future global temperature
-    legfile = os.path.join(dirs['exp'], 'leginfo.yml')
-    with open(legfile, 'r', encoding='utf-8') as file:
-        leginfo = yaml.load(file, Loader=yaml.FullLoader)
-    info = leginfo['base.context']['experiment']['schedule']['leg']
-    endyear = info['start'].year - 1
-    startyear = endyear - yearspan
-    print('Fitting in the range: ',startyear,endyear)
-
-    # read data
+    # load data
+    df = osm.elements(expname)
+    startyear, endyear = io.start_end_years(expname, yearspan, leg)
     data = io.readmf_T(expname, startyear, endyear)
 
-    # extract averaged T filtered
-    tt = data['time'].values.flatten()
-    tom = om.moving_average(data['to'].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+    # averaged variables
+    x = osm.dateDecimal(data['time'].values.flatten())
+    y = osm.movave(data['to'].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
 
-    # fit global temperature
-    Yg = [[tom[i]] for i in range(len(tom))]
-    Xg = [[tt[i]] for i in range(len(tt))]
-    model=LinearRegression()
-    model.fit(Xg, Yg)
-    mp = model.coef_[0][0]
-    qp = model.intercept_[0]
-    teq = mp*(endyear+yearleap) + qp
-    print(' Fit coefficients: ',mp,qp)
-    print(' Projected Temperature: ',teq)
+    # fit / forecast
+    xf = endyear + yearleap
+    mp,qp = osm.linear_fit(x, y)
+    yf = mp*xf + qp
 
-    return teq
+    # create new restart field using forecast
+    df['vol'] = df['vol'].rename({'z': 'nav_lev'})
+    rdata = io.read_restart(expname, leg)
+    varlist = ['tn', 'tb']
+    for var in varlist:
+        tef = rdata[var].where(rdata[var]!=0.0).isel(time_counter=0).weighted(df['vol']).mean(dim=['nav_lev', 'y', 'x']).values
+        rdata[var] = xr.where(rdata[var]!=0.0, rdata[var] - tef[0] + yf, 0.0)
 
-# action: manipulate (diversify: constant, local, eof)
-def manipulate(expname, leg):
+    return rdata
 
-    dirs = io.folders(expname, leg)
+# relative change based on the global temperature
+def forecast_T_rel(expname, leg, yearspan, yearleap):
 
-    # extract start and end years
-
-    # read output fields in the time window
+    # load data
+    df = osm.elements(expname)
+    startyear, endyear = io.start_end_years(expname, yearspan, leg)
     data = io.readmf_T(expname, startyear, endyear)
-    tf = len(data['time'])
-    xt0 = data['to'].isel(time=0)
-    xt1 = data['to'].isel(time=tf-1)
-    xt0 = xt0.rename({'z': 'nav_lev'})
-    xt1 = xt1.rename({'z': 'nav_lev'})
 
-    # modify restart files
-    domain = domain.rename({'z': 'nav_lev'})
-    vol = domain['e1t']*domain['e2t']*domain['e3t_0']
-    filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
-    timestep = io.get_nemo_timestep(filelist[0])
-    oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
-    xfield = xr.open_dataset(oce)
+    # averaged variables
+    x = osm.dateDecimal(data['time'].values.flatten())
+    y = osm.movave(data['to'].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+
+    # fit / forecast
+    xf = endyear+yearleap
+    mp,qp = osm.linear_fit(x, y)
+    yf = mp*xf + qp
+
+    # create new restart field using forecast
+    rdata = io.read_restart(expname, leg)
+    leg0 = int(leg)-int(yearspan)
+    rdata0 = io.read_restart(expname, leg0)
+    df['vol'] = df['vol'].rename({'z': 'nav_lev'})
     varlist = ['tn', 'tb']
     for var in varlist:
-        tef = xfield[var].where(xfield[var]!=0.0).isel(time_counter=0).weighted(vol).mean(dim=['nav_lev', 'y', 'x']).values
-        print('Last value of Temperature: ',var,tef[0])
-        trel = teq/tef[0]
-        dxt = xr.where(xt0 > xt1, 1.0-trel, 1.0+trel)
-        xfield[var] = xr.where(xfield[var]!=0, dxt*xfield[var], 0.0)
+        tef = rdata[var].where(rdata[var]!=0.0).isel(time_counter=0).weighted(df['vol']).mean(dim=['nav_lev', 'y', 'x']).values
+        trel = abs(yf-tef[0])/yf
+        delta = xr.where(rdata[var]!=0, rdata[var].values-rdata0[var].values, 0.0)
+        rdata[var] = xr.where(delta>0, (1+trel)*rdata[var], (1-trel)*rdata[var])
 
-def manipulate(expname, leg):
-
-    filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
-    timestep = io.get_nemo_timestep(filelist[0])
-    oce = os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc')
-    xfield = xr.open_dataset(oce)
-    varlist = ['tn', 'tb']
-    for var in varlist:
-        xfield[var] = xr.where(xfield[var]!=0, xfield[var] - 1.0, 0.)
-    
-    # ocean restart creation
-    oceout = os.path.join(dirs['tmp'], 'restart.nc')
-    xfield.to_netcdf(oceout)
-
-    # ice restart copy
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
+    return rdata
 
 #
-def write_nemo_restart(expname, xfield, leg):
+def forecast_T_interp(expname, leg, yearspan, yearleap):
 
-    # get timestep
-    dirs = io.folders(expname, leg)
-    filelist = glob.glob(os.path.join(dirs['tmp'],  expname + '*_restart.nc'))
-    timestep = io.get_nemo_timestep(filelist[0])
-    
-    # ocean restart creation
-    oceout = os.path.join(dirs['tmp'], 'restart.nc')
-    xfield.to_netcdf(oceout)
+    startyear, endyear = io.start_end_years(expname, yearspan, leg)    
+    rdata = io.read_restart(expname, leg)
+    leg0 = int(leg)-int(yearspan)    
+    rdata0 = io.read_restart(expname, leg0)
 
-    # copy ice restart
-    shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
+    varlist = ['tn', 'tb']
+    for var in varlist:
+        dxt = rdata[var].values+yearleap*(rdata[var].values-rdata0[var].values)/(endyear-startyear)
+        rdata[var] = xr.where(rdata[var]!=0, dxt, 0.0)
 
+    return rdata
+
+# manipulate restart adding a constant (with sign)
+# check what happens for T<4, and add a threshold
+def manipulate_add_const(expname, leg, const):
+
+    rdata = io.read_restart(expname, leg)
+    varlist = ['tn', 'tb']
+    for var in varlist:
+        rdata[var] = xr.where(rdata[var]!=0, rdata[var] + const, 0.)
+
+    return rdata

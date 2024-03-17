@@ -20,21 +20,22 @@ Alessandro Sozza (CNR-ISAC, Mar 2024)
 import subprocess
 import os
 import glob
+import shutil
 import yaml
 import numpy as np
 import xarray as xr
 import cftime
 
-def folders(expname, leg):
+def folders(expname):
 
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
         'nemo': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "nemo"),
-        'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname, leg.zfill(3)),
+        'restart': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "restart"),        
+        'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname),
         'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo",
         'backup': os.path.join("/ec/res4/scratch/itas/ece4", expname + "-backup")
     }
-    os.makedirs(dirs['tmp'], exist_ok=True)
 
     return dirs
 
@@ -132,8 +133,44 @@ def read_domain(expname):
 
     return domain
 
+def read_restart(expname, leg):
+
+    dirs = folders(expname)
+    filename = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
+    data = xr.open_mfdataset(filename)
+
+    return data
+
 def get_nemo_timestep(filename):
     """Minimal function to get the timestep from a nemo restart file"""
 
     return os.path.basename(filename).split('_')[1]
 
+def start_end_years(expname, yearspan, leg):
+
+    dirs = folders(expname)
+
+    legfile = os.path.join(dirs['exp'], 'leginfo.yml')
+    with open(legfile, 'r', encoding='utf-8') as file:
+        leginfo = yaml.load(file, Loader=yaml.FullLoader)
+    info = leginfo['base.context']['experiment']['schedule']['leg']
+    endyear = info['start'].year - 1
+    startyear = endyear - yearspan
+
+    return startyear,endyear
+
+def write_nemo_restart(expname, field, leg):
+
+    dirs = folders(expname)
+    flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
+    timestep = get_nemo_timestep(flist[0])
+
+    # ocean restart creation
+    oceout = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')
+    field.to_netcdf(oceout, mode='w', unlimited_dims={'time_counter':True})
+
+    # copy ice restart
+    #orig = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart_ice.nc')
+    orig = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc')
+    dest = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc')
+    shutil.copy(orig, dest)

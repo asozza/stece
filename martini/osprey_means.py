@@ -18,6 +18,8 @@ Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
 import os
+import glob
+import shutil
 import numpy as np
 import xarray as xr
 import cftime
@@ -90,13 +92,25 @@ def elements(expname):
 
     return df
 
+# compute y_leap by means of linear fit
+def linear_fit(x, y):
+
+    ya = [[y[i]] for i in range(len(y))]
+    xa = [[x[i]] for i in range(len(x))]
+    model=LinearRegression()
+    model.fit(xa, ya)
+    mp = model.coef_[0][0]
+    qp = model.intercept_[0]
+
+    return mp,qp
+
 # interpolated moving average
 def intave(xdata, ydata, N):
 
-    x_orig = np.array(gt.dateDecimal(xdata.values))
+    x_orig = np.array(dateDecimal(xdata.values))
 
     for i in range(N):    
-        x_filled = np.array(gt.dateDecimal(xdata.where(xdata['time.month']==i+1,drop=True).values))
+        x_filled = np.array(dateDecimal(xdata.where(xdata['time.month']==i+1,drop=True).values))
         y_filled = np.array(ydata.where(xdata['time.month']==i+1,drop=True).values.flatten())
         if (i==0):
             y_smooth = np.interp(x_orig, x_filled, y_filled)/N
