@@ -23,6 +23,7 @@ import xarray as xr
 import cftime
 import datetime
 import time
+import gc
 from sklearn.linear_model import LinearRegression
 
 def epoch(date):
@@ -75,3 +76,20 @@ def cost(var, varref, idx):
 
     return x
 
+# VERTICAL SUBREGIONS
+# mixed layer (0-100 m), pycnocline (100-1000 m), abyss (1000-5000 m)
+# levels in ORCA2: [0,9] [10,20] [21,30]
+# levels in eORCA1: [0,23] [24,45] [46,74]
+def subregions(orca):
+
+    z1 = []; z2 = []
+    if orca == 'ORCA2':
+        z1 = [0, 10, 21]
+        z2 = [9, 20, 30]
+    elif orca == 'eORCA1':
+        z1 = [0, 24, 46]
+        z2 = [23, 45, 74]
+    else:        
+        raise ValueError(" Not a valid ORCA grid! ")
+    
+    return z1,z2

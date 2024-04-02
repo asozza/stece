@@ -20,6 +20,7 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
+import gc
 from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io
@@ -36,6 +37,28 @@ def elements(expname):
     df['dz'] = domain['e3t_0']
 
     return df
+
+def local_cost_function(expname, year, field, idx):
+    
+    data = io.read_T(expname=expname, year=year)
+    delta = gt.cost(data, field, idx)
+
+    return delta
+
+# linear fit
+def linear_fit(x, y):
+
+    ya = [[y[i]] for i in range(len(y))]
+    xa = [[x[i]] for i in range(len(x))]
+    model=LinearRegression()
+    model.fit(xa, ya)
+    mp = model.coef_[0][0]
+    qp = model.intercept_[0]
+
+    return mp,qp
+
+##################################################################
+# AVERAGES
 
 # interpolated moving average
 def intave(xdata, ydata, N):
@@ -70,47 +93,117 @@ def cumave(ydata):
 
     return ave
 
+#################################################################################
+# MEAN OPERATIONS ON THE FIELD
+
+# Definitions: 
+# global_mean: time and space average
+# time_mean: average on time 
+# space_mean:  spatial average on x,y,z or x,y weighted by volume or area
+# sub: spatial average on a subinterval z in [z1,z2]
+# suball: according to subregions
+
 # global average over space and time
-def ave_T(expname, year, var):
+def timemean(expname, field):
 
-    df = elements(expname=expname)   
-    data = io.read_T(expname=expname, year=year)
-    ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+    df = elements(expname=expname)       
+    ave = field.mean(dim=['time']).values.flatten()
 
     return ave
 
-# global average in a vertical slab
-def ave_T_sub(expname, year, var, z1, z2):
+def globalmean3d(expname, field):
 
-    df = elements(expname=expname)
+    df = elements(expname=expname)   
+    ave = field.weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+
+    return ave
+
+def globalmean3d_sub(expname, field, z1, z2):
+
+    df = elements(expname=expname)           
     subvol = df['vol'].isel(z=slice(z1,z2))
-    data = io.read_T(expname=expname, year=year)
-    subvar = data[var].isel(z=slice(z1,z2))
-    ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
+    subvar = field.isel(z=slice(z1,z2))
+    ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values.flatten()
 
     return ave
 
-# global average in a time window
-def ave_T_window(expname, startyear, endyear, var):
+def globalmean3d_suball(expname, field):
+
+    ave = []
+    df = elements(expname=expname)           
+    z1,z2 = gt.subregions('ORCA2')
+    for i in range(3):
+        subvol = df['vol'].isel(z=slice(z1[i],z2[i]))
+        subvar = field.isel(z=slice(z1[i],z2[i]))
+        ave[i] = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values.flatten()
+
+    return ave
+
+def globalmean2d(expname, field):
 
     df = elements(expname=expname)   
-    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
-    ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+    ave = field.weighted(df['area']).mean(dim=['time', 'y', 'x']).values
 
     return ave
 
-# mean state
-def mean_state(expname, startyear, endyear):
+def spacemean3d(expname, field):
+
+    df = elements(expname=expname)       
+    ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten()
+
+    return ave
+
+def spacemean3d_sub(expname, field, z1, z2):
+
+    df = elements(expname=expname)           
+    subvol = df['vol'].isel(z=slice(z1,z2))
+    subvar = field.isel(z=slice(z1,z2))    
+    ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values.flatten()
+
+    return ave
+
+def spacemean3d_suball(expname, field):
+
+    ave = []
+    df = elements(expname=expname)
+    z1,z2 = gt.subregions('ORCA2')
+    for i in range(3):
+        subvol = df['vol'].isel(z=slice(z1[i],z2[i]))
+        subvar = field.isel(z=slice(z1[i],z2[i]))
+        ave.append(subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values.flatten())
+
+    return ave
+
+def spacemean2d(expname, field):
 
     df = elements(expname=expname)
-    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
-    field = data.mean(dim=['time'])
+    ave = field.weighted(df['area']).mean(dim=['y', 'x']).values.flatten()
 
-    return field
+    return ave
 
-def anomaly_local(expname, year, field, idx):
-    
-    data = io.read_T(expname=expname, year=year)
-    delta = gt.cost(data, field, idx)
+#################################################################################
+# new functions:
 
-    return delta
+def globalmean(expname, field, ndim):
+
+    df = elements(expname=expname) 
+    if ndim == '3D':  
+        ave = field.weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values.flatten()
+    elif ndim == '2D':
+        ave = field.weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
+    else:        
+        raise ValueError(" ndim =! (2,3): Check dimensions! ")
+
+    return ave
+
+def spacemean(expname, field, ndim):
+
+    df = elements(expname=expname) 
+    if ndim == '3D':  
+        ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten()
+    elif ndim == '2D':
+        ave = field.weighted(df['area']).mean(dim=['y', 'x']).values.flatten()
+    else:        
+        raise ValueError(" ndim =! (2,3): Check dimensions! ")
+
+    return ave
