@@ -26,6 +26,17 @@ def orca2_fixer(data):
 
     return data
 
+def orca2_main(input, output):
+
+    """Main fixer function to be applied to each dataset"""
+
+    ds = xr.open_dataset(input, decode_times=False)
+    newds = ds.map(orca2_fixer)
+    encoding = {var: {'_FillValue': None} for var in newds.data_vars}
+    newds.to_netcdf(output, encoding=encoding)
+
+    return newds
+
 
 if __name__ == "__main__":
     import sys
@@ -37,11 +48,5 @@ if __name__ == "__main__":
     input_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    ds = xr.open_dataset(input_file, decode_times=False)
-
-    newds = ds.map(orca2_fixer, keep_attrs=True)
-
-    encoding = {var: {'_FillValue': None} for var in newds.data_vars}
-
-    newds.to_netcdf(output_file, encoding=encoding)
+    orca2_main(input_file, output_file)
 
