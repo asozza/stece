@@ -2,19 +2,16 @@
 
 import re
 
-def get_info_grid(gridname):
-
+def ecmwf_grid(kind):
     """Get the info on the grid to find the right ECMWF file"""
-
-    kind = re.sub("[0-9]", "", gridname)[1:].upper()
-    spectral = re.sub("[^0-9]", "", gridname)
+    
     ecmwf_name = {
         'L': 'l_2',
         'CO': '_4',
         'Q': '_2'
     }
 
-    return spectral, ecmwf_name[kind]
+    return ecmwf_name[kind.upper()]
 
 def extract_grid_info(string):
     """Extract grid info from a string"""
@@ -25,8 +22,8 @@ def extract_grid_info(string):
         spectral = int(match.group(2))
         num_levels = int(match.group(3))
         return grid_type, spectral, num_levels
-    else:
-        return None
+    
+    return None
     
 def spectral2gaussian(spectral, kind):
     """Convert spectral resolution to gaussian"""
@@ -35,4 +32,4 @@ def spectral2gaussian(spectral, kind):
     if kind == "L":
         return int((int(spectral) + 1) / 2)
 
-    raise ValueError("Unknown grid type")   
+    raise ValueError("Unknown grid type")
