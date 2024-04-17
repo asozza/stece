@@ -2,9 +2,9 @@
 
 # Need both eccodes (grib_set) and cdo to run
 
-target_grid=L31
-start_grid=L91
-horizontal_grid=TL63
+target_grid=$1
+start_grid=$2
+horizontal_grid=$1
 INDIR=/lus/h2resw01/scratch/ccpd/paleo/${horizontal_grid}${start_grid}/19900101
 OUTDIR=/lus/h2resw01/scratch/ccpd/paleo/${horizontal_grid}${target_grid}/19900101
 #OUTDIR=$SCRATCH/paleotest2
@@ -28,7 +28,7 @@ vertical_values=$(( ($vertical_levels + 1) * 2 ))
 grib_set -s numberOfVerticalCoordinateValues=${vertical_values} lnsp.grb lnsp2.grb 
 
 # convert spectral to grid point
-cdo sp2gpl $INDIR/ICMSHECE4INIT sp2gauss.grb
+cdo sp2gpl -selname,vo,t,d $INDIR/ICMSHECE4INIT sp2gauss.grb
 
 # convert reduced to gaussian
 cdo setgridtype,regular $INDIR/ICMGGECE4INIUA gp2gauss.grb
