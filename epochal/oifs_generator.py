@@ -10,7 +10,6 @@ Paolo Davini (CNR-ISAC, Nov 2023)
 
 import subprocess
 import os
-from glob import glob
 from utils import extract_grid_info, ecmwf_grid
 
 # configurable
