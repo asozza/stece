@@ -30,7 +30,7 @@ do_clean = False
 startdate = '19900101'
 source_grid = 'TL159L91'
 # Higher resolution is better, in principle. 
-# However, differnces in original resolution might cause glitches
+# However, differences in original resolution files (GRB vs GRB2, cubic vs linear) might cause glitches
 
 # where original OIFS data is found
 OIFS_BASE = '/home/ccpd/hpcperm/ECE4-DATA/oifs/'

@@ -1,5 +1,4 @@
 """Some utilities for OIFS grid definition"""
-
 import re
 
 def ecmwf_grid(kind):
@@ -15,7 +14,7 @@ def ecmwf_grid(kind):
 
 def extract_grid_info(string):
     """Extract grid info from a string"""
-    pattern = r'T(co|L)(\d+)L(\d+)'
+    pattern = r'T(CO|L)(\d+)L(\d+)'
     match = re.match(pattern, string)
     if match:
         grid_type = match.group(1)
@@ -27,7 +26,7 @@ def extract_grid_info(string):
     
 def spectral2gaussian(spectral, kind):
     """Convert spectral resolution to gaussian"""
-    if kind == "co":
+    if kind.upper() == "CO":
         return int(spectral) + 1
     if kind == "L":
         return int((int(spectral) + 1) / 2)

@@ -6,14 +6,16 @@ Based on the original script from Florian Ziemen.
 Paolo Davini, Apr 2024
 """
 
-import subprocess
 import os
 import netCDF4 as nc
 import numpy as np
 from utils import extract_grid_info, spectral2gaussian
+import cdo
+cdo = cdo.Cdo()
+#cdo.debug = True
 
 
-resolutions = ["TL63L31", "TL159L91", "TL255L91", "Tco159L91", "Tco199L91", "Tco319L91", "Tco399L91"]
+resolutions = ["TL63L31", "TL159L91", "TL255L91", "TCO159L91", "TCO199L91", "TCO319L91", "TCO399L91"]
 oifs_dir = "/lus/h2resw01/hpcperm/ccpd/ECE4-DATA/oifs"
 tgt_dir = "/etc/ecmwf/nfs/dh1_perm_b/ccpd/ecearth4/oifs-grids"
 
@@ -31,14 +33,13 @@ for resolution in resolutions:
 
     # convert to netcdf
     print(f"Converting GRIB {infile_name} to NetCDF {netcdf_name}")
-    subprocess.call(["cdo", "-f", "nc4", f"selname,{variable_name}",
-                    infile_name, netcdf_name])
-
+    cdo.selname(variable_name, input=infile_name, output=netcdf_name, options="-f nc4")
 
     # there is a strange bug in cdo. latitude are not recognized in the original grid file
     # however, we know them from gaussian grid associated
     print(f"Creating gaussian grid {gaussian_name}")
-    subprocess.call(["cdo", "-f", "nc4", f"const,1,n{gaussian}", gaussian_name])
+    cdo.const(f"1,n{gaussian}", output=gaussian_name, options="-f nc4")
+    #ubprocess.call(["cdo", "-f", "nc4", f"const,1,n{gaussian}", gaussian_name])
 
     # load the latitudes from the new file
     infile = nc.Dataset(gaussian_name)
