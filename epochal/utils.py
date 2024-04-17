@@ -15,3 +15,24 @@ def get_info_grid(gridname):
     }
 
     return spectral, ecmwf_name[kind]
+
+def extract_grid_info(string):
+    """Extract grid info from a string"""
+    pattern = r'T(co|L)(\d+)L(\d+)'
+    match = re.match(pattern, string)
+    if match:
+        grid_type = match.group(1)
+        spectral = int(match.group(2))
+        num_levels = int(match.group(3))
+        return grid_type, spectral, num_levels
+    else:
+        return None
+    
+def spectral2gaussian(spectral, kind):
+    """Convert spectral resolution to gaussian"""
+    if kind == "co":
+        return int(spectral) + 1
+    if kind == "L":
+        return int((int(spectral) + 1) / 2)
+
+    raise ValueError("Unknown grid type")   
