@@ -14,6 +14,7 @@ def ecmwf_grid(kind):
 
 def extract_grid_info(string):
     """Extract grid info from a string"""
+    string = string.upper()
     pattern = r'T(CO|L)(\d+)L(\d+)'
     match = re.match(pattern, string)
     if match:

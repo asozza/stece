@@ -28,9 +28,9 @@ do_clean = False
 
 # configurable with caution
 startdate = '19900101'
-source_grid = 'TL159L91'
-# Higher resolution is better, in principle. 
-# However, differences in original resolution files (GRB vs GRB2, cubic vs linear) might cause glitches
+source_grid = 'Tco95L91'
+# Higher resolution is better, in principle.
+# However, given the issue that we have with remapcon, we will use coarser resolution for now.
 
 # where original OIFS data is found
 OIFS_BASE = '/home/ccpd/hpcperm/ECE4-DATA/oifs/'
@@ -62,26 +62,34 @@ source_spectral = 'T' + ic_grid_type + str(ic_spectral)
 
 if ic_vertical != vertical:
     print("Vertical interpolation is necessary")
-    do_vertical = True
+    DO_VERTICAL = True
 else:
-    do_vertical = False
+    DO_VERTICAL = False
 
 
 # INITIAL CONDITIONS
 print("Truncating spectral file ICMSHECE4INIT to", spectral, "harmonics")
-# This is done with a clean spectral truncation with cdo. 
+# This is done with a clean spectral truncation with cdo.
 # Orography is therefore realiable.
+# The file has to be split in two since orography is GRIB1 and the rest is GRIB2
 OIFS_IC = os.path.join(OIFS_BASE, source_grid, startdate)
-cdo.sp2sp(spectral, option="--eccodes", input=f"{OIFS_IC}/ICMSHECE4INIT",
-          output=f"{TMPDIR}/ICMSHECE4INIT")
+grib2file = cdo.sp2sp(spectral, input=f"-selname,lnsp,vo,t,d {OIFS_IC}/ICMSHECE4INIT")
+gribtemp = cdo.selname("z", input=f"{OIFS_IC}/ICMSHECE4INIT", options="--eccodes")
+grib1file = cdo.sp2sp(spectral, input=gribtemp, options="--eccodes")
+subprocess.call(f"cat {grib2file} {grib1file} > {TMPDIR}/ICMSHECE4INIT", shell=True)
+
+#old version for all GRB2 data
+#cdo.sp2sp(spectral, option="--eccodes", input=f"{OIFS_IC}/ICMSHECE4INIT",output=f"{TMPDIR}/ICMSHECE4INIT")
 
 
 print ("Remapping ICMGG gaussian ICs to", target_grid)
-# This is done with remapcon using the grid fils computed with oifs_create_corner.py
+
 for file in ["ICMGGECE4INIT", "ICMGGECE4INIUA"]:
+    # This is done with remapcon using the grid fils computed with oifs_create_corner.py
     #icmtmp = cdo.remapcon(f"{GRIDS}/{target_spectral}_grid.nc",
     #             input=f"-setgrid,{GRIDS}/{source_spectral}_grid.nc {OIFS_IC}/{file}")
-    #cdo.setgrid(f"grids/{target_spectral}.txt", input=icmtmp, output=f"{TMPDIR}/{file}")
+    #cdo.setgrid(f"grids/{target_spectral}.txt", input=icmtmp, output=f"{TMPDIR}/{file}"
+    # this is the old version with remapnn
     cdo.remapnn(f"grids/{target_spectral}.txt", input=f"{OIFS_IC}/{file}", output=f"{TMPDIR}/{file}")
     
 # BOUNDARY CONDITIONS
@@ -98,7 +106,7 @@ cdo.settaxis("2021-01-15,00:00:00,1month",
 os.remove(f"{TMPDIR}/temp.grb")
 
 # move the files to the target directory
-if not do_vertical:
+if not DO_VERTICAL:
     print("Copying files to the target directory")
     for file in ["ICMSHECE4INIT", "ICMGGECE4INIT", "ICMGGECE4INIUA"]:
         shutil.move(f"{TMPDIR}/{file}", f"{IC_TGT}/{file}")
