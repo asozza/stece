@@ -20,7 +20,6 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
-import gc
 import matplotlib.pyplot as plt
 import goat_tools as gt
 import goat_io as io
@@ -77,12 +76,12 @@ def gregoryplot(expname, startyear, endyear, var_x, ndim_x, var_y, ndim_y, idx_a
         vx = gm.movave(xdata[var_x].values.flatten(),12)
         vy = gm.movave(ydata[var_y].values.flatten(),12)        
         vx1 = vx[6:-6]; vy1 = vy[6:-6]; tt1 = tt[6:-6]
-    #colors = [tt1[i] for i in range(len(tt1))]
-    pp = plt.scatter(vx1, vy1) # c=colors, cmap=plt.cm.coolwarm)
-    #cbar = plt.colorbar()
+    colors = [tt1[i] for i in range(len(tt1))]
+    pp = plt.scatter(vx1, vy1, c=colors, cmap=plt.cm.coolwarm)    
+    cbar = plt.colorbar()
     plt.xlabel(xdata[var_x].long_name)
     plt.ylabel(ydata[var_y].long_name)
-    #cbar.set_label(xdata['time'].long_name, ha='left', labelpad=10)
+    cbar.set_label(xdata['time'].long_name, ha='left', labelpad=10)
 
     return pp
 
@@ -128,9 +127,13 @@ def hovmoller(expname, startyear, endyear, var, x_axis, y_axis):
 
 def timeseries_diff(exp1, exp2, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset):
 
+    isub = False
+    if '-' in var:
+        isub = True
+        
     # read (or create) averaged data 
-    data1 = io.read_averaged_timeseries_T(exp1, startyear, endyear, var, ndim)
-    data2 = io.read_averaged_timeseries_T(exp2, startyear, endyear, var, ndim)
+    data1 = io.read_averaged_timeseries_T(exp1, startyear, endyear, var, ndim, isub)
+    data2 = io.read_averaged_timeseries_T(exp2, startyear, endyear, var, ndim, isub)
     # assembly and plot
     tt = data1['time'].values.flatten()
     delta = data2[var]-data1[var]

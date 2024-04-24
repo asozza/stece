@@ -321,3 +321,12 @@ def read_averaged_map_T(expname, startyear, endyear, var):
     data = read_map_T(expname, startyear, endyear, var)
 
     return data
+
+# merger of different simulations with same prefix (e.g. fix0, fix1, fix2, fix3 ....)
+def merge_averaged_timeseries_T(prefix, n, var):
+
+    # use zfill to fill 4-character expname
+    dirs = folders(prefix)
+    os.path.join("/perm/itas/ece4", expname, "nemo")
+
+    return 
