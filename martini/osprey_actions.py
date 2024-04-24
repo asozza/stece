@@ -311,10 +311,13 @@ def forecast_T_local_fit(expname, leg, yearspan, yearleap):
     print(' countercheck T<-2deg .... ')
 
     # check T < -2 deg
+    y_last = []
+    for i in range(to_wonan.shape[1]):
+        y_last.append(to_wonan[-1, i])
     k=0
     for i in range(len(to_pred)):
         if to_pred[i] < -1.8:
-            to_pred[i] = -1.8
+            to_pred[i] = y_last[i]
             k += 1
     print(' Fraction of points below -2deg = ',k/len(to_pred))
 
