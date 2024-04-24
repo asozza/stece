@@ -270,7 +270,8 @@ def collect_sypd(expnames, leg):
 
 #############################################################
 # plots
-# ISSUE --> generalize functions for any variable
+# ISSUE1 --> generalize functions for any variable
+# ISSUE2 --> cumulative SBU
 
 def plot_sypd_vs_time(expname, leg):
 
@@ -284,7 +285,7 @@ def plot_sypd_vs_time(expname, leg):
     return pp
 
 # multiplot
-# ISSUE --> generalize with 4 labels
+# ISSUE: it can be generalized using 4 labels
 def multiplot_vs_time(expname, leg):
 
     legs = selectleg(expname, leg)
