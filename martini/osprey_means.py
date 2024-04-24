@@ -17,6 +17,7 @@ Authors
 Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
+import numpy as np
 import os
 import glob
 import shutil
@@ -50,6 +51,12 @@ def dateDecimal(date):
     x1 = [yearFraction(t) for t in date]
 
     return x1
+
+def flatten_to_triad(m, nk, nj, ni):
+    k = m // (ni * nj)
+    j = (m - k * ni * nj) // ni
+    i = m - k * ni * nj - j * ni
+    return k, j, i
 
 # container for multiple cost functions
 def cost(var, varref, idx):
@@ -166,6 +173,22 @@ def ave_T_window(expname, startyear, endyear, var):
 
     return ave
 
+def annual_ave_T_window(expname, startyear, endyear, var):
+
+    df = elements(expname=expname)  
+    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+    ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+
+    return ave
+
+def seasonal_ave_T_window(expname, startyear, endyear, var):
+
+    df = elements(expname=expname)   
+    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+    ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+
+    return ave
+
 # mean state
 def mean_state(expname, startyear, endyear):
 
@@ -181,3 +204,14 @@ def anomaly_local(expname, year, field, idx):
     delta = cost(data, field, idx)
 
     return delta
+
+def forecast_error(expname, year, var, xfield):
+
+    df = elements(expname=expname)  
+    data = io.read_T(expname=expname, year=year)
+    mdata = data[var].mean('time')
+    xdata = xr.where(mdata!=0.0, xfield, 0.0)
+    delta = xr.where(mdata!=0.0, mdata.values-xdata.values, 0.0)
+    dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
+
+    return dd

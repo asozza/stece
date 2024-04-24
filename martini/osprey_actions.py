@@ -18,12 +18,15 @@ Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
 import subprocess
+import numpy as np
 import os
 import glob
 import shutil
 import yaml
 import argparse
+import random
 import xarray as xr
+import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from sklearn.linear_model import LinearRegression
 import osprey_io as io
@@ -67,7 +70,8 @@ def rebuild_nemo(expname, leg):
 
     # read timestep
     filelist = glob.glob(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'))
-    timestep = io.get_nemo_timestep(filelist[0])
+    
+    #timestep = io.get_nemo_timestep(filelist[0])
 
     # copy restart
     #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
@@ -205,6 +209,7 @@ def forecast_T_ave(expname, leg, yearspan, yearleap):
     xf = endyear + yearleap
     mp,qp = osm.linear_fit(x, y)
     yf = mp*xf + qp
+    print(' Projected Temperature: ',yf)
 
     # create new restart field using forecast
     df['vol'] = df['vol'].rename({'z': 'nav_lev'})
@@ -231,7 +236,8 @@ def forecast_T_rel(expname, leg, yearspan, yearleap):
     # fit / forecast
     xf = endyear+yearleap
     mp,qp = osm.linear_fit(x, y)
-    yf = mp*xf + qp
+    yf = mp*xf + qp    
+    print(' Projected Temperature: ',yf)
 
     # create new restart field using forecast
     rdata = io.read_restart(expname, leg)
@@ -261,6 +267,111 @@ def forecast_T_interp(expname, leg, yearspan, yearleap):
         rdata[var] = xr.where(rdata[var]!=0, dxt, 0.0)
 
     return rdata
+
+def forecast_T_local_fit(expname, leg, yearspan, yearleap):
+
+    print(' loading data .... ')
+
+    # load data
+    endyear = 1990+int(leg)-2
+    startyear = endyear - yearspan
+    xf = endyear+yearleap
+    data = io.readmf_T(expname, startyear, endyear)
+    x = osm.dateDecimal(data['time'].values.flatten())
+
+    print(' flattening and reshapening .... ')
+
+    # flattened arrays
+    ds = data['to'].isel(time=0)
+    ds_flat = ds.values.flatten()
+    to_flat = data['to'].values.flatten()
+
+    to_reshaped = to_flat.reshape(len(x),-1)
+    indices = ~np.isnan(to_reshaped)
+    indices_flat = ~np.isnan(to_flat)
+    to_valid = to_flat[indices_flat]
+    size_valid = to_valid.shape[0]/len(x)
+    to_wonan = np.zeros((len(x), int(size_valid)))
+    to_wonan = to_reshaped[:, indices[0]]
+
+    # fit and predict
+
+    print(' forecasting .... ')
+
+    to_pred = []
+    model = LinearRegression()
+    for i in range(to_wonan.shape[1]):
+        #x_row = x_wonan[:, i].reshape(len(x),-1)
+        x_row = np.array(x).reshape(len(x),-1)
+        y_row = to_wonan[:, i].reshape(len(x),-1)
+        model.fit(x_row, y_row)
+        yf = model.predict([[xf]])
+        to_pred.append(yf[0][0])
+
+    print(' countercheck T<-2deg .... ')
+
+    # check T < -2 deg
+    k=0
+    for i in range(len(to_pred)):
+        if to_pred[i] < -1.8:
+            to_pred[i] = -1.8
+            k += 1
+    print(' Fraction of points below -2deg = ',k/len(to_pred))
+
+    check_fit=True
+    if check_fit:
+        i=random.randint(0, to_wonan.shape[1]-1)
+        kji = osm.flatten_to_triad(i, 31, 148, 180)
+        model = LinearRegression()
+        x_row = np.array(x).reshape(len(x),-1)
+        y_row = to_wonan[:,i].reshape(len(x),-1)
+        model.fit(x_row, y_row)
+        mp = model.coef_[0][0]
+        qp = model.intercept_[0]
+        yf = model.predict([[xf]])
+        ym = osm.movave(y_row.flatten(),12).reshape(len(x),-1)
+        yp = []; xp = []
+        for i in range(len(x)*2):
+            xp.append(startyear+i/12.)
+            yp.append(mp*(startyear+i/12.)+qp)
+        plt.plot(x_row,y_row)
+        plt.plot(x,ym)
+        plt.plot(xp,yp)
+        plt.scatter(xf,yf, color='green')
+        plt.ylabel('temperature')
+        plt.xlabel('time')
+        plt.title('')
+        plt.title(' (k,j,i) = {}'.format(kji))
+        plt.gca().legend(('local trend','moving average','fit','projected value'))
+
+    # fill new field
+    theta = []
+    j = 0
+    for i in range(len(ds_flat)):
+        if indices[0][i]:
+            theta.append(to_pred[j])
+            j += 1
+        else:
+            theta.append(np.nan)
+
+    # reshape    
+    te = np.array(theta).reshape((len(ds['z']),len(ds['y']),len(ds['x'])))
+    
+    # create new restart field using the forecast
+    rdata = io.read_restart(expname, leg)
+    varlist = ['tn', 'tb']
+    for var in varlist:
+        rdata[var] = xr.where(rdata[var]!=0.0, te, 0.0)
+
+    return rdata
+
+def forecast_T_eof(expname, leg, yearspan, yearleap):
+
+    try:
+        subprocess.run("cdo mergetime file1.nc file2.nc merged_file.nc", shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        # If there's an error, print the error message
+        print("Error:", e)
 
 # manipulate restart adding a constant (with sign)
 # check what happens for T<4, and add a threshold

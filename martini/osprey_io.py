@@ -18,6 +18,7 @@ Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
 import subprocess
+import numpy as np
 import os
 import glob
 import shutil
@@ -43,10 +44,19 @@ def preproc_nemo_T(data):
     """preprocessing routine for nemo for T grid"""
 
     data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
-    data = data.rename({'deptht': 'z', 'time_counter': 'time', 'thetao': 'to'})
     data = data.swap_dims({'x_grid_T_inner': 'x', 'y_grid_T_inner': 'y'})
+    data = data.rename({'deptht': 'z', 'time_counter': 'time', 'thetao': 'to'})    
+    data = data.rename({'nav_lat_grid_T': 'nav_lat', 'nav_lon_grid_T': 'nav_lon'})
     data.coords['z'] = -data['z']
     
+    return data
+
+def preproc_nemo_restart(data):
+    """preprocessing routine for nemo restart grid"""
+
+    data = data.rename_dims({'nav_lev': 'z', 'time_counter': 'time'})
+    data = data.rename({'nav_lat': 'lat', 'nav_lon': 'lon'})
+
     return data
 
 def preproc_nemo_U(data):
