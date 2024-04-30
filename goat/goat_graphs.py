@@ -30,7 +30,7 @@ import goat_means as gm
 # - can I add option to plot an portion of the existing averaged data?
 # - can it be used to plot subvars like thetao-mix, thetao-pyc, thetao-aby?
 #
-def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset):
+def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset, color):
 
     isub = False
     if '-' in var:
@@ -47,7 +47,7 @@ def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, 
         vv = gm.movave(data[var].values.flatten(),12)
         tt1 = tt[6:-6]; vv1 = vv[6:-6]
     tt2 = [tt1[i]+offset for i in range(len(tt1))]
-    pp = plt.plot(tt2,gt.cost(vv1, norm, idx_norm))
+    pp = plt.plot(tt2, gt.cost(vv1, norm, idx_norm), color)
     plt.xlabel(data['time'].long_name)
     plt.ylabel(data[var].long_name)
 
@@ -97,7 +97,7 @@ def profile(expname, startyear, endyear, var, norm, idx_norm):
 
     return pp
 
-def hovmoller(expname, startyear, endyear, var, x_axis, y_axis):
+def hovmoller(expname, startyear, endyear, var, x_axis, y_axis, idx_norm):
 
     data = io.read_averaged_map_T(expname, startyear, endyear, var)
     # pp = plt.plot(x=x_axis, y=y_axis, c=var, cmap=plt.cm.coolwarm)
@@ -110,10 +110,6 @@ def hovmoller(expname, startyear, endyear, var, x_axis, y_axis):
     delta = (data[var] - data[var].isel(time=0))
     pp = delta.plot(x='time', y='z', cmap=plt.cm.coolwarm)
     plt.ylim(-5000,0)
-
-    return pp
-
-
 
     return pp
 
