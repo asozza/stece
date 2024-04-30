@@ -8,8 +8,8 @@
 | |/ _ \| _ \__ \ | |_|  __/|  _/
 |_|\___/|___/___/ |____\___\|_|
 
-LOBSTER: Load balancing script for ec-earth4
---------------------------------------------
+LOBSTER: LOad Balancing ScripT for Ec-earth fouR
+------------------------------------------------
 Functions and tools
 
 Authors
