@@ -12,8 +12,7 @@ Ocean Spin-uP acceleratoR for Earth climatologY
 
 ## Overview
 
-The "Ocean Spin-uP acceleratoR for Earth climatologY" (OSPREY) is a suite of tools for accelerating 
-the ocean spin-up in climate simulations.
+The "Ocean Spin-uP acceleratoR for Earth climatologY" (OSPREY) is a suite of tools for accelerating the ocean spin-up in climate simulations.
 
 ## Installation
 

@@ -2,13 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """
- _____  __________  ____  ______   __ 
-/  __ \/   __   _ \|  _ \|  ___ \ / / 
-| |  |    |_ | |_|   |_|   |__ \ V /  
-| |  | |\_  \|  __/|    /|  __| | |   
-| |__| |__|    |   | |\ \| |____| |   
-\___________/|_|   |_| \__________|   
-
 OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
 --------------------------------------------------------
 Osprey library for mathematical operations
@@ -69,7 +62,7 @@ def cost(var, varref, idx):
         x = (var-varref)
     # relative difference
     if idx == 'rdiff':
-        x = (var-varref)/varref    
+        x = (var-varref)/varref
     # absolute error
     if idx == 'abs':
         x = abs(var-varref)
@@ -195,6 +188,7 @@ def mean_state(expname, startyear, endyear):
     df = elements(expname=expname)
     data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
     field = data.mean(dim=['time'])
+    field = field.drop_dims({'axis_nbounds'})
 
     return field
 
@@ -205,7 +199,7 @@ def anomaly_local(expname, year, field, idx):
 
     return delta
 
-def forecast_error(expname, year, var, xfield):
+def mean_forecast_error(expname, year, var, xfield):
 
     df = elements(expname=expname)  
     data = io.read_T(expname=expname, year=year)
