@@ -2,13 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |__| |/ /_\ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT: Global Ocean Analysis and Trends
+GOAT: Global Ocean & Atmosphere Trends
 ------------------------------------------------------
 GOAT library for plots
 
@@ -20,7 +14,6 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
-import gc
 import matplotlib.pyplot as plt
 import goat_tools as gt
 import goat_io as io

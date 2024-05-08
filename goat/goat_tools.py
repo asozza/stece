@@ -2,13 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |__| |/ /_\ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT: Global Ocean Analysis and Trends
+GOAT: Global Ocean & Atmosphere Trends
 ------------------------------------------------------
 GOAT library for tools (options, simple functions & miscellanea)
 
@@ -23,7 +17,6 @@ import xarray as xr
 import cftime
 import datetime
 import time
-import gc
 from sklearn.linear_model import LinearRegression
 
 def epoch(date):

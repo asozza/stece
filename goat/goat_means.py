@@ -2,13 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |__| |/ /_\ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT: Global Ocean Analysis and Trends
+GOAT: Global Ocean & Atmosphere Trends
 ------------------------------------------------------
 GOAT library for averaging operations and other means
 
@@ -20,7 +14,6 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
-import gc
 from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io
@@ -104,12 +97,11 @@ def cumave(ydata):
 # suball: according to subregions
 
 # global average over space and time
-def timemean(expname, field):
+def timemean(field):
+    
+    meanfield = field.mean(dim=['time']).values
 
-    df = elements(expname=expname)       
-    ave = field.mean(dim=['time']).values.flatten()
-
-    return ave
+    return meanfield
 
 def globalmean3d(expname, field):
 

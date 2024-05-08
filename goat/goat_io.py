@@ -2,13 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |__| |/ /_\ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT: Global Ocean Analysis and Trends
+GOAT: Global Ocean & Atmosphere Trends
 ------------------------------------------------------
 GOAT library for i/o operations
 
@@ -24,8 +18,6 @@ import numpy as np
 import netCDF4
 import xarray as xr
 import cftime
-import gc
-from sklearn.linear_model import LinearRegression
 import goat_means as gm
 import goat_tools as gt
 
@@ -92,16 +84,18 @@ def read_domain(expname):
     return domain
 
 ##########################################################################################
-# PREPROCESSING OPTIONS
+# Pre-processing options for NEMO readers
 
 def preproc_nemo_T(data):
     """preprocessing routine for nemo for T grid"""
 
     data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
+    data = data.rename({'nav_lat_grid_T': 'lat', 'nav_lon_grid_T': 'lon'})
     data = data.rename({'deptht': 'z', 'time_counter': 'time'})
     data = data.swap_dims({'x_grid_T_inner': 'x', 'y_grid_T_inner': 'y'})
+    #data = data.drop_dims({'axis_nbounds'})
     data.coords['z'] = -data['z']
-    
+        
     return data
 
 def preproc_nemo_U(data):
@@ -145,6 +139,7 @@ def preproc_nemo_ice(data):
 # Readers of averaged data: timeseries, profiles, maps, hovmoller, pdfs etc ...
 
 def read_timeseries_T(expname, startyear, endyear, var):
+    """ read averaged timeseries """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"timeseries_{var}_{startyear}-{endyear}.nc")
@@ -153,6 +148,7 @@ def read_timeseries_T(expname, startyear, endyear, var):
     return data
 
 def read_profile_T(expname, startyear, endyear, var):
+    """ read averaged profiles """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"profiles_{var}_{startyear}-{endyear}.nc")
@@ -161,6 +157,7 @@ def read_profile_T(expname, startyear, endyear, var):
     return data
 
 def read_hovmoller_T(expname, startyear, endyear, var):
+    """ read averaged hovmoller """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"hovmoller_{var}_{startyear}-{endyear}.nc")
@@ -170,6 +167,7 @@ def read_hovmoller_T(expname, startyear, endyear, var):
 
 # 2d horizontal map: 
 def read_map_T(expname, startyear, endyear, var):
+    """read averaged horizontal map """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"map_{var}_{startyear}-{endyear}.nc")
@@ -177,9 +175,20 @@ def read_map_T(expname, startyear, endyear, var):
 
     return data
 
+def read_field_T(expname, startyear, endyear, var):
+    """read averaged meanfield in 2D or 3D """
+
+    dirs = folders(expname)
+    filename = os.path.join(dirs['perm'], f"field_{var}_{startyear}-{endyear}.nc")
+    data = xr.open_dataset(filename, use_cftime=True)
+
+    return data
+
+
 ##########################################################################################
 # Containers for reader/creator of averaged data
 
+# for averaged timeseries
 def read_averaged_timeseries_T(expname, startyear, endyear, inivar, ndim, isub):
 
     # check if var is a new variable defined on a subregion
@@ -244,6 +253,7 @@ def read_averaged_timeseries_T(expname, startyear, endyear, inivar, ndim, isub):
 
     return data
 
+# for averaged profiles
 def read_averaged_profile_T(expname, startyear, endyear, var):
 
     dirs = folders(expname)
@@ -281,14 +291,15 @@ def read_averaged_profile_T(expname, startyear, endyear, var):
 
     return data
 
-def read_averaged_map_T(expname, startyear, endyear, var):
+# for averaged field
+def read_averaged_field_T(expname, startyear, endyear, var, ndim):
 
     dirs = folders(expname)
     df = gm.elements(expname)
 
     # try to read averaged data
     try:
-        data = read_map_T(expname, startyear, endyear, var)
+        data = read_field_T(expname, startyear, endyear, var)
         print(" Averaged data found ")
         return data
     except FileNotFoundError:
@@ -299,34 +310,57 @@ def read_averaged_map_T(expname, startyear, endyear, var):
     data = readmf_T(expname, startyear, endyear)
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    xvec = gt.dateDecimal(data['time'].values)
-    yvec = data['z'].values.flatten()
-    fvec = data[var].weighted(df['area']).mean(dim=['y', 'x']).values.flatten()
-    vec = fvec.reshape(len(xvec),len(yvec))
+    vec = gm.timemean(data[var])
 
     # create xarray dataset
-    ds = xr.Dataset({
-        'time': xr.DataArray(data = xvec, dims = ['time'], coords = {'time': xvec},                              
-                             attrs = {'units' : 'years', 'long_name' : 'time'}), 
-        'z': xr.DataArray(data = yvec, dims = ['z'], coords = {'z': yvec}, 
-                             attrs = {'units' : 'm', 'long_name' : 'depth'}), 
-        var : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': xvec, 'z': yvec}, 
-                               attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})}, 
-        attrs = {'description': 'ECE4/NEMO 2D averaged hovmoller diagram from T_grid variables'})
+    print(" Allocating new xarray dataset ... ")
+    if ndim == '3D':
+        ds = xr.Dataset({
+            'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                        attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
+            'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                        attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
+            'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']},
+                        attrs = {'units' : 'm', 'long_name' : 'depth'}),                             
+            var : xr.DataArray(data = vec, dims = ['z', 'y', 'x'], coords = {'z': data['z'], 'y': data['y'], 'x': data['x']},
+                        attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})}, 
+            attrs = {'description': 'ECE4/NEMO averaged T_grid_3D field'})
+
+    if ndim == '2D':
+        ds = xr.Dataset({
+            'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                        attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
+            'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                        attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
+            var : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
+                        attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})}, 
+            attrs = {'description': 'ECE4/NEMO averaged T_grid_2D field'})
 
     # write the averaged data and read it again
     print(" Saving averaged data ... ")
-    filename = os.path.join(dirs['perm'], f"map_{var}_{startyear}-{endyear}.nc")
-    ds.to_netcdf(filename)    
-    data = read_map_T(expname, startyear, endyear, var)
+    filename = os.path.join(dirs['perm'], f"field_{var}_{startyear}-{endyear}.nc")
+    ds.to_netcdf(filename)
+    data = read_field_T(expname, startyear, endyear, var)
 
     return data
 
-# merger of different simulations with same prefix (e.g. fix0, fix1, fix2, fix3 ....)
+##########################################################################################
+# Post-processing with averaged data
+
+# merger of long simulations with same prefix
 def merge_averaged_timeseries_T(prefix, n, var):
 
     # use zfill to fill 4-character expname
+
     dirs = folders(prefix)
+
+    os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
+
+
     os.path.join("/perm/itas/ece4", expname, "nemo")
 
     return 
+
+
+
+##########################################################################################

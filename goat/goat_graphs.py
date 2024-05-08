@@ -2,13 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |__| |/ /_\ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT: Global Ocean & Atmosphere Trends?
+GOAT: Global Ocean & Atmosphere Trends
 ------------------------------------------------------
 GOAT library for graphics
 
@@ -25,11 +19,10 @@ import goat_tools as gt
 import goat_io as io
 import goat_means as gm
 
-
 # time series:
 # - can I add option to plot an portion of the existing averaged data?
 # - can it be used to plot subvars like thetao-mix, thetao-pyc, thetao-aby?
-#
+# - add option for cost function anomaly with respect to a meanstate
 def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset, color):
 
     isub = False
@@ -160,8 +153,32 @@ def profiles_diff(exp1, exp2, startyear, endyear, var, norm, idx_norm):
 
     return pp
 
-##########################################################################################
-# map anomaly with respect to a reference control field 
-# N.B. for anomalies with timeseries and profiles use norm and idx_norm or *_diff 
 
-#def map_anomaly():
+##########################################################################################
+# anomaly with respect to a meanfield
+
+def timeseries_anomaly(expname, startyear, endyear, refname, startref, endref, var, ndim, norm, idx_norm, idx_ave, offset, color):
+
+    isub = False
+    if '-' in var:
+        isub = True
+
+    # read (or create) averaged data 
+    data = io.read_averaged_timeseries_T(expname, startyear, endyear, var, ndim, isub)
+    mdata = io.read_averaged_field_T(refname, startref, endref, var, ndim)
+
+    # assembly and plot
+    tt = data['time'].values.flatten()
+    if idx_ave == 'ave':
+        vv = data[var].values.flatten()
+        vm = mdata[var].values.flatten() 
+        tt1 = tt; vv1 = vv
+    elif idx_ave == 'mave':
+        vv = gm.movave(data[var].values.flatten(),12)
+        tt1 = tt[6:-6]; vv1 = vv[6:-6]
+    tt2 = [tt1[i]+offset for i in range(len(tt1))]
+    pp = plt.plot(tt2, gt.cost(vv1, norm, idx_norm), color)
+    plt.xlabel(data['time'].long_name)
+    plt.ylabel(data[var].long_name)
+
+    return pp
