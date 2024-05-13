@@ -13,8 +13,30 @@ LOad Balancing ScripT for Ec-earth fouR
 
 "Load Balancing Script for ec-earth4" (LOBSTER) is a suite for evaluation of simulation performance of EC-Earth4.
 
-## Installation
-
 ## Documentation
 
+files needed:
+
+- [ ]  `NODE.001_01`
+- [ ]  `leginfo.yml`
+- [ ]  `timing.log`
+- [ ]  `paths.yml` (optional)
+
 ## Examples
+
+see jupiter notebook test.ipynb
+
+loaded libraries:
+
+``` 
+import numpy as np
+import matplotlib.pyplot as plt
+import lobster as lobs
+```
+
+available commands:
+
+- [x] single plot: `lobs.plot_sypd_vs_time(expname, leg)`
+- [x] multi plots:  `lobs.multiplot_vs_time(expname, leg)`
+- [x] multi experiments: `lobs.plot_sypd_vs_nptot([exp1,exp2,...], leg)`
+- [x] save table: `lobs.save_table(expnames, leg)`
