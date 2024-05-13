@@ -14,6 +14,7 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
+import dask
 from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io
@@ -199,3 +200,9 @@ def spacemean(expname, field, ndim):
         raise ValueError(" ndim =! (2,3): Check dimensions! ")
 
     return ave
+
+def cost_field(data, mdata, var, ndim):
+
+    xdata=data[var]-mdata[var]
+
+    return xdata

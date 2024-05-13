@@ -14,6 +14,7 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
+import dask
 import matplotlib.pyplot as plt
 import goat_tools as gt
 import goat_io as io

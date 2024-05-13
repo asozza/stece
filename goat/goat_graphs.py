@@ -13,7 +13,7 @@ Alessandro Sozza (CNR-ISAC, 2023-2024)
 import os
 import numpy as np
 import xarray as xr
-import cftime
+import dask
 import matplotlib.pyplot as plt
 import goat_tools as gt
 import goat_io as io
@@ -157,27 +157,53 @@ def profiles_diff(exp1, exp2, startyear, endyear, var, norm, idx_norm):
 ##########################################################################################
 # anomaly with respect to a meanfield
 
-def timeseries_anomaly(expname, startyear, endyear, refname, startref, endref, var, ndim, norm, idx_norm, idx_ave, offset, color):
+def timeseries_diff2(expname, startyear, endyear, refname, startref, endref, var, ndim, idx_norm, idx_ave, offset, color):
 
     isub = False
     if '-' in var:
         isub = True
 
     # read (or create) averaged data 
-    data = io.read_averaged_timeseries_T(expname, startyear, endyear, var, ndim, isub)
+    data = io.read_averaged_timeseries_T(expname, startyear, endyear, var, ndim, isub)    
     mdata = io.read_averaged_field_T(refname, startref, endref, var, ndim)
 
     # assembly and plot
     tt = data['time'].values.flatten()
     if idx_ave == 'ave':
         vv = data[var].values.flatten()
-        vm = mdata[var].values.flatten() 
+        vm = gm.spacemean(expname, mdata[var], ndim)
+        tt1 = tt; vv1 = vv
+    elif idx_ave == 'mave':
+        vv = gm.movave(data[var].values.flatten(),12)
+        vm = gm.spacemean(expname, mdata[var], ndim)
+        tt1 = tt[6:-6]; vv1 = vv[6:-6]
+    tt2 = [tt1[i]+offset for i in range(len(tt1))]
+    pp = plt.plot(tt2, gt.cost(vv1, vm, idx_norm), color)
+    plt.xlabel(data['time'].long_name)
+    plt.ylabel('Cost function')
+
+    return pp
+
+
+def timeseries_anomaly(expname, startyear, endyear, refname, startref, endref, var, ndim, idx_ave, offset, color):
+
+    # read (or create) averaged data     
+    #data = io.readmf_T(expname, startyear, endyear)
+    #mdata = io.read_averaged_field_T(refname, startref, endref, var, ndim)
+    #delta = gt.cost(data[var], mdata[var], idx_norm)
+
+    # read (or create) averaged data 
+    data = io.read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim)
+    # assembly and plot
+    tt = data['time'].values.flatten()
+    if idx_ave == 'ave':
+        vv = data[var].values.flatten()
         tt1 = tt; vv1 = vv
     elif idx_ave == 'mave':
         vv = gm.movave(data[var].values.flatten(),12)
         tt1 = tt[6:-6]; vv1 = vv[6:-6]
     tt2 = [tt1[i]+offset for i in range(len(tt1))]
-    pp = plt.plot(tt2, gt.cost(vv1, norm, idx_norm), color)
+    pp = plt.plot(tt2, vv1, color)
     plt.xlabel(data['time'].long_name)
     plt.ylabel(data[var].long_name)
 

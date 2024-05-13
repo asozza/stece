@@ -18,6 +18,7 @@ import numpy as np
 import netCDF4
 import xarray as xr
 import cftime
+import dask
 import goat_means as gm
 import goat_tools as gt
 
@@ -143,6 +144,15 @@ def read_timeseries_T(expname, startyear, endyear, var):
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"timeseries_{var}_{startyear}-{endyear}.nc")
+    data = xr.open_dataset(filename, use_cftime=True)
+
+    return data
+
+def read_timeseries_local_anomaly_T(expname, startyear, endyear, var):
+    """ read avereaged local anomaly timeseries """
+
+    dirs = folders(expname)
+    filename = os.path.join(dirs['perm'], f"timeseries_local_anomaly_{var}_{startyear}-{endyear}.nc")
     data = xr.open_dataset(filename, use_cftime=True)
 
     return data
@@ -341,6 +351,49 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
     filename = os.path.join(dirs['perm'], f"field_{var}_{startyear}-{endyear}.nc")
     ds.to_netcdf(filename)
     data = read_field_T(expname, startyear, endyear, var)
+
+    return data
+
+# averaged local anomaly (rms) 
+def read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim):
+
+    dirs = folders(expname)
+    df = gm.elements(expname)
+
+    # try to read averaged data
+    try:
+        data = read_timeseries_local_anomaly_T(expname, startyear, endyear, var)
+        print(" Averaged data found ")
+        return data
+    except FileNotFoundError:
+        print(" Averaged data not found. Creating new file ... ")
+
+    # If averaged data not existing, read original data
+    print(" Loading data ... ")
+    
+    # read field and meanfield
+    mdata = read_averaged_field_T(refname, startref, endref, var, ndim)
+    data = readmf_T(expname, startyear, endyear)
+    delta = pow(data[var]-mdata[var],2) # choose cost function: square
+    
+    print(" Averaging ... ")
+    # spatial averaging of the desidered variable
+    tvec = gt.dateDecimal(data['time'].values)
+    vec = gm.spacemean(expname, delta, ndim)
+
+    # create xarray dataset
+    ds = xr.Dataset({
+        'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
+                        attrs = {'units' : 'years', 'long_name' : 'years'}), 
+        var : xr.DataArray(data = vec, dims = ['time'], coords = {'time': tvec}, 
+                        attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})},
+        attrs = {'description': 'ECE4/NEMO 1D timeseries averaged local anomaly from T_grid variables'})
+
+    # write the averaged data and read it again
+    print(" Saving averaged data ... ")
+    filename = os.path.join(dirs['perm'], f"timeseries_local_anomaly_{var}_{startyear}-{endyear}.nc")
+    ds.to_netcdf(filename)
+    data = read_timeseries_local_anomaly_T(expname, startyear, endyear, var)
 
     return data
 
