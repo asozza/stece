@@ -80,12 +80,22 @@ def read_ice(expname, year):
 def read_domain(expname):
 
     dirs = folders(expname)
-    domain = xr.open_dataset(os.path.join(dirs['exp'], 'domain_cfg.nc'))
+    filename = os.path.join(dirs['exp'], 'domain_cfg.nc')
+    domain = xr.open_mfdataset(filename, preprocess=preproc_nemo_domain)
+    domain = domain.isel(time=0)
 
     return domain
 
 ##########################################################################################
 # Pre-processing options for NEMO readers
+
+def preproc_nemo_domain(data):
+    """preprocessing routine for nemo domain"""
+
+    data = data.rename({'time_counter': 'time'})
+    data.coords['z'] = -data['z']
+
+    return data
 
 def preproc_nemo_T(data):
     """preprocessing routine for nemo for T grid"""
@@ -149,7 +159,7 @@ def read_timeseries_T(expname, startyear, endyear, var):
     return data
 
 def read_timeseries_local_anomaly_T(expname, startyear, endyear, var):
-    """ read avereaged local anomaly timeseries """
+    """ read averaged rms local anomaly timeseries """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"timeseries_local_anomaly_{var}_{startyear}-{endyear}.nc")
@@ -166,8 +176,17 @@ def read_profile_T(expname, startyear, endyear, var):
 
     return data
 
+def read_profile_local_anomaly_T(expname, startyear, endyear, var):
+    """ read averaged profiles of rms local anomaly """
+
+    dirs = folders(expname)
+    filename = os.path.join(dirs['perm'], f"profiles_local_anomaly_{var}_{startyear}-{endyear}.nc")
+    data = xr.open_dataset(filename, use_cftime=True)
+
+    return data
+
 def read_hovmoller_T(expname, startyear, endyear, var):
-    """ read averaged hovmoller """
+    """ read averaged hovmoller diagram """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"hovmoller_{var}_{startyear}-{endyear}.nc")
@@ -175,12 +194,29 @@ def read_hovmoller_T(expname, startyear, endyear, var):
 
     return data
 
-# 2d horizontal map: 
+def read_hovmoller_local_anomaly_T(expname, startyear, endyear, var):
+    """ read averaged rms local anomaly hovmoller diagram """
+
+    dirs = folders(expname)
+    filename = os.path.join(dirs['perm'], f"hovmoller_local_anomaly_{var}_{startyear}-{endyear}.nc")
+    data = xr.open_dataset(filename, use_cftime=True)
+
+    return data
+
 def read_map_T(expname, startyear, endyear, var):
-    """read averaged horizontal map """
+    """read averaged map """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['perm'], f"map_{var}_{startyear}-{endyear}.nc")
+    data = xr.open_dataset(filename, use_cftime=True)
+
+    return data
+
+def read_map_local_anomaly_T(expname, startyear, endyear, var):
+    """read averaged map of rms local anomaly """
+
+    dirs = folders(expname)
+    filename = os.path.join(dirs['perm'], f"map_local_anomaly_{var}_{startyear}-{endyear}.nc")
     data = xr.open_dataset(filename, use_cftime=True)
 
     return data
@@ -301,6 +337,47 @@ def read_averaged_profile_T(expname, startyear, endyear, var):
 
     return data
 
+# for averaged hovmöller diagram
+def read_averaged_hovmoller_T(expname, startyear, endyear, var):
+
+    dirs = folders(expname)
+    df = gm.elements(expname)
+
+    # try to read averaged data
+    try:
+        data = read_hovmoller_T(expname, startyear, endyear, var)
+        print(" Averaged data found ")
+        return data
+    except FileNotFoundError:
+        print(" Averaged data not found. Creating new file ... ")
+
+    # If averaged data not existing, read original data
+    print(" Loading data ... ")
+    data = readmf_T(expname, startyear, endyear)
+    print(" Averaging ... ")
+    # and spatial averaging of the desidered variable
+    tvec = gt.dateDecimal(data['time'].values)
+    vec = gm.spacemean(expname, data[var], '2D')
+
+    # create xarray dataset
+    print(" Allocating new xarray dataset ... ")
+    ds = xr.Dataset({
+        'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
+                    attrs = {'units' : 'years', 'long_name' : 'years'}), 
+        'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
+                    attrs = {'units' : 'm', 'long_name' : 'depth'}), 
+        var : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': data['z']},
+                        attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})}, 
+            attrs = {'description': 'ECE4/NEMO averaged T_grid 2D hovmoller diagram'})
+
+    # write the averaged data and read it again
+    print(" Saving averaged data ... ")
+    filename = os.path.join(dirs['perm'], f"hovmoller_{var}_{startyear}-{endyear}.nc")
+    ds.to_netcdf(filename)
+    data = read_field_T(expname, startyear, endyear, var)
+
+    return data
+
 # for averaged field
 def read_averaged_field_T(expname, startyear, endyear, var, ndim):
 
@@ -354,8 +431,8 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
 
     return data
 
-# averaged local anomaly (rms) 
-def read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim):
+# averaged rms local anomaly timeseries
+def read_averaged_timeseries_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim):
 
     dirs = folders(expname)
     df = gm.elements(expname)
@@ -369,8 +446,7 @@ def read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref
         print(" Averaged data not found. Creating new file ... ")
 
     # If averaged data not existing, read original data
-    print(" Loading data ... ")
-    
+    print(" Loading data ... ")    
     # read field and meanfield
     mdata = read_averaged_field_T(refname, startref, endref, var, ndim)
     data = readmf_T(expname, startyear, endyear)
@@ -380,6 +456,7 @@ def read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref
     # spatial averaging of the desidered variable
     tvec = gt.dateDecimal(data['time'].values)
     vec = gm.spacemean(expname, delta, ndim)
+    vec = pow(vec,0.5)
 
     # create xarray dataset
     ds = xr.Dataset({
@@ -387,7 +464,7 @@ def read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref
                         attrs = {'units' : 'years', 'long_name' : 'years'}), 
         var : xr.DataArray(data = vec, dims = ['time'], coords = {'time': tvec}, 
                         attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})},
-        attrs = {'description': 'ECE4/NEMO 1D timeseries averaged local anomaly from T_grid variables'})
+        attrs = {'description': 'ECE4/NEMO 1D timeseries averaged rms local anomaly from T_grid variables'})
 
     # write the averaged data and read it again
     print(" Saving averaged data ... ")
@@ -397,22 +474,69 @@ def read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref
 
     return data
 
+# howmoller diagram of rms local anomaly
+def read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var):
+
+    dirs = folders(expname)
+    
+    # try to read averaged data
+    try:
+        data = read_hovmoller_local_anomaly_T(expname, startyear, endyear, var)
+        print(" Averaged data found ")
+        return data
+    except FileNotFoundError:
+        print(" Averaged data not found. Creating new file ... ")
+
+    # If averaged data not existing, read original data
+    print(" Loading data ... ")
+    # read field and meanfield
+    mdata = read_averaged_field_T(refname, startref, endref, var, '3D')
+    data = readmf_T(expname, startyear, endyear)
+    delta = pow(data[var]-mdata[var],2) # choose cost function: square
+
+    print(" Averaging ... ")
+    # and spatial averaging of the desidered variable
+    tvec = gt.dateDecimal(data['time'].values)
+    vec = gm.spacemean(expname, delta, '2D')
+    vec = pow(vec,0.5)
+
+    # create xarray dataset
+    print(" Allocating new xarray dataset ... ")
+    ds = xr.Dataset({
+        'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
+                    attrs = {'units' : 'years', 'long_name' : 'years'}), 
+        'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
+                    attrs = {'units' : 'm', 'long_name' : 'depth'}), 
+        var : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': data['z']},
+                    attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})
+                    }, 
+        attrs = {'description': 'ECE4/NEMO averaged T_grid 2D hovmoller diagram of rms local anomaly'}
+        )
+
+    # write the averaged data and read it again
+    print(" Saving averaged data ... ")
+    filename = os.path.join(dirs['perm'], f"hovmoller_local_anomaly_{var}_{startyear}-{endyear}.nc")
+    ds.to_netcdf(filename)
+    data = read_hovmoller_local_anomaly_T(expname, startyear, endyear, var)
+
+    return data
+
+
+
 ##########################################################################################
 # Post-processing with averaged data
 
+# - merger of long simulations
+# - append new data on existing averaged file
+# - convert all for saving figure and launch functions for command line
+
 # merger of long simulations with same prefix
-def merge_averaged_timeseries_T(prefix, n, var):
-
-    # use zfill to fill 4-character expname
-
-    dirs = folders(prefix)
-
-    os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
-
-
-    os.path.join("/perm/itas/ece4", expname, "nemo")
-
-    return 
+#def merge_averaged_timeseries_T(prefix, n, var):
+#    # use zfill to fill 4-character expname
+#    dirs = folders(prefix)
+#    os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
+#    os.path.join("/perm/itas/ece4", expname, "nemo")
+#    return 
 
 
 

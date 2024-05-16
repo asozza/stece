@@ -116,7 +116,7 @@ def globalmean3d_sub(expname, field, z1, z2):
     df = elements(expname=expname)           
     subvol = df['vol'].isel(z=slice(z1,z2))
     subvar = field.isel(z=slice(z1,z2))
-    ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values.flatten()
+    ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
 
     return ave
 
@@ -128,7 +128,7 @@ def globalmean3d_suball(expname, field):
     for i in range(3):
         subvol = df['vol'].isel(z=slice(z1[i],z2[i]))
         subvar = field.isel(z=slice(z1[i],z2[i]))
-        ave[i] = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values.flatten()
+        ave[i] = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
 
     return ave
 
@@ -142,7 +142,7 @@ def globalmean2d(expname, field):
 def spacemean3d(expname, field):
 
     df = elements(expname=expname)       
-    ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten()
+    ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
 
     return ave
 
@@ -151,7 +151,7 @@ def spacemean3d_sub(expname, field, z1, z2):
     df = elements(expname=expname)           
     subvol = df['vol'].isel(z=slice(z1,z2))
     subvar = field.isel(z=slice(z1,z2))    
-    ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values.flatten()
+    ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values
 
     return ave
 
@@ -163,14 +163,14 @@ def spacemean3d_suball(expname, field):
     for i in range(3):
         subvol = df['vol'].isel(z=slice(z1[i],z2[i]))
         subvar = field.isel(z=slice(z1[i],z2[i]))
-        ave.append(subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values.flatten())
+        ave.append(subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values)
 
     return ave
 
 def spacemean2d(expname, field):
 
     df = elements(expname=expname)
-    ave = field.weighted(df['area']).mean(dim=['y', 'x']).values.flatten()
+    ave = field.weighted(df['area']).mean(dim=['y', 'x']).values
 
     return ave
 
@@ -181,9 +181,9 @@ def globalmean(expname, field, ndim):
 
     df = elements(expname=expname) 
     if ndim == '3D':  
-        ave = field.weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values.flatten()
+        ave = field.weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
     elif ndim == '2D':
-        ave = field.weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
+        ave = field.weighted(df['area']).mean(dim=['time', 'y', 'x']).values
     else:        
         raise ValueError(" ndim =! (2,3): Check dimensions! ")
 
@@ -193,9 +193,9 @@ def spacemean(expname, field, ndim):
 
     df = elements(expname=expname) 
     if ndim == '3D':  
-        ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten()
+        ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
     elif ndim == '2D':
-        ave = field.weighted(df['area']).mean(dim=['y', 'x']).values.flatten()
+        ave = field.weighted(df['area']).mean(dim=['y', 'x']).values
     else:        
         raise ValueError(" ndim =! (2,3): Check dimensions! ")
 

@@ -48,7 +48,7 @@ def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, 
 
 
 # gregory plot
-def gregoryplot(expname, startyear, endyear, var_x, ndim_x, var_y, ndim_y, idx_ave):
+def gregoryplot(expname, startyear, endyear, var_x, ndim_x, var_y, ndim_y, idx_ave, color):
 
     isub_x = False
     if '-' in var_x:
@@ -69,12 +69,12 @@ def gregoryplot(expname, startyear, endyear, var_x, ndim_x, var_y, ndim_y, idx_a
         vx = gm.movave(xdata[var_x].values.flatten(),12)
         vy = gm.movave(ydata[var_y].values.flatten(),12)        
         vx1 = vx[6:-6]; vy1 = vy[6:-6]; tt1 = tt[6:-6]
-    colors = [tt1[i] for i in range(len(tt1))]
-    pp = plt.scatter(vx1, vy1, c=colors, cmap=plt.cm.coolwarm)    
-    cbar = plt.colorbar()
+    #colors = [tt1[i] for i in range(len(tt1))]
+    pp = plt.plot(vx1, vy1, color) #, c=colors, cmap=plt.cm.coolwarm)        
     plt.xlabel(xdata[var_x].long_name)
     plt.ylabel(ydata[var_y].long_name)
-    cbar.set_label(xdata['time'].long_name, ha='left', labelpad=10)
+    # cbar = plt.colorbar()
+    # cbar.set_label(xdata['time'].long_name, ha='left', labelpad=10)
 
     return pp
 
@@ -187,14 +187,7 @@ def timeseries_diff2(expname, startyear, endyear, refname, startref, endref, var
 
 def timeseries_anomaly(expname, startyear, endyear, refname, startref, endref, var, ndim, idx_ave, offset, color):
 
-    # read (or create) averaged data     
-    #data = io.readmf_T(expname, startyear, endyear)
-    #mdata = io.read_averaged_field_T(refname, startref, endref, var, ndim)
-    #delta = gt.cost(data[var], mdata[var], idx_norm)
-
-    # read (or create) averaged data 
     data = io.read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim)
-    # assembly and plot
     tt = data['time'].values.flatten()
     if idx_ave == 'ave':
         vv = data[var].values.flatten()
@@ -206,5 +199,14 @@ def timeseries_anomaly(expname, startyear, endyear, refname, startref, endref, v
     pp = plt.plot(tt2, vv1, color)
     plt.xlabel(data['time'].long_name)
     plt.ylabel(data[var].long_name)
+
+    return pp
+
+def hovmoller_anomaly(expname, startyear, endyear, refname, startref, endref, var):
+
+    data = io.read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var)    
+    delta = data[var]#/data[var].isel(time=0)-1
+    pp = delta.plot(x='time', y='z', cmap=plt.cm.coolwarm)
+    plt.ylim(-5000,0)
 
     return pp
