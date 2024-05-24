@@ -33,8 +33,8 @@ def parse_args():
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
     parser.add_argument("leg", metavar="LEG", help="The leg you want to process for rebuilding", type=str)
-    parser.add_argument("yearspan", metavar="YEARSPAN", help="Year span for fitting global temperature", type=int)
-    parser.add_argument("yearleap", metavar="YEARLEAP", help="Year leap for projecting global temperature", type=int)
+    parser.add_argument("yearspan", metavar="YEARSPAN", help="Year span for fitting temperature", type=int)
+    parser.add_argument("yearleap", metavar="YEARLEAP", help="Year leap for projecting temperature", type=int)
 
     # optional to activate nemo rebuild
     parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     if args.rebuild:
         osa.rebuild_nemo(expname, leg)
 
-    # manipulate based on global temperature
+    # forecast based on local temperature fit
     rdata = osa.forecast_T_local_fit(expname, leg, yearspan, yearleap)
     osi.write_nemo_restart(expname, rdata, leg)
 

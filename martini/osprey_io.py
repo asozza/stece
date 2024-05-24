@@ -21,20 +21,21 @@ import xarray as xr
 import cftime
 
 def folders(expname):
+    """ List of global paths """
 
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
         'nemo': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "nemo"),
-        'restart': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "restart"),        
+        'restart': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "restart"),
+        'backup': os.path.join("/ec/res4/scratch/itas/ece4", expname + "-backup"),
         'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname),
         'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo",
-        'backup': os.path.join("/ec/res4/scratch/itas/ece4", expname + "-backup")
     }
 
     return dirs
 
 def preproc_nemo_T(data):
-    """preprocessing routine for nemo for T grid"""
+    """ preprocessing routine for nemo for T grid """
 
     data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
     data = data.swap_dims({'x_grid_T_inner': 'x', 'y_grid_T_inner': 'y'})
@@ -45,7 +46,7 @@ def preproc_nemo_T(data):
     return data
 
 def preproc_nemo_restart(data):
-    """preprocessing routine for nemo restart grid"""
+    """ preprocessing routine for nemo restart grid """
 
     data = data.rename_dims({'nav_lev': 'z', 'time_counter': 'time'})
     data = data.rename({'nav_lat': 'lat', 'nav_lon': 'lon'})
@@ -53,7 +54,7 @@ def preproc_nemo_restart(data):
     return data
 
 def preproc_nemo_U(data):
-    """preprocessing routine for nemo for U grid"""
+    """ preprocessing routine for nemo for U grid """
 
     data = data.rename_dims({'x_grid_U': 'x', 'y_grid_U': 'y'})
     data = data.rename({'depthu': 'z', 'time_counter': 'time'})
@@ -63,7 +64,7 @@ def preproc_nemo_U(data):
     return data
 
 def preproc_nemo_V(data):
-    """preprocessing routine for nemo for V grid"""
+    """ preprocessing routine for nemo for V grid """
 
     data = data.rename_dims({'x_grid_V': 'x', 'y_grid_V': 'y'})
     data = data.rename({'depthv': 'z', 'time_counter': 'time'})
@@ -73,7 +74,7 @@ def preproc_nemo_V(data):
     return data
 
 def preproc_nemo_W(data):
-    """preprocessing routine for nemo for W grid"""
+    """ preprocessing routine for nemo for W grid """
 
     data = data.swap_dims({'x_grid_W_inner': 'x', 'y_grid_W_inner': 'y'})
     data = data.rename_dims({'x_grid_W': 'x', 'y_grid_W': 'y'})
@@ -83,13 +84,14 @@ def preproc_nemo_W(data):
     return data
 
 def preproc_nemo_ice(data):
-    """preprocessing routine for nemo for ice"""
+    """ preprocessing routine for nemo for ice """
 
     data = data.rename({'time_counter': 'time'})
     
     return data
 
 def readmf_T(expname, startyear, endyear):
+    """ Read multiple T_grid fields """
 
     dirs = folders(expname)
     filelist = []
@@ -102,6 +104,7 @@ def readmf_T(expname, startyear, endyear):
     return data
 
 def readmf_ice(expname, startyear, endyear):
+    """ Read multiple ice fields """
 
     dirs = folders(expname)
     filelist = []
@@ -114,6 +117,7 @@ def readmf_ice(expname, startyear, endyear):
     return data
 
 def read_T(expname, year):
+    """ Read single field on T grid """
 
     dirs = folders(expname)
     filelist = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
@@ -122,6 +126,7 @@ def read_T(expname, year):
     return data
 
 def read_ice(expname, year):
+    """ Read NEMO ice field """
 
     dirs = folders(expname)
     filelist = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
@@ -130,6 +135,7 @@ def read_ice(expname, year):
     return data
 
 def read_domain(expname):
+    """ Read NEMO domain configuration file """
 
     dirs = folders(expname)
     domain = xr.open_dataset(os.path.join(dirs['exp'], 'domain_cfg.nc'))
@@ -137,6 +143,7 @@ def read_domain(expname):
     return domain
 
 def read_restart(expname, leg):
+    """ Read NEMO restart file """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
@@ -145,7 +152,7 @@ def read_restart(expname, leg):
     return data
 
 def get_nemo_timestep(filename):
-    """Minimal function to get the timestep from a nemo restart file"""
+    """ Minimal function to get the timestep from a nemo restart file """
 
     return os.path.basename(filename).split('_')[1]
 
@@ -163,6 +170,7 @@ def start_end_years(expname, yearspan, leg):
     return startyear,endyear
 
 def write_nemo_restart(expname, field, leg):
+    """ Write nemo restart """
 
     dirs = folders(expname)
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
@@ -177,3 +185,16 @@ def write_nemo_restart(expname, field, leg):
     orig = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc')
     dest = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc')
     shutil.copy(orig, dest)
+
+def run_cdo(command):
+    """ Run a CDO command using subprocess """
+
+    try:
+        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(result.stdout.decode('utf-8'))
+        print(result.stderr.decode('utf-8'))
+    except subprocess.CalledProcessError as e:
+        print(f"Command '{command}' failed with return code {e.returncode}")
+        print(e.output.decode('utf-8'))
+        print(e.stderr.decode('utf-8'))
+        raise

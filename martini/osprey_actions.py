@@ -28,7 +28,7 @@ import osprey_means as osm
 
 # action: rebuild
 def rebuild_nemo(expname, leg):
-    """Minimal nemo rebuilder in a temporary path"""
+    """ Minimal nemo rebuilder in a temporary path """
 
     dirs = io.folders(expname)
     
@@ -81,7 +81,8 @@ def rebuild_nemo(expname, leg):
 
 # action rollback
 def rollback_ece4(expname, leg):
-    
+    """ Rollback ECE4 run to a previous leg """
+
     # define directories
     dirs = io.folders(expname)
 
@@ -163,6 +164,7 @@ def rollback_ece4(expname, leg):
 
 # action: replace 
 def replace_nemo(expname, leg):
+    """ Replace NEMO rebuilt field in the run folder """
 
     dirs = io.folders(expname)
 
@@ -186,8 +188,9 @@ def replace_nemo(expname, leg):
         os.symlink(resfile, newfile)
 
 
-# action: forecast (diversify: constant, local, eof)
+# forecasting action
 def forecast_T_ave(expname, leg, yearspan, yearleap):
+    """ Forecast for T grid using global mean """
 
     # load data
     df = osm.elements(expname)
@@ -216,12 +219,13 @@ def forecast_T_ave(expname, leg, yearspan, yearleap):
 
 # relative change based on the global temperature
 def forecast_T_rel(expname, leg, yearspan, yearleap):
+    """ Forecast for T grid using relative change based on global mean """
 
     # load data
     df = osm.elements(expname)
     startyear, endyear = io.start_end_years(expname, yearspan, leg)
     data = io.readmf_T(expname, startyear, endyear)
-
+    
     # averaged variables
     x = osm.dateDecimal(data['time'].values.flatten())
     y = osm.movave(data['to'].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
@@ -248,6 +252,7 @@ def forecast_T_rel(expname, leg, yearspan, yearleap):
 
 #
 def forecast_T_interp(expname, leg, yearspan, yearleap):
+    """ Forecast for T grid using interpolation """
 
     startyear, endyear = io.start_end_years(expname, yearspan, leg)    
     rdata = io.read_restart(expname, leg)
@@ -262,6 +267,7 @@ def forecast_T_interp(expname, leg, yearspan, yearleap):
     return rdata
 
 def forecast_T_local_fit(expname, leg, yearspan, yearleap):
+    """ Forecast for T grid using local fit """
 
     print(' loading data .... ')
 
@@ -361,21 +367,35 @@ def forecast_T_local_fit(expname, leg, yearspan, yearleap):
 
     return rdata
 
-def forecast_T_eof(expname, leg, yearspan, yearleap):
+# manipulation using EOF
+def forecast_T_EOF(expname, leg, yearspan, yearleap):
+    """ Forecast for T grid using EOF """
 
-    try:
-        subprocess.run("cdo mergetime file1.nc file2.nc merged_file.nc", shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        # If there's an error, print the error message
-        print("Error:", e)
+    endyear = 1990+int(leg)-2
+    startyear = endyear-yearspan
+    foreyear = endyear+yearleap
 
-# manipulate restart adding a constant (with sign)
-# check what happens for T<4, and add a threshold
-def manipulate_add_const(expname, leg, const):
+    dirs = io.folders(expname)
+    fldlist = []
+    for year in range(startyear, endyear):
+        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
+        matching_files = glob.glob(pattern)
+        fldlist.extend(matching_files)
 
-    rdata = io.read_restart(expname, leg)
-    varlist = ['tn', 'tb']
-    for var in varlist:
-        rdata[var] = xr.where(rdata[var]!=0, rdata[var] + const, 0.)
+    var='thetao'
+    fldcat = os.path.join(dirs['tmp'], f"{expname}_{startyear}-{endyear}")
+    fld = os.path.join(dirs['tmp'], f"{var}_{startyear}-{endyear}")
+    flda = os.path.join(dirs['tmp'], f"{var}_anomaly_{startyear}-{endyear}")
+    fldcov = os.path.join(dirs['tmp'], f"{var}_variance_{startyear}-{endyear}")
+    fldpat = os.path.join(dirs['tmp'], f"{var}_pattern_{startyear}-{endyear}")
+    timeseries = os.path.join(dirs['tmp'], f"{var}_timeseries_{startyear}-{endyear}")
+
+    io.run_cdo(f"cdo cat {fldlist} {fldcat}")
+    io.run_cdo(f"cdo yearmean -selname,{var} {fldcat} {fld}")
+    io.run_cdo(f"cdo sub {fld} -timmean {fld} {flda}")
+    io.run_cdo(f"cdo eof,10 {flda} {fldcov} {fldpat}")
+    io.run_cdo(f"cdo eofcoeff {fldpat} {flda} {timeseries}")
 
     return rdata
+# 
+

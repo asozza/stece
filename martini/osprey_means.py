@@ -209,3 +209,8 @@ def mean_forecast_error(expname, year, var, xfield):
     dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
 
     return dd
+
+def yeargain(expname, year, refname, var):
+    """ detect delta of years saved in an experiment """
+
+    ave = globalmean(expname, var)

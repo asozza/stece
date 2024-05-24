@@ -10,7 +10,7 @@ Needed modules:
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/apps/netcdf4/4.9.1/INTEL/2021.4/lib:/usr/local/apps/hdf5/1.12.2/INTEL/2021.4/lib
 
 Authors
-Alessandro Sozza and Paolo Davini (CNR-ISAC, Nov 2023)
+Alessandro Sozza and Paolo Davini (CNR-ISAC, May 2024)
 """
 
 import subprocess
@@ -33,7 +33,8 @@ def parse_args():
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
     parser.add_argument("leg", metavar="LEG", help="The leg you want to process for rebuilding", type=str)
-    parser.add_argument("const", metavar="CONST", help="Constant delta temperature to be added (with sign)", type=float)
+    parser.add_argument("yearspan", metavar="YEARSPAN", help="Year span for fitting temperature", type=int)
+    parser.add_argument("yearleap", metavar="YEARLEAP", help="Year leap for projecting temperature", type=int)
 
     # optional to activate nemo rebuild
     parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")
@@ -49,7 +50,8 @@ if __name__ == "__main__":
     args = parse_args()
     expname = args.expname
     leg = args.leg
-    const = args.const
+    yearspan = args.yearspan
+    yearleap = args.yearleap
 
     # define folders
     dirs = osi.folders(expname)
@@ -57,9 +59,12 @@ if __name__ == "__main__":
     # rebuild nemo restart files
     if args.rebuild:
         osa.rebuild_nemo(expname, leg)
-
-    # manipulate based on global temperature
-    rdata = osa.manipulate_add_const(expname, leg, const)
+    
+    # forecast based on local temperature fit
+    rdata = osa.forecast_T_eof(expname, leg, yearspan, yearleap)
     osi.write_nemo_restart(expname, rdata, leg)
 
+    # replace nemo restart files
+    if args.replace:
+        osa.replace_nemo(expname, leg)
 
