@@ -187,7 +187,7 @@ def timeseries_diff2(expname, startyear, endyear, refname, startref, endref, var
 
 def timeseries_anomaly(expname, startyear, endyear, refname, startref, endref, var, ndim, idx_ave, offset, color):
 
-    data = io.read_averaged_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim)
+    data = io.read_averaged_timeseries_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim)
     tt = data['time'].values.flatten()
     if idx_ave == 'ave':
         vv = data[var].values.flatten()

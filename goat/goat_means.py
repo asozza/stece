@@ -21,6 +21,7 @@ import goat_io as io
 
 # define differential forms for integrals
 def elements(expname):
+    """ define differential forms for integrals """
 
     df = {}
     domain = io.read_domain(expname=expname)
@@ -33,14 +34,14 @@ def elements(expname):
     return df
 
 def local_cost_function(expname, year, field, idx):
-    
+
     data = io.read_T(expname=expname, year=year)
     delta = gt.cost(data, field, idx)
 
     return delta
 
-# linear fit
 def linear_fit(x, y):
+    """ linear fit """
 
     ya = [[y[i]] for i in range(len(y))]
     xa = [[x[i]] for i in range(len(x))]
@@ -54,23 +55,8 @@ def linear_fit(x, y):
 ##################################################################
 # AVERAGES
 
-# interpolated moving average
-def intave(xdata, ydata, N):
-
-    x_orig = np.array(gt.dateDecimal(xdata.values))
-
-    for i in range(N):    
-        x_filled = np.array(gt.dateDecimal(xdata.where(xdata['time.month']==i+1,drop=True).values))
-        y_filled = np.array(ydata.where(xdata['time.month']==i+1,drop=True).values.flatten())
-        if (i==0):
-            y_smooth = np.interp(x_orig, x_filled, y_filled)/N
-        else:
-            y_smooth += np.interp(x_orig, x_filled, y_filled)/N
-    
-    return y_smooth
-
-# moving/running average
 def movave(ydata, N):
+    """ moving average """
 
     #y_list = np.array(ydata.values.flatten())
     y_padded = np.pad(ydata, (N//2, N-1-N//2), mode='edge')
@@ -78,9 +64,9 @@ def movave(ydata, N):
 
     return y_smooth
 
-# cumulative average
 def cumave(ydata):
-        
+    """ cumulative average """
+
     ave = np.cumsum(ydata)
     for i in range(1,len(ydata)):
         ave[i] = ave[i]/(i+1)
@@ -88,121 +74,56 @@ def cumave(ydata):
     return ave
 
 #################################################################################
-# MEAN OPERATIONS ON THE FIELD
+# AVERAGING OPERATIONS ON A FIELD
 
 # Definitions: 
 # global_mean: time and space average
 # time_mean: average on time 
 # space_mean:  spatial average on x,y,z or x,y weighted by volume or area
-# sub: spatial average on a subinterval z in [z1,z2]
-# suball: according to subregions
 
-# global average over space and time
-def timemean(field):
-    
-    meanfield = field.mean(dim=['time']).values
+def timemean(data, var):
+    """ Time average of a field """
 
-    return meanfield
-
-def globalmean3d(expname, field):
-
-    df = elements(expname=expname)   
-    ave = field.weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+    ave = data[var].mean(dim=['time']).values
 
     return ave
 
-def globalmean3d_sub(expname, field, z1, z2):
+def globalmean(data, var, ndim, subreg = None):
+    """ Global average of a field """
 
-    df = elements(expname=expname)           
-    subvol = df['vol'].isel(z=slice(z1,z2))
-    subvar = field.isel(z=slice(z1,z2))
-    ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
-
-    return ave
-
-def globalmean3d_suball(expname, field):
-
-    ave = []
-    df = elements(expname=expname)           
-    z1,z2 = gt.subregions('ORCA2')
-    for i in range(3):
-        subvol = df['vol'].isel(z=slice(z1[i],z2[i]))
-        subvar = field.isel(z=slice(z1[i],z2[i]))
-        ave[i] = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
+    expname = gt.get_expname(data)
+    df = elements(expname)
+    if ndim == '3D':
+        ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
+        if subreg != None:
+            z1,z2 = gt.subrange(subreg)
+            subvol = df['vol'].isel(z=slice(z1,z2))
+            subvar = data[var].isel(z=slice(z1,z2))
+            ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
+    elif ndim == '2D':
+        ave = data[var].weighted(df['area']).mean(dim=['time', 'y', 'x']).values
+    else:
+        raise ValueError(" Invalid dimensions ")
 
     return ave
 
-def globalmean2d(expname, field):
+def spacemean(data, var, ndim, subreg = None):
+    """ Spatial average of a field """
 
-    df = elements(expname=expname)   
-    ave = field.weighted(df['area']).mean(dim=['time', 'y', 'x']).values
-
-    return ave
-
-def spacemean3d(expname, field):
-
-    df = elements(expname=expname)       
-    ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
-
-    return ave
-
-def spacemean3d_sub(expname, field, z1, z2):
-
-    df = elements(expname=expname)           
-    subvol = df['vol'].isel(z=slice(z1,z2))
-    subvar = field.isel(z=slice(z1,z2))    
-    ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values
-
-    return ave
-
-def spacemean3d_suball(expname, field):
-
-    ave = []
-    df = elements(expname=expname)
-    z1,z2 = gt.subregions('ORCA2')
-    for i in range(3):
-        subvol = df['vol'].isel(z=slice(z1[i],z2[i]))
-        subvar = field.isel(z=slice(z1[i],z2[i]))
-        ave.append(subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values)
-
-    return ave
-
-def spacemean2d(expname, field):
-
-    df = elements(expname=expname)
-    ave = field.weighted(df['area']).mean(dim=['y', 'x']).values
+    expname = gt.get_expname(data)
+    df = elements(expname) 
+    if ndim == '3D':
+        ave = data[var].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
+        if subreg != None:
+            z1,z2 = gt.subrange(subreg,'ORCA2')
+            subvol = df['vol'].isel(z=slice(z1,z2))
+            subvar = data[var].isel(z=slice(z1,z2))
+            ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values
+    elif ndim == '2D':
+        ave = data[var].weighted(df['area']).mean(dim=['y', 'x']).values
+    else:
+        raise ValueError(" Invalid dimensions ")
 
     return ave
 
 #################################################################################
-# new functions:
-
-def globalmean(expname, field, ndim):
-
-    df = elements(expname=expname) 
-    if ndim == '3D':  
-        ave = field.weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
-    elif ndim == '2D':
-        ave = field.weighted(df['area']).mean(dim=['time', 'y', 'x']).values
-    else:        
-        raise ValueError(" ndim =! (2,3): Check dimensions! ")
-
-    return ave
-
-def spacemean(expname, field, ndim):
-
-    df = elements(expname=expname) 
-    if ndim == '3D':  
-        ave = field.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
-    elif ndim == '2D':
-        ave = field.weighted(df['area']).mean(dim=['y', 'x']).values
-    else:        
-        raise ValueError(" ndim =! (2,3): Check dimensions! ")
-
-    return ave
-
-def cost_field(data, mdata, var, ndim):
-
-    xdata=data[var]-mdata[var]
-
-    return xdata
