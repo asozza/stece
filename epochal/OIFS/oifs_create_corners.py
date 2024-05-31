@@ -15,9 +15,9 @@ cdo = cdo.Cdo()
 #cdo.debug = True
 
 
-resolutions = ["TL63L31", "TL159L91", "TL255L91", "TCO159L91", "TCO199L91", "TCO319L91", "TCO399L91"]
+resolutions = ["TL63L31", "TL159L91"]
 oifs_dir = "/lus/h2resw01/hpcperm/ccpd/ECE4-DATA/oifs"
-tgt_dir = "/etc/ecmwf/nfs/dh1_perm_b/ccpd/ecearth4/oifs-grids"
+tgt_dir = "/ec/res4/scratch/itmn/IFS-masked"
 
 
 for resolution in resolutions:
@@ -28,6 +28,7 @@ for resolution in resolutions:
     netcdf_name = f"{tgt_dir}/{resolution}-tmp.nc"
     gaussian_name = f"{tgt_dir}/{resolution}-gaussian.nc"
     outfile_name = f"{tgt_dir}/T{kind}{spectral}_grid.nc"
+    outfile_masked_name = f"{tgt_dir}/T{kind}{spectral}_grid_masked.nc"
     variable_name = "var172" #land-sea mask, but anything else will work
     gaussian = spectral2gaussian(spectral, kind)
 
@@ -115,6 +116,32 @@ for resolution in resolutions:
     clon_bnds[:]=corners_lon*np.pi/180
     clat_bnds[:]=corners_lat*np.pi/180
     ds.close()
+
+    print("Writing masked output file...", outfile_masked_name)
+    ds_masked = nc.Dataset(outfile_masked_name, "w", format="NETCDF4")
+    cells_masked = ds_masked.createDimension("rgrid",total_points)
+    nv_masked = ds_masked.createDimension("nv", 4)
+    clon_masked = ds_masked.createVariable("clon","f8", ("rgrid",))
+    clat_masked = ds_masked.createVariable("clat","f8", ("rgrid",))
+    variable_mask = variables[variable_name][:]
+    mask = ds_masked.createVariable("lsm","f4", ("rgrid",))
+    mask[:] = variable_mask[:]
+    clon_bnds_masked = ds_masked.createVariable("clon_bnds","f8", ("rgrid", "nv"))
+    clat_bnds_masked = ds_masked.createVariable("clat_bnds","f8", ("rgrid", "nv"))
+    for x in [ clon_masked, clat_masked, mask]:
+        x.units="radian"
+        x.coordinates="clat clon"
+    clon_masked.bounds = "clon_bnds"
+    clat_masked.bounds = "clat_bnds"
+    clon_masked.standard_name = "longitude"
+    clat_masked.standard_name = "latitude"
+
+    clon_masked[:]=lons*np.pi/180.
+    clat_masked[:]=lats*np.pi/180.
+    mask[:]=variables[variable_name][:]
+    clon_bnds_masked[:]=corners_lon*np.pi/180
+    clat_bnds_masked[:]=corners_lat*np.pi/180
+    ds_masked.close()
 
     print("Cleaning up...")
     os.remove(netcdf_name)
