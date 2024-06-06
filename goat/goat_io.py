@@ -22,8 +22,10 @@ import xarray as xr
 import goat_means as gm
 import goat_tools as gt
 
-def folders(expname): 
-    
+
+def folders(expname):
+    """ define paths and folders """
+
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
         'nemo': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "nemo"),
@@ -44,19 +46,6 @@ def readmf_T(expname, startyear, endyear):
     filelist = []
     for year in range(startyear, endyear):
         pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
-        matching_files = glob.glob(pattern)
-        filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
-
-    return data
-
-def readmf_var_T(expname, startyear, endyear, var):
-    """ read multiple T_grid fields extracted using CDO """
-
-    dirs = folders(expname)
-    filelist = []
-    for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['perm'], var, f"{var}_*_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
@@ -615,8 +604,20 @@ def read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname
 # - saving figure and launch functions for command line
 
 ##########################################################################################
+# Reading from CDO
 
-# Read from CDO
+def readmf_var_T(expname, startyear, endyear, var):
+    """ read multiple T_grid fields extracted using CDO """
+
+    dirs = folders(expname)
+    filelist = []
+    for year in range(startyear, endyear):
+        pattern = os.path.join(dirs['perm'], var, f"{var}_*_{year}-{year}.nc")
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
+
+    return data
 
 def read_from_cdo_T(expname, startyear, endyear, var):
     """  read field extracted using with CDO """
@@ -624,3 +625,7 @@ def read_from_cdo_T(expname, startyear, endyear, var):
     data = readmf_var_T(expname, startyear, endyear, var)
 
     return data
+
+##########################################################################################
+# Reader of EOF
+

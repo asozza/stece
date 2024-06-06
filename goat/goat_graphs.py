@@ -24,6 +24,7 @@ import goat_means as gm
 # - can it be used to plot subvars like thetao-mix, thetao-pyc, thetao-aby?
 # - add option for cost function anomaly with respect to a meanstate
 def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset, color):
+    """ graphics of timeseries """
 
     isub = False
     if '-' in var:
@@ -49,6 +50,7 @@ def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, 
 
 # gregory plot
 def gregoryplot(expname, startyear, endyear, var_x, ndim_x, var_y, ndim_y, idx_ave, color):
+    """ graphics of gregory plot"""
 
     isub_x = False
     if '-' in var_x:
@@ -80,6 +82,7 @@ def gregoryplot(expname, startyear, endyear, var_x, ndim_x, var_y, ndim_y, idx_a
 
 
 def profile(expname, startyear, endyear, var, norm, idx_norm):
+    """ graphics profile """
 
     data = io.read_averaged_profile_T(expname, startyear, endyear, var)
     zz = data['z'].values.flatten() 
@@ -91,6 +94,7 @@ def profile(expname, startyear, endyear, var, norm, idx_norm):
     return pp
 
 def hovmoller(expname, startyear, endyear, var, x_axis, y_axis, idx_norm):
+    """ graphics of hovmöller diagram """
 
     data = io.read_averaged_map_T(expname, startyear, endyear, var)
     # pp = plt.plot(x=x_axis, y=y_axis, c=var, cmap=plt.cm.coolwarm)

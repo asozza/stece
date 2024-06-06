@@ -15,9 +15,9 @@ import numpy as np
 import xarray as xr
 import cftime
 import dask
-from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io
+
 
 # define differential forms for integrals
 def elements(expname):
@@ -40,19 +40,17 @@ def local_cost_function(expname, year, field, idx):
 
     return delta
 
-def linear_fit(x, y):
-    """ linear fit """
+#def linear_fit(x, y):
+#    """ linear fit """
+#    ya = [[y[i]] for i in range(len(y))]
+#    xa = [[x[i]] for i in range(len(x))]
+#    model=LinearRegression()
+#    model.fit(xa, ya)
+#    mp = model.coef_[0][0]
+#    qp = model.intercept_[0]
+#    return mp,qp
 
-    ya = [[y[i]] for i in range(len(y))]
-    xa = [[x[i]] for i in range(len(x))]
-    model=LinearRegression()
-    model.fit(xa, ya)
-    mp = model.coef_[0][0]
-    qp = model.intercept_[0]
-
-    return mp,qp
-
-##################################################################
+##################################################################################
 # AVERAGES
 
 def movave(ydata, N):
