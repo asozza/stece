@@ -9,25 +9,16 @@ Date: Oct 2023
 """
 
 import subprocess
-import numpy as np
 import os
 import glob
-import shutil
-import yaml
-import dask
-import cftime
-import nc_time_axis
-import xarray as xr
 
-import osprey_io as osi
-import osprey_means as osm
-import osprey_tools as ost
-import osprey_eof as ose
+from osprey.reader import folders
+from osprey.utils import get_nemo_timestep
 
 def rebuilder(expname, leg):
-    """ Function to rebuild NEMO restart """
+    """Function to rebuild NEMO restart """
 
-    dirs = osi.folders(expname)
+    dirs = folders(expname)
     
     os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
 
@@ -36,7 +27,7 @@ def rebuilder(expname, leg):
     for kind in ['restart', 'restart_ice']:
         print(' Processing ' + kind)
         flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + kind + '_????.nc'))
-        tstep = ost.get_nemo_timestep(flist[0])
+        tstep = get_nemo_timestep(flist[0])
 
         for filename in flist:
             destination_path = os.path.join(dirs['tmp'], str(leg).zfill(3), os.path.basename(filename))
