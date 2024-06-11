@@ -14,7 +14,7 @@ Alessandro Sozza and Paolo Davini (CNR-ISAC, Nov 2023)
 """
 
 import argparse
-import osprey_actions as osa
+import osprey.actions.rebuilder as rebuilder
 
 def parse_args():
     """Command line parser for rebuild_nemo"""
@@ -36,4 +36,4 @@ if __name__ == "__main__":
     expname = args.expname
     leg = args.leg
 
-    osa.rebuilder(expname, leg)
+    rebuilder(expname, leg)

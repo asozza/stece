@@ -111,6 +111,7 @@ def cdo_merge(expname, startyear, endyear):
         matching_files = glob.glob(pattern)
         fldlist.extend(matching_files)
     
+    os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
     fldcat = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{expname}_{startyear}-{endyear}.nc")
     run_bash_command(f"cdo cat {' '.join(fldlist)} {fldcat}")
 

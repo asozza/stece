@@ -25,7 +25,8 @@ dependencies = [
     "dask",
     "ruamel.yaml",
     "matplotlib",
-    "cftime"
+    "cftime",
+    "nc-time-axis"
 ]
 
 [tool.setuptools]
