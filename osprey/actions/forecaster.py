@@ -8,41 +8,32 @@ Author: Alessandro Sozza (CNR-ISAC)
 Date: Mar 2024
 """
 
-import subprocess
 import numpy as np
 import os
-import glob
-import shutil
-import yaml
-import dask
 import cftime
-import nc_time_axis
 import xarray as xr
-import matplotlib.pyplot as plt
-from dateutil.relativedelta import relativedelta
 
-import osprey_io as osi
-import osprey_means as osm
-import osprey_tools as ost
-import osprey.actions.checks as osc
-import osprey_eof as ose
+from osprey.reader import folders
+from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
+from osprey.reader import read_T, read_rebuilt, read_restart
+from osprey.means.eof import cdo_merge, cdo_selname, cdo_detrend, cdo_EOF, save_EOF, add_trend_EOF
 
 
 def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     """ Function to forecast local temperature using linear fit of output files """
 
     # get time interval
-    endyear = ost.get_year(endleg)
-    startleg = ost.get_startleg(endleg, yearspan)
-    startyear = ost.get_startyear(endyear, yearspan)
+    endyear = get_year(endleg)
+    startleg = get_startleg(endleg, yearspan)
+    startyear = get_startyear(endyear, yearspan)
 
     # get forecast year
-    foreyear = ost.get_forecast_year(endyear,yearleap)
+    foreyear = get_forecast_year(endyear,yearleap)
     fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 12, 0, 0, has_year_zero=False)
     xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
 
     # load data
-    data = osi.read_T(expname, startyear, endyear)
+    data = read_T(expname, startyear, endyear)
 
     # fit
     p = data[var].polyfit(dim='time', deg=1, skipna=True)
@@ -51,7 +42,7 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     yf = yf.drop_indexes({'x', 'y'})
     yf = yf.reset_coords({'x', 'y'}, drop=True)
     
-    rdata = osi.read_rebuilt(expname, endleg, endleg)
+    rdata = read_rebuilt(expname, endleg, endleg)
     varlist = ['tn', 'tb']
     for var1 in varlist:
         rdata[var1] = xr.where(rdata[var1] !=0, yf.values, 0.0)
@@ -63,17 +54,17 @@ def forecaster_fit_re(expname, var, endleg, yearspan, yearleap):
     """ Function to forecast local temperature using linear fit of restart files """
 
     # get time interval
-    endyear = ost.get_year(endleg)
-    startleg = ost.get_startleg(endleg, yearspan)
-    startyear = ost.get_startyear(endyear, yearspan)
+    endyear = get_year(endleg)
+    startleg = get_startleg(endleg, yearspan)
+    startyear = get_startyear(endyear, yearspan)
 
     # get forecast year
-    foreyear = ost.get_forecast_year(endyear,yearleap)
+    foreyear = get_forecast_year(endyear,yearleap)
     fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 12, 0, 0, has_year_zero=False)
     xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
 
     # load restarts
-    rdata = osi.read_restart(expname, startyear, endyear)
+    rdata = read_restart(expname, startyear, endyear)
 
     # fit
     yf = {}
@@ -85,7 +76,7 @@ def forecaster_fit_re(expname, var, endleg, yearspan, yearleap):
     yf = yf.drop_indexes({'x', 'y'})
     yf = yf.reset_coords({'x', 'y'}, drop=True)
 
-    rdata = osi.read_rebuilt(expname, endleg, endleg)
+    rdata = read_rebuilt(expname, endleg, endleg)
     for vars in varlist: 
         #yf[var] = yf[var].where( yf < -1.8, rdata[var], yf[var])
         rdata[vars] = yf[vars]
@@ -96,22 +87,22 @@ def forecaster_fit_re(expname, var, endleg, yearspan, yearleap):
 def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
     """ Function to forecast temperature field using EOF """
 
-    dirs = osi.folders(expname)
-    startleg = ost.get_startleg(endleg, yearspan)
-    startyear = ost.get_year(startleg)
-    endyear = ost.get_year(endleg)
+    dirs = folders(expname)
+    startleg = get_startleg(endleg, yearspan)
+    startyear = get_year(startleg)
+    endyear = get_year(endleg)
     window = endyear - startyear
 
     # forecast year
-    foreyear = ost.get_forecast_year(endyear, yearleap)
+    foreyear = get_forecast_year(endyear, yearleap)
     fdate = cftime.DatetimeGregorian(foreyear, 7, 1, 12, 0, 0, has_year_zero=False)
     foredate = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
 
     # create EOF
-    ose.cdo_merge(expname, startyear, endyear)
-    ose.cdo_selname(expname, startyear, endyear, var)
-    ose.cdo_detrend(expname, startyear, endyear, var)
-    ose.cdo_EOF(expname, startyear, endyear, var, ndim)
+    cdo_merge(expname, startyear, endyear)
+    cdo_selname(expname, startyear, endyear, var)
+    cdo_detrend(expname, startyear, endyear, var)
+    cdo_EOF(expname, startyear, endyear, var, ndim)
     
     if ndim == '2D':
         pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_pattern_2D)
@@ -131,14 +122,14 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
         field = field + theta.isel(time=0,lat=0,lon=0)*laststep
 
     # save EOF
-    ose.save_EOF(expname, startyear, endyear, field, var, ndim)
+    save_EOF(expname, startyear, endyear, field, var, ndim)
 
     # add trend
-    ose.add_trend_EOF(expname, startyear, endyear, var)
+    add_trend_EOF(expname, startyear, endyear, var)
 
     # read forecast and change restart
     data = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_forecast_3D) 
-    rdata = osi.read_rebuilt(expname, endleg, endleg)
+    rdata = read_rebuilt(expname, endleg, endleg)
     data['time_counter'] = rdata['time_counter']
     varlist = ['tn', 'tb']
     for var1 in varlist:

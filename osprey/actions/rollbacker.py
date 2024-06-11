@@ -8,30 +8,21 @@ Author: Alessandro Sozza (CNR-ISAC)
 Date: Oct 2023
 """
 
-import subprocess
-import numpy as np
 import os
 import glob
 import shutil
 import yaml
-import dask
-import cftime
-import nc_time_axis
-import xarray as xr
-import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
-import osprey_io as osi
-import osprey_means as osm
-import osprey_tools as ost
-import osprey.actions.checks as osc
-import osprey_eof as ose
+
+from osprey.reader import folders
+from osprey.utils.utils import get_nemo_timestep
 
 
 def rollbacker(expname, leg):
     """ Function to rollback ECE4 run to a previous leg """
 
     # define directories
-    dirs = osi.folders(expname)
+    dirs = folders(expname)
 
     # cleaning
     # create list of files to be remove in the run folder
@@ -45,7 +36,7 @@ def rollbacker(expname, leg):
 
     # update time.step
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
-    timestep = ost.get_nemo_timestep(flist[0])
+    timestep = get_nemo_timestep(flist[0])
     tstepfile = os.path.join(dirs['exp'], 'time.step')
     with open(tstepfile, 'w', encoding='utf-8') as file:
         file.write(str(int(timestep)))

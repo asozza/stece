@@ -8,29 +8,17 @@ Author: Alessandro Sozza (CNR-ISAC)
 Date: Oct 2023
 """
 
-import subprocess
-import numpy as np
 import os
 import glob
 import shutil
-import yaml
-import dask
-import cftime
-import nc_time_axis
-import xarray as xr
-import matplotlib.pyplot as plt
-from dateutil.relativedelta import relativedelta
-import osprey_io as osi
-import osprey_means as osm
-import osprey_tools as ost
-import osprey.actions.checks as osc
-import osprey_eof as ose
+
+from osprey.reader import folders
 
 
 def replacer(expname, leg):
     """ Function to replace modified restart files in the run folder """
 
-    dirs = osi.folders(expname)
+    dirs = folders(expname)
 
     # cleaning
     browser = ['restart*.nc']
