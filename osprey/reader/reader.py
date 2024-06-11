@@ -8,20 +8,16 @@ Author: Alessandro Sozza
 Date: March 2024
 """
 
-import subprocess
 import os
 import glob
 import shutil
-import yaml
-import dask
-import cftime
-import nc_time_axis
-import netCDF4
 import numpy as np
 import xarray as xr
-import osprey_means as osm
-import osprey_tools as ost
-import osprey_actions as osa
+
+from osprey.means import elements, timemean, spacemean
+from osprey.utils.utils import get_nemo_timestep
+from osprey.utils.time import get_leg, dateDecimal
+from osprey.actions import rebuilder
 
 
 def folders(expname):
@@ -239,7 +235,7 @@ def read_averaged_timeseries_T(expname, startyear, endyear, inivar, ndim, isub, 
         var = inivar
 
     dirs = folders(expname)
-    df = osm.elements(expname)
+    df = elements(expname)
 
     # try to read averaged data
     try:
@@ -251,20 +247,20 @@ def read_averaged_timeseries_T(expname, startyear, endyear, inivar, ndim, isub, 
 
     # If averaged data not existing, read original data
     print(" Loading data ... ")
-    if iload == 'orig':
-        data = read_T(expname, startyear, endyear)
-        print(" Averaging ... ")
-        tvec = ost.dateDecimal(data['time'].values)
-        vec = osm.spacemean(expname, data[var], ndim)
-    elif iload == 'post':
-        data = read_from_cdo_T(expname, startyear, endyear, var)
-        tvec = ost.dateDecimal(data['time'].values)
-        vec = osm.spacemean(expname, data[var], ndim)
+    #if iload == 'orig':
+    data = read_T(expname, startyear, endyear)
+    print(" Averaging ... ")
+    tvec = dateDecimal(data['time'].values)
+    vec = spacemean(expname, data[var], ndim)
+    #elif iload == 'post':
+    #    data = read_from_cdo_T(expname, startyear, endyear, var)
+    #    tvec = ost.dateDecimal(data['time'].values)
+    #    vec = osm.spacemean(expname, data[var], ndim)
 
     # ONLY for 3D variables! 
     # compute var in subregions: mixed layer (mix), pycnocline (pyc), abyss (aby)
     if isub == True:
-        subvec = osm.spacemean3d_suball(expname, data[var])
+        subvec = spacemean3d_suball(expname, data[var])
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
                             attrs = {'units' : 'years', 'long_name' : 'years'}),
@@ -307,7 +303,7 @@ def read_averaged_profile_T(expname, startyear, endyear, var, iload):
     """ reader/creator of averaged profiles for T grid """
 
     dirs = folders(expname)
-    df = osm.elements(expname)
+    df = elements(expname)
 
     # try to read averaged data
     try:
@@ -319,16 +315,16 @@ def read_averaged_profile_T(expname, startyear, endyear, var, iload):
 
     # If averaged data not existing, read original data
     print(" Loading data ... ")
-    if iload == 'orig':
-        data = read_T(expname, startyear, endyear)
-        print(" Averaging ... ")
-        # and spatial averaging of the desidered variable
-        zvec = data['z'].values.flatten()
-        vec = data[var].weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
-    elif iload == 'post':
-        data = read_from_cdo_T(expname, startyear, endyear, var)
-        zvec = data['z'].values.flatten()
-        vec = data[var].weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
+    #if iload == 'orig':
+    data = read_T(expname, startyear, endyear)
+    print(" Averaging ... ")
+    # and spatial averaging of the desidered variable
+    zvec = data['z'].values.flatten()
+    vec = data[var].weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
+    #elif iload == 'post':
+    #    data = read_from_cdo_T(expname, startyear, endyear, var)
+    #    zvec = data['z'].values.flatten()
+    #    vec = data[var].weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
 
     # create xarray dataset
     ds = xr.Dataset({
@@ -351,7 +347,7 @@ def read_averaged_hovmoller_T(expname, startyear, endyear, var):
     """ reader/creator of averaged hovmöller diagram for T grid """
 
     dirs = folders(expname)
-    df = osm.elements(expname)
+    df = elements(expname)
 
     # try to read averaged data
     try:
@@ -366,8 +362,8 @@ def read_averaged_hovmoller_T(expname, startyear, endyear, var):
     data = read_T(expname, startyear, endyear)
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    tvec = ost.dateDecimal(data['time'].values)
-    vec = osm.spacemean(expname, data[var], '2D')
+    tvec = dateDecimal(data['time'].values)
+    vec = spacemean(expname, data[var], '2D')
 
     # create xarray dataset
     print(" Allocating new xarray dataset ... ")
@@ -393,7 +389,7 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
     """ reader/creator of averaged field for T grid """
 
     dirs = folders(expname)
-    df = osm.elements(expname)
+    df = elements(expname)
 
     # try to read averaged data
     try:
@@ -408,7 +404,7 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
     data = read_T(expname, startyear, endyear)
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    vec = osm.timemean(data[var])
+    vec = timemean(data[var])
 
     # create xarray dataset
     print(" Allocating new xarray dataset ... ")
@@ -451,7 +447,7 @@ def read_averaged_timeseries_local_anomaly_T(expname, startyear, endyear, refnam
     """ reader/creator of averaged timeseries of rms local anomaly for T grid """
 
     dirs = folders(expname)
-    df = osm.elements(expname)
+    df = elements(expname)
 
     # try to read averaged data
     try:
@@ -470,8 +466,8 @@ def read_averaged_timeseries_local_anomaly_T(expname, startyear, endyear, refnam
     
     print(" Averaging ... ")
     # spatial averaging of the desidered variable
-    tvec = ost.dateDecimal(data['time'].values)
-    vec = osm.spacemean(expname, delta, ndim)
+    tvec = dateDecimal(data['time'].values)
+    vec = spacemean(expname, delta, ndim)
     vec = np.power(vec,0.5)
 
     # create xarray dataset
@@ -495,7 +491,7 @@ def read_averaged_profile_local_anomaly_T(expname, startyear, endyear, refname, 
     """ reader/creator of averaged profile of rms local anomaly for T grid """
 
     dirs = folders(expname)
-    df = osm.elements(expname)    
+    df = elements(expname)    
 
     # try to read averaged data
     try:
@@ -560,8 +556,8 @@ def read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname
 
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    tvec = ost.dateDecimal(data['time'].values)
-    vec = osm.spacemean(expname, delta, '2D')
+    tvec = dateDecimal(data['time'].values)
+    vec = spacemean(expname, delta, '2D')
     vec = np.power(vec,0.5)
 
     # create xarray dataset
@@ -592,7 +588,8 @@ def read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname
 def read_restart(expname, startyear, endyear):
     """ Reader of NEMO restart files in a range of legs """
 
-    startleg,endleg = ost.get_legs(startyear, endyear)
+    startleg = get_leg(startyear)
+    endleg = get_leg(endyear)
     dirs = folders(expname)
 
     try:
@@ -603,7 +600,7 @@ def read_restart(expname, startyear, endyear):
 
     # rebuild files
     for leg in range(startleg,endleg+1):
-        osa.rebuilder(expname, leg)
+        rebuilder(expname, leg)
 
     data = read_rebuilt(expname, startleg, endleg)
 
@@ -628,7 +625,7 @@ def write_restart(expname, rdata, leg):
 
     dirs = folders(expname)
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
-    timestep = ost.get_nemo_timestep(flist[0])
+    timestep = get_nemo_timestep(flist[0])
 
     # ocean restart creation
     oceout = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')

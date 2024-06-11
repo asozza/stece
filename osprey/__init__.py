@@ -21,9 +21,9 @@ from .means import create_EOF,save_EOF
 from .utils import run_bash_command, get_expname, get_nemo_timestep
 from .utils import epoch, year_fraction, count_leap_years, count_non_leap_years
 from .utils import count_total_steps, read_legfile, get_startleg, get_startyear
-from .utils import get_forecast_year, get_year, get_leg
+from .utils import get_forecast_year, get_year, get_leg, dateDecimal
 
 __all__ = ["rebuilder", "rollbacker", "replacer", "forecaster_fit", "forecaster_EOF", "stabilizer",
            "run_bash_command", "get_expname", "get_nemo_timestep", "epoch", "year_fraction", 
-           "count_leap_years", "count_non_leap_years", "count_total_steps", 
+           "count_leap_years", "count_non_leap_years", "count_total_steps", "dateDecimal", 
            "read_legfile", "get_startleg", "get_startyear", "get_forecast_year", "get_year", "get_leg"]

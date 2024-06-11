@@ -40,6 +40,13 @@ def year_fraction(date):
 
     return  date.year + Frac
 
+def dateDecimal(date):
+    """ apply yearFraction to an array of dates """
+
+    x1 = [yearFraction(t) for t in date]
+
+    return x1
+
 def count_leap_years(year1, year2):
     """ Compute number of leap years (bissextile) """
     
