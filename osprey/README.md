@@ -20,15 +20,17 @@ The "Ocean Spin-uP acceleratoR for Earth climatologY" (OSPREY) is a suite of too
 
 ## Documentation
 
-The code is divided into ? groups of functions
+The code is divided into groups of functions
 
-- [ ] io: input/output funtions for reading and writing
+- [ ] reader: for handling input & reading
 - [ ] means: mathematical operations
-- [ ] tools: management
-- [ ] actions: 
-- [ ] checks: 
-- [ ] graphs: 
-- [ ] diagnostics:
+- [ ] utils: management
+- [ ] actions: actions & checks
+- [ ] graphics: for plotting
+- [ ] diagnostics: organized plots for scientific production
+- [ ] launch: executable scripts
+- [ ] notebooks: provide some jupyter notebooks
+
 
 ## Examples
 

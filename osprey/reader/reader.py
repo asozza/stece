@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
---------------------------------------------------------
-Osprey library for i/o operations
+Reader module
 
-Authors
-Alessandro Sozza (CNR-ISAC, 2023-2024)
+Author: Alessandro Sozza
+Date: March 2024
 """
 
 import subprocess

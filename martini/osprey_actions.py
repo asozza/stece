@@ -7,7 +7,7 @@ OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
 Osprey library for actions
 
 Authors
-Alessandro Sozza (CNR-ISAC, Mar 2024)
+Alessandro Sozza (CNR-ISAC, 2023-2024)
 """
 
 import subprocess
@@ -16,21 +16,22 @@ import os
 import glob
 import shutil
 import yaml
-import argparse
-import random
+import dask
+import cftime
+import nc_time_axis
 import xarray as xr
 import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
-from sklearn.linear_model import LinearRegression
-import osprey_io as io
+import osprey_io as osi
 import osprey_means as osm
+import osprey_tools as ost
+import osprey_checks as osc
+import osprey_eof as ose
 
+def rebuilder(expname, leg):
+    """ Function to rebuild NEMO restart """
 
-# action: rebuild
-def rebuild_nemo(expname, leg):
-    """ Minimal nemo rebuilder in a temporary path """
-
-    dirs = io.folders(expname)
+    dirs = osi.folders(expname)
     
     os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
 
@@ -39,7 +40,7 @@ def rebuild_nemo(expname, leg):
     for kind in ['restart', 'restart_ice']:
         print(' Processing ' + kind)
         flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + kind + '_????.nc'))
-        tstep = io.get_nemo_timestep(flist[0])
+        tstep = ost.get_nemo_timestep(flist[0])
 
         for filename in flist:
             destination_path = os.path.join(dirs['tmp'], str(leg).zfill(3), os.path.basename(filename))
@@ -62,13 +63,12 @@ def rebuild_nemo(expname, leg):
             os.remove(destination_path)
 
     # read timestep
-    filelist = glob.glob(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'))
-    
-    #timestep = io.get_nemo_timestep(filelist[0])
+    #filelist = glob.glob(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'))    
+    #timestep = ost.get_nemo_timestep(filelist[0])
 
     # copy restart
-    #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], 'restart.nc'))
-    #shutil.copy(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], 'restart_ice.nc'))
+    #shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc'))
+    #shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc'))
 
     # remove 
     #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
@@ -78,13 +78,13 @@ def rebuild_nemo(expname, leg):
     for file in flist:
         os.remove(file)
 
+    return None
 
-# action rollback
-def rollback_ece4(expname, leg):
-    """ Rollback ECE4 run to a previous leg """
+def rollbacker(expname, leg):
+    """ Function to rollback ECE4 run to a previous leg """
 
     # define directories
-    dirs = io.folders(expname)
+    dirs = osi.folders(expname)
 
     # cleaning
     # create list of files to be remove in the run folder
@@ -98,7 +98,7 @@ def rollback_ece4(expname, leg):
 
     # update time.step
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
-    timestep = io.get_nemo_timestep(flist[0])
+    timestep = ost.get_nemo_timestep(flist[0])
     tstepfile = os.path.join(dirs['exp'], 'time.step')
     with open(tstepfile, 'w', encoding='utf-8') as file:
         file.write(str(int(timestep)))
@@ -161,12 +161,13 @@ def rollback_ece4(expname, leg):
                 print('Removing output file', file)
                 os.remove(file)
 
+    return None
 
-# action: replace 
-def replace_nemo(expname, leg):
-    """ Replace NEMO rebuilt field in the run folder """
 
-    dirs = io.folders(expname)
+def replacer(expname, leg):
+    """ Function to replace modified restart files in the run folder """
+
+    dirs = osi.folders(expname)
 
     # cleaning
     browser = ['restart*.nc']
@@ -186,216 +187,169 @@ def replace_nemo(expname, leg):
         newfile = os.path.join(dirs['exp'], file)
         print("Linking rebuilt NEMO restart", file)            
         os.symlink(resfile, newfile)
-
-
-# forecasting action
-def forecast_T_ave(expname, leg, yearspan, yearleap):
-    """ Forecast for T grid using global mean """
-
-    # load data
-    df = osm.elements(expname)
-    startyear, endyear = io.start_end_years(expname, yearspan, leg)
-    data = io.readmf_T(expname, startyear, endyear)
-
-    # averaged variables
-    x = osm.dateDecimal(data['time'].values.flatten())
-    y = osm.movave(data['to'].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
-
-    # fit / forecast
-    xf = endyear + yearleap
-    mp,qp = osm.linear_fit(x, y)
-    yf = mp*xf + qp
-    print(' Projected Temperature: ',yf)
-
-    # create new restart field using forecast
-    df['vol'] = df['vol'].rename({'z': 'nav_lev'})
-    rdata = io.read_restart(expname, leg)
-    varlist = ['tn', 'tb']
-    for var in varlist:
-        tef = rdata[var].where(rdata[var]!=0.0).isel(time_counter=0).weighted(df['vol']).mean(dim=['nav_lev', 'y', 'x']).values
-        rdata[var] = xr.where(rdata[var]!=0.0, rdata[var] - tef[0] + yf, 0.0)
-
-    return rdata
-
-# relative change based on the global temperature
-def forecast_T_rel(expname, leg, yearspan, yearleap):
-    """ Forecast for T grid using relative change based on global mean """
-
-    # load data
-    df = osm.elements(expname)
-    startyear, endyear = io.start_end_years(expname, yearspan, leg)
-    data = io.readmf_T(expname, startyear, endyear)
     
-    # averaged variables
-    x = osm.dateDecimal(data['time'].values.flatten())
-    y = osm.movave(data['to'].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+    return None
 
-    # fit / forecast
-    xf = endyear+yearleap
-    mp,qp = osm.linear_fit(x, y)
-    yf = mp*xf + qp    
-    print(' Projected Temperature: ',yf)
 
-    # create new restart field using forecast
-    rdata = io.read_restart(expname, leg)
-    leg0 = int(leg)-int(yearspan)
-    rdata0 = io.read_restart(expname, leg0)
-    df['vol'] = df['vol'].rename({'z': 'nav_lev'})
-    varlist = ['tn', 'tb']
-    for var in varlist:
-        tef = rdata[var].where(rdata[var]!=0.0).isel(time_counter=0).weighted(df['vol']).mean(dim=['nav_lev', 'y', 'x']).values
-        trel = abs(yf-tef[0])/yf
-        delta = xr.where(rdata[var]!=0, rdata[var].values-rdata0[var].values, 0.0)
-        rdata[var] = xr.where(delta>0, (1+trel)*rdata[var], (1-trel)*rdata[var])
+def forecaster_fit(expname, var, endleg, yearspan, yearleap):
+    """ Function to forecast local temperature using linear fit of output files """
 
-    return rdata
+    # get time interval
+    endyear = ost.get_year(endleg)
+    startleg = ost.get_startleg(endleg, yearspan)
+    startyear = ost.get_startyear(endyear, yearspan)
 
-#
-def forecast_T_interp(expname, leg, yearspan, yearleap):
-    """ Forecast for T grid using interpolation """
-
-    startyear, endyear = io.start_end_years(expname, yearspan, leg)    
-    rdata = io.read_restart(expname, leg)
-    leg0 = int(leg)-int(yearspan)    
-    rdata0 = io.read_restart(expname, leg0)
-
-    varlist = ['tn', 'tb']
-    for var in varlist:
-        dxt = rdata[var].values+yearleap*(rdata[var].values-rdata0[var].values)/(endyear-startyear)
-        rdata[var] = xr.where(rdata[var]!=0, dxt, 0.0)
-
-    return rdata
-
-def forecast_T_local_fit(expname, leg, yearspan, yearleap):
-    """ Forecast for T grid using local fit """
-
-    print(' loading data .... ')
+    # get forecast year
+    foreyear = ost.get_forecast_year(endyear,yearleap)
+    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 12, 0, 0, has_year_zero=False)
+    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
 
     # load data
-    endyear = 1990+int(leg)-2
-    startyear = endyear - yearspan
-    xf = endyear+yearleap
-    data = io.readmf_T(expname, startyear, endyear)
-    x = osm.dateDecimal(data['time'].values.flatten())
+    data = osi.read_T(expname, startyear, endyear)
 
-    print(' flattening and reshapening .... ')
-
-    # flattened arrays
-    ds = data['to'].isel(time=0)
-    ds_flat = ds.values.flatten()
-    to_flat = data['to'].values.flatten()
-
-    to_reshaped = to_flat.reshape(len(x),-1)
-    indices = ~np.isnan(to_reshaped)
-    indices_flat = ~np.isnan(to_flat)
-    to_valid = to_flat[indices_flat]
-    size_valid = to_valid.shape[0]/len(x)
-    to_wonan = np.zeros((len(x), int(size_valid)))
-    to_wonan = to_reshaped[:, indices[0]]
-
-    # fit and predict
-
-    print(' forecasting .... ')
-
-    to_pred = []
-    model = LinearRegression()
-    for i in range(to_wonan.shape[1]):
-        #x_row = x_wonan[:, i].reshape(len(x),-1)
-        x_row = np.array(x).reshape(len(x),-1)
-        y_row = to_wonan[:, i].reshape(len(x),-1)
-        model.fit(x_row, y_row)
-        yf = model.predict([[xf]])
-        to_pred.append(yf[0][0])
-
-    print(' countercheck T<-2deg .... ')
-
-    # check T < -2 deg
-    y_last = []
-    for i in range(to_wonan.shape[1]):
-        y_last.append(to_wonan[-1, i])
-    k=0
-    for i in range(len(to_pred)):
-        if to_pred[i] < -1.8:
-            to_pred[i] = y_last[i]
-            k += 1
-    print(' Fraction of points below -2deg = ',k/len(to_pred))
-
-    check_fit=True
-    if check_fit:
-        i=random.randint(0, to_wonan.shape[1]-1)
-        kji = osm.flatten_to_triad(i, 31, 148, 180)
-        model = LinearRegression()
-        x_row = np.array(x).reshape(len(x),-1)
-        y_row = to_wonan[:,i].reshape(len(x),-1)
-        model.fit(x_row, y_row)
-        mp = model.coef_[0][0]
-        qp = model.intercept_[0]
-        yf = model.predict([[xf]])
-        ym = osm.movave(y_row.flatten(),12).reshape(len(x),-1)
-        yp = []; xp = []
-        for i in range(len(x)*2):
-            xp.append(startyear+i/12.)
-            yp.append(mp*(startyear+i/12.)+qp)
-        plt.plot(x_row,y_row)
-        plt.plot(x,ym)
-        plt.plot(xp,yp)
-        plt.scatter(xf,yf, color='green')
-        plt.ylabel('temperature')
-        plt.xlabel('time')
-        plt.title('')
-        plt.title(' (k,j,i) = {}'.format(kji))
-        plt.gca().legend(('local trend','moving average','fit','projected value'))
-
-    # fill new field
-    theta = []
-    j = 0
-    for i in range(len(ds_flat)):
-        if indices[0][i]:
-            theta.append(to_pred[j])
-            j += 1
-        else:
-            theta.append(np.nan)
-
-    # reshape    
-    te = np.array(theta).reshape((len(ds['z']),len(ds['y']),len(ds['x'])))
+    # fit
+    p = data[var].polyfit(dim='time', deg=1, skipna=True)
+    yf = xr.polyval(xf, p.polyfit_coefficients)
+    yf = yf.rename({'time': 'time_counter', 'z': 'nav_lev'})
+    yf = yf.drop_indexes({'x', 'y'})
+    yf = yf.reset_coords({'x', 'y'}, drop=True)
     
-    # create new restart field using the forecast
-    rdata = io.read_restart(expname, leg)
+    rdata = osi.read_rebuilt(expname, endleg, endleg)
     varlist = ['tn', 'tb']
-    for var in varlist:
-        rdata[var] = xr.where(rdata[var]!=0.0, te, 0.0)
+    for var1 in varlist:
+        rdata[var1] = xr.where(rdata[var1] !=0, yf.values, 0.0)
 
     return rdata
 
-# manipulation using EOF
-def forecast_T_EOF(expname, leg, yearspan, yearleap):
-    """ Forecast for T grid using EOF """
 
-    endyear = 1990+int(leg)-2
-    startyear = endyear-yearspan
-    foreyear = endyear+yearleap
+def forecaster_fit_re(expname, var, endleg, yearspan, yearleap):
+    """ Function to forecast local temperature using linear fit of restart files """
 
-    dirs = io.folders(expname)
-    fldlist = []
-    for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
-        matching_files = glob.glob(pattern)
-        fldlist.extend(matching_files)
+    # get time interval
+    endyear = ost.get_year(endleg)
+    startleg = ost.get_startleg(endleg, yearspan)
+    startyear = ost.get_startyear(endyear, yearspan)
 
-    var='thetao'
-    fldcat = os.path.join(dirs['tmp'], f"{expname}_{startyear}-{endyear}")
-    fld = os.path.join(dirs['tmp'], f"{var}_{startyear}-{endyear}")
-    flda = os.path.join(dirs['tmp'], f"{var}_anomaly_{startyear}-{endyear}")
-    fldcov = os.path.join(dirs['tmp'], f"{var}_variance_{startyear}-{endyear}")
-    fldpat = os.path.join(dirs['tmp'], f"{var}_pattern_{startyear}-{endyear}")
-    timeseries = os.path.join(dirs['tmp'], f"{var}_timeseries_{startyear}-{endyear}")
+    # get forecast year
+    foreyear = ost.get_forecast_year(endyear,yearleap)
+    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 12, 0, 0, has_year_zero=False)
+    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
 
-    io.run_cdo(f"cdo cat {fldlist} {fldcat}")
-    io.run_cdo(f"cdo yearmean -selname,{var} {fldcat} {fld}")
-    io.run_cdo(f"cdo sub {fld} -timmean {fld} {flda}")
-    io.run_cdo(f"cdo eof,10 {flda} {fldcov} {fldpat}")
-    io.run_cdo(f"cdo eofcoeff {fldpat} {flda} {timeseries}")
+    # load restarts
+    rdata = osi.read_restart(expname, startyear, endyear)
+
+    # fit
+    yf = {}
+    varlist = ['tn', 'tb']
+    for vars in varlist:   
+        p = rdata[var].polyfit(dim='time', deg=1, skipna=True)
+        yf[vars] = xr.polyval(xf, p.polyfit_coefficients)
+    yf = yf.rename({'time': 'time_counter', 'z': 'nav_lev'})
+    yf = yf.drop_indexes({'x', 'y'})
+    yf = yf.reset_coords({'x', 'y'}, drop=True)
+
+    rdata = osi.read_rebuilt(expname, endleg, endleg)
+    for vars in varlist: 
+        #yf[var] = yf[var].where( yf < -1.8, rdata[var], yf[var])
+        rdata[vars] = yf[vars]
 
     return rdata
-# 
 
+# add vfrac: percetuage of EOF to consider: 1.0 -> all
+def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
+    """ Function to forecast temperature field using EOF """
+
+    dirs = osi.folders(expname)
+    startleg = ost.get_startleg(endleg, yearspan)
+    startyear = ost.get_year(startleg)
+    endyear = ost.get_year(endleg)
+    window = endyear - startyear
+
+    # forecast year
+    foreyear = ost.get_forecast_year(endyear, yearleap)
+    fdate = cftime.DatetimeGregorian(foreyear, 7, 1, 12, 0, 0, has_year_zero=False)
+    foredate = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
+
+    # create EOF
+    ose.cdo_merge(expname, startyear, endyear)
+    ose.cdo_selname(expname, startyear, endyear, var)
+    ose.cdo_detrend(expname, startyear, endyear, var)
+    ose.cdo_EOF(expname, startyear, endyear, var, ndim)
+    
+    if ndim == '2D':
+        pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_pattern_2D)
+    if ndim == '3D':
+        pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_pattern_3D)
+    field = pattern.isel(time=0)*0
+
+    for i in range(window):        
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_timeseries_{startyear}-{endyear}_0000{i}.nc")
+        if ndim == '2D':
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=ose.preproc_timeseries_2D)        
+        if ndim == '3D':
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=ose.preproc_timeseries_3D)        
+        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        theta = xr.polyval(foredate, p[f"{var}_polyfit_coefficients"])
+        laststep = pattern.isel(time=i)
+        field = field + theta.isel(time=0,lat=0,lon=0)*laststep
+
+    # save EOF
+    ose.save_EOF(expname, startyear, endyear, field, var, ndim)
+
+    # add trend
+    ose.add_trend_EOF(expname, startyear, endyear, var)
+
+    # read forecast and change restart
+    data = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_forecast_3D) 
+    rdata = osi.read_rebuilt(expname, endleg, endleg)
+    data['time_counter'] = rdata['time_counter']
+    varlist = ['tn', 'tb']
+    for var1 in varlist:
+        rdata[var1] = data[var]
+
+    return rdata
+
+
+def water_column_stabilizer(nc_file):
+    """ stabilizer of temperature and salinity profiles  """    
+
+    # Open the NetCDF file
+    ds = xr.open_dataset(nc_file)
+    
+    # Extract temperature and salinity fields
+    temperature = ds['temperature']
+    salinity = ds['salinity']
+    
+    # create density field using the state equation: alpha*T+beta*S?
+    rho = temperature + salinity
+
+    # Calculate the vertical derivative of temperature and salinity
+    dTdz = temperature.diff('depth') / temperature['depth'].diff('depth')
+    dSdz = salinity.diff('depth') / salinity['depth'].diff('depth')
+    
+    # Define a threshold for instability (this is an example, you may need to adjust it)
+    instability_threshold = 0  # Example threshold, needs to be defined appropriately
+    
+    # Identify unstable zones
+    unstable_zones = (dTdz > instability_threshold)
+
+    # Correct unstable zones by homogenizing temperature
+    for i in range(temperature.shape[0] - 1):
+        unstable_layer = unstable_zones.isel(depth=i)
+        if unstable_layer.any():
+            # Calculate mean temperature for the unstable layer
+            temp_mean = (temperature.isel(depth=i) + temperature.isel(depth=i + 1)) / 2
+            
+            # Apply the mean temperature to the unstable layer
+            temperature[i:i+2] = temp_mean
+    
+    # Update the dataset with the corrected temperature
+    ds['temperature'] = temperature
+    
+    # Save the modified dataset to a new NetCDF file
+    ds.to_netcdf('corrected_' + nc_file)
+    
+    # Close the dataset
+    ds.close()
+
+    return None
