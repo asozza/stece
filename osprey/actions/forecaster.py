@@ -12,11 +12,23 @@ import numpy as np
 import os
 import cftime
 import xarray as xr
+from copy import deepcopy
 
 from osprey.reader import folders
 from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
 from osprey.reader import read_T, read_rebuilt, read_restart
 from osprey.means.eof import cdo_merge, cdo_selname, cdo_detrend, cdo_EOF, save_EOF, add_trend_EOF
+from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D, preproc_forecast_3D
+
+
+def _forecast_xarray(foreyear):
+    """Get the xarray for the forecast time"""
+    
+    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 0, 0, 0, has_year_zero=False)
+    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])},
+                      attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
+
+    return xf
 
 
 def forecaster_fit(expname, var, endleg, yearspan, yearleap):
@@ -24,13 +36,11 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
 
     # get time interval
     endyear = get_year(endleg)
-    startleg = get_startleg(endleg, yearspan)
     startyear = get_startyear(endyear, yearspan)
 
     # get forecast year
     foreyear = get_forecast_year(endyear,yearleap)
-    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 12, 0, 0, has_year_zero=False)
-    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
+    xf = _forecast_xarray(foreyear)
 
     # load data
     data = read_T(expname, startyear, endyear)
@@ -50,38 +60,35 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     return rdata
 
 
-def forecaster_fit_re(expname, var, endleg, yearspan, yearleap):
+def forecaster_fit_re(expname, endleg, yearspan, yearleap,  varlist=['tn', 'tb']):
     """ Function to forecast local temperature using linear fit of restart files """
 
     # get time interval
     endyear = get_year(endleg)
-    startleg = get_startleg(endleg, yearspan)
     startyear = get_startyear(endyear, yearspan)
 
     # get forecast year
     foreyear = get_forecast_year(endyear,yearleap)
-    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 12, 0, 0, has_year_zero=False)
-    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
+    xf = _forecast_xarray(foreyear)
 
     # load restarts
     rdata = read_restart(expname, startyear, endyear)
 
     # fit
-    yf = {}
-    varlist = ['tn', 'tb']
-    for vars in varlist:   
-        p = rdata[var].polyfit(dim='time', deg=1, skipna=True)
-        yf[vars] = xr.polyval(xf, p.polyfit_coefficients)
-    yf = yf.rename({'time': 'time_counter', 'z': 'nav_lev'})
-    yf = yf.drop_indexes({'x', 'y'})
-    yf = yf.reset_coords({'x', 'y'}, drop=True)
+    yf = deepcopy(rdata)
+    for variable in varlist:
+        p = rdata[variable].polyfit(dim='time', deg=1, skipna=True)
+        yf[variable].data = xr.polyval(xf, p.polyfit_coefficients).data
+    #yf = yf.rename({'time': 'time_counter', 'z': 'nav_lev'})
+    #yf = yf.drop_indexes({'x', 'y'})
+    #yf = yf.reset_coords({'x', 'y'}, drop=True)
 
-    rdata = read_rebuilt(expname, endleg, endleg)
-    for vars in varlist: 
+    #rdata = read_rebuilt(expname, endleg, endleg)
+    #for variable in varlist: 
         #yf[var] = yf[var].where( yf < -1.8, rdata[var], yf[var])
-        rdata[vars] = yf[vars]
+    #    rdata[variable] = yf[variable]
 
-    return rdata
+    return yf
 
 # add vfrac: percetuage of EOF to consider: 1.0 -> all
 def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
@@ -95,8 +102,7 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
 
     # forecast year
     foreyear = get_forecast_year(endyear, yearleap)
-    fdate = cftime.DatetimeGregorian(foreyear, 7, 1, 12, 0, 0, has_year_zero=False)
-    foredate = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])}, attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
+    xf = _forecast_xarray(foreyear)
 
     # create EOF
     cdo_merge(expname, startyear, endyear)
@@ -105,19 +111,21 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
     cdo_EOF(expname, startyear, endyear, var, ndim)
     
     if ndim == '2D':
-        pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_pattern_2D)
+        pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"),
+                                    use_cftime=True, preprocess=preproc_pattern_2D)
     if ndim == '3D':
-        pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_pattern_3D)
+        pattern = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc"),
+                                    use_cftime=True, preprocess=preproc_pattern_3D)
     field = pattern.isel(time=0)*0
 
-    for i in range(window):        
+    for i in range(window):      
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_timeseries_{startyear}-{endyear}_0000{i}.nc")
         if ndim == '2D':
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=ose.preproc_timeseries_2D)        
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_2D)
         if ndim == '3D':
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=ose.preproc_timeseries_3D)        
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
-        theta = xr.polyval(foredate, p[f"{var}_polyfit_coefficients"])
+        theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
         laststep = pattern.isel(time=i)
         field = field + theta.isel(time=0,lat=0,lon=0)*laststep
 
@@ -128,7 +136,8 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
     add_trend_EOF(expname, startyear, endyear, var)
 
     # read forecast and change restart
-    data = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc"), use_cftime=True, preprocess=ose.preproc_forecast_3D) 
+    data = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc"), 
+                             use_cftime=True, preprocess=preproc_forecast_3D)
     rdata = read_rebuilt(expname, endleg, endleg)
     data['time_counter'] = rdata['time_counter']
     varlist = ['tn', 'tb']
