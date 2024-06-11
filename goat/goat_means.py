@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-GOAT: Global Ocean & Atmosphere Trends
-------------------------------------------------------
+  ____   ____     _   _____
+ / __/  / __ \   / \ |_   _|
+| |  _ | |  | | / _ \  | |  
+| |_| || |  | |/ /__ \ | |  
+ \____| \____//_/   \_\|_|  
+
 GOAT library for averaging operations and other means
 
 Authors
@@ -14,10 +18,10 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
-import dask
+import pandas as pd
+from sklearn.linear_model import LinearRegression
 import goat_tools as gt
 import goat_io as io
-
 
 # define differential forms for integrals
 def elements(expname):
@@ -33,7 +37,8 @@ def elements(expname):
 
     return df
 
-def local_cost_function(expname, year, field, idx):
+# interpolated moving average
+def intave(xdata, ydata, N):
 
     data = io.read_T(expname=expname, year=year)
     delta = gt.cost(data, field, idx)
@@ -53,6 +58,7 @@ def local_cost_function(expname, year, field, idx):
 ##################################################################################
 # AVERAGES
 
+# moving/running average
 def movave(ydata, N):
     """ moving average """
 
@@ -62,9 +68,9 @@ def movave(ydata, N):
 
     return y_smooth
 
+# cumulative average
 def cumave(ydata):
-    """ cumulative average """
-
+        
     ave = np.cumsum(ydata)
     for i in range(1,len(ydata)):
         ave[i] = ave[i]/(i+1)

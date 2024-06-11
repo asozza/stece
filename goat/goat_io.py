@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-GOAT: Global Ocean & Atmosphere Trends
-------------------------------------------------------
+  ____   ____     _   _____
+ / __/  / __ \   / \ |_   _|
+| |  _ | |  | | / _ \  | |  
+| |_| || |  | |/ /__ \ | |  
+ \____| \____//_/   \_\|_|  
+
 GOAT library for i/o operations
 
 Authors
@@ -14,18 +18,12 @@ import subprocess
 import os
 import glob
 import yaml
-import dask
-import cftime
-import netCDF4
 import numpy as np
 import xarray as xr
-import goat_means as gm
-import goat_tools as gt
-
+import cftime
+from sklearn.linear_model import LinearRegression
 
 def folders(expname):
-    """ define paths and folders """
-
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
         'nemo': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "nemo"),
@@ -36,7 +34,6 @@ def folders(expname):
 
     return dirs
 
-##########################################################################################
 # Readers of NEMO output
 
 def readmf_T(expname, startyear, endyear):
@@ -71,7 +68,6 @@ def read_T(expname, year):
     dirs = folders(expname)
     filelist = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
-    
     return data
 
 def read_ice(expname, year):
@@ -80,7 +76,6 @@ def read_ice(expname, year):
     dirs = folders(expname)
     filelist = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
     data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice, use_cftime=True)
-    
     return data
 
 def read_domain(expname):
