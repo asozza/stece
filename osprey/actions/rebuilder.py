@@ -4,7 +4,7 @@
 """
 Rebuilder
 
-Author: Alessandro Sozza (CNR-ISAC) 
+Authors: Paolo Davini, Alessandro Sozza (CNR-ISAC) 
 Date: Oct 2023
 """
 

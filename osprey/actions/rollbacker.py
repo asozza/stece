@@ -4,7 +4,7 @@
 """
 Rollacker
 
-Author: Alessandro Sozza (CNR-ISAC) 
+Author: Paolo Davini, Alessandro Sozza (CNR-ISAC) 
 Date: Oct 2023
 """
 

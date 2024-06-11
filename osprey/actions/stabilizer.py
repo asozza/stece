@@ -19,6 +19,21 @@ import dask
 import cftime
 import nc_time_axis
 
+def _eos(T, S, z):
+    """ seawater equation of state """
+
+    a0 = 1.6650e-1
+    b0 = 7.6554e-1
+    l1 = 5.9520e-2
+    l2 = 5.4914e-4
+    nu = 2.4341e-3
+    m1 = 1.4970e-4
+    m2 = 1.1090e-5
+    R0 = 1026.0
+
+    R = (-a0*(1.0+0.5*l1*(T-10.)+m1*z)*(T-10.)+b0*(1.0-0.5*l2*(S-35.)-m2*z)*(S-35.)-nu*(T-10.)*(S-35.))/R0
+
+    return R
 
 def stabilizer(nc_file):
     """ stabilizer of temperature and salinity profiles  """    

@@ -25,57 +25,87 @@ from osprey.actions.rebuilder import rebuilder
 ##########################################################################################
 # Readers of NEMO output
 
+def _nemodict(grid, freq):
+    """Dictionary of NEMO output fields"""
+
+    gridlist = ["T", "U", "V", "W"]    
+    if grid in gridlist:
+        grid_lower = grid.lower()
+        return {
+            grid: {
+                "preproc": preproc_nemo,
+                "format": f"oce_{freq}_{grid}",
+                "x_grid": f"x_grid_{grid}",
+                "y_grid": f"y_grid_{grid}",
+                "nav_lat": f"nav_lat_grid_{grid}",
+                "nav_lon": f"nav_lon_grid_{grid}",
+                "depth": f"depth{grid_lower}",
+                "x_grid_inner": f"x_grid_{grid}_inner",
+                "y_grid_inner": f"y_grid_{grid}_inner"
+            }
+        }
+    elif grid == "ice":
+        return {
+            "ice": {
+                "preproc": preproc_nemo_ice,
+                "format": f"ice_{freq}"
+            }
+        }
+    else:
+        raise ValueError(f"Unsupported grid type: {grid}")
+
+
+def preproc_nemo(data, grid):
+    """General preprocessing routine for NEMO data based on grid type"""
+    
+    grid_mappings = _nemodict(grid, None)[grid]  # None for freq as it is not used here
+
+    data = data.rename_dims({grid_mappings["x_grid"]: 'x', grid_mappings["y_grid"]: 'y'})
+    data = data.rename({
+        grid_mappings["nav_lat"]: 'lat', 
+        grid_mappings["nav_lon"]: 'lon', 
+        grid_mappings["depth"]: 'z', 
+        'time_counter': 'time'
+    })
+    data = data.swap_dims({grid_mappings["x_grid_inner"]: 'x', grid_mappings["y_grid_inner"]: 'y'})
+    data = data.drop_vars(['time_centered'], errors='ignore')
+    data = data.drop_dims(['axis_nbounds'], errors='ignore')
+
+    return data
+
+
+def preproc_nemo_ice(data):
+    """Preprocessing routine for NEMO for ice"""
+
+    data = data.rename({'time_counter': 'time'})
+    
+    return data
+
+
 def read_nemo(expname, startyear, endyear, grid="T", freq="1m"):
     """Main function to read nemo data"""
 
     dirs = folders(expname)
+    dict = _nemodict(grid, freq)
+
     filelist = []
-
-    mapping_dictionary = {
-        "T": {
-            "preproc": preproc_nemo_T,
-            "format": f"oce_{freq}_{grid}"
-        },
-        "ice": {
-            "preproc": preproc_nemo_ice,
-            "format": f"ice_{freq}"
-        }
-    }
-
     for year in range(startyear, endyear+1):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_{mapping_dictionary[grid]['format']}_{year}-{year}.nc")
+        pattern = os.path.join(dirs['nemo'], f"{expname}_{dict[grid]['format']}_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     logging.info('Files to be loaded %s', filelist)
-    data = xr.open_mfdataset(filelist, preprocess=mapping_dictionary[grid]["preproc"], use_cftime=True)
+    data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
 
     return data
 
-    
 
-def read_T(expname, startyear, endyear):
-    """ read T_grid fields """
+##########################################################################################
+# Reader of NEMO domain
 
-    dirs = folders(expname)
-    filelist = []
-    for year in range(startyear, endyear+1):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
-        matching_files = glob.glob(pattern)
-        filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
+def preproc_nemo_domain(data):
+    """ preprocessing routine for nemo domain """
 
-    return data
-
-def read_ice(expname, startyear, endyear):
-    """ read multiple ice fields """
-
-    dirs = folders(expname)
-    filelist = []
-    for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
-        matching_files = glob.glob(pattern)
-        filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice, use_cftime=True)
+    data = data.rename({'time_counter': 'time'})
 
     return data
 
@@ -89,64 +119,21 @@ def read_domain(expname):
 
     return domain
 
+def elements(expname):
+    """ define differential forms for integrals """
+
+    df = {}
+    domain = read_domain(expname=expname)
+    df['vol'] = domain['e1t']*domain['e2t']*domain['e3t_0']
+    df['area'] = domain['e1t']*domain['e2t']
+    df['dx'] = domain['e1t']
+    df['dy'] = domain['e2t']
+    df['dz'] = domain['e3t_0']
+
+    return df
+
 
 ##########################################################################################
-# Pre-processing options for NEMO readers
-
-def preproc_nemo_domain(data):
-    """ preprocessing routine for nemo domain """
-
-    data = data.rename({'time_counter': 'time'})
-
-    return data
-
-def preproc_nemo_T(data):
-    """ preprocessing routine for nemo for T grid """
-
-    data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
-    data = data.rename({'nav_lat_grid_T': 'lat', 'nav_lon_grid_T': 'lon'})
-    data = data.rename({'deptht': 'z', 'time_counter': 'time'})
-    data = data.swap_dims({'x_grid_T_inner': 'x', 'y_grid_T_inner': 'y'})
-    data = data.drop({'time_centered'})
-    data = data.drop_dims({'axis_nbounds'})
-        
-    return data
-
-def preproc_nemo_U(data):
-    """ preprocessing routine for nemo for U grid """
-
-    data = data.rename_dims({'x_grid_U': 'x', 'y_grid_U': 'y'})
-    data = data.rename({'depthu': 'z', 'time_counter': 'time'})
-    data = data.swap_dims({'x_grid_U_inner': 'x', 'y_grid_U_inner': 'y'})
-    
-    return data
-
-def preproc_nemo_V(data):
-    """ preprocessing routine for nemo for V grid """
-
-    data = data.rename_dims({'x_grid_V': 'x', 'y_grid_V': 'y'})
-    data = data.rename({'depthv': 'z', 'time_counter': 'time'})
-    data = data.swap_dims({'x_grid_V_inner': 'x', 'y_grid_V_inner': 'y'})
-    
-    return data
-
-def preproc_nemo_W(data):
-    """ preprocessing routine for nemo for W grid """
-
-    data = data.swap_dims({'x_grid_W_inner': 'x', 'y_grid_W_inner': 'y'})
-    data = data.rename_dims({'x_grid_W': 'x', 'y_grid_W': 'y'})
-    data = data.rename({'depthw': 'z', 'time_counter': 'time'})
-
-    return data
-
-def preproc_nemo_ice(data):
-    """ preprocessing routine for nemo for ice """
-
-    data = data.rename({'time_counter': 'time'})
-    
-    return data
-
-
 ##########################################################################################
 # Readers of averaged data: timeseries, profiles, maps, hovmoller, pdfs etc ...
 
@@ -653,15 +640,3 @@ def write_restart(expname, rdata, leg):
 
 ##########################################################################################
 
-def elements(expname):
-    """ define differential forms for integrals """
-
-    df = {}
-    domain = read_domain(expname=expname)
-    df['vol'] = domain['e1t']*domain['e2t']*domain['e3t_0']
-    df['area'] = domain['e1t']*domain['e2t']
-    df['dx'] = domain['e1t']
-    df['dy'] = domain['e2t']
-    df['dz'] = domain['e3t_0']
-
-    return df

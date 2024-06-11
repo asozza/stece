@@ -2,28 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
---------------------------------------------------------
-Osprey library for mathematical means
+Means module
 
-Authors
-Alessandro Sozza (CNR-ISAC, Mar 2024)
+Author: Alessandro Sozza (CNR-ISAC)
+Date: Mar 2024
 """
 
 import numpy as np
 from osprey.utils.utils import get_expname
 
-#################################################################################
-# MATRIX & FIELD MANIPULATION
-
-def flatten_to_triad(m, nk, nj, ni):
-    """ recover triad indexes from flatten array length """
-
-    k = m // (ni * nj)
-    j = (m - k * ni * nj) // ni
-    i = m - k * ni * nj - j * ni
-
-    return k, j, i
 
 #################################################################################
 # FOR OPERATIONS ON THE DOMAIN: INTEGRALS AND SUBREGIONS

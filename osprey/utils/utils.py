@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
---------------------------------------------------------
-Osprey library for tools: bash operations and path management 
+Utilities module
 
-Authors
-Alessandro Sozza (CNR-ISAC, 2023-2024)
+Author: Alessandro Sozza (CNR-ISAC) 
+Date: May 2024
 """
 
 import os
@@ -38,3 +36,11 @@ def get_nemo_timestep(filename):
 
     return os.path.basename(filename).split('_')[1]
 
+def flatten_to_triad(m, nj, ni):
+    """ Recover triad indexes from flatten array length """
+
+    k = m // (ni * nj)
+    j = (m - k * ni * nj) // ni
+    i = m - k * ni * nj - j * ni
+
+    return k, j, i
