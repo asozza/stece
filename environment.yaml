@@ -18,3 +18,4 @@ dependencies:
   - matplotlib
   - netcdf4
   - ruamel.yaml
+  - nc-time-axis
