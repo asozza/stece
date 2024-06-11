@@ -14,27 +14,11 @@ import shutil
 import numpy as np
 import xarray as xr
 
-from osprey.means import elements, timemean, spacemean
+from osprey.means.means import timemean, spacemean
 from osprey.utils.utils import get_nemo_timestep
+from osprey.utils.folders import folders
 from osprey.utils.time import get_leg, dateDecimal
 from osprey.actions import rebuilder
-
-
-def folders(expname):
-    """ List of global paths """
-
-    dirs = {
-        'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
-        'nemo': os.path.join("/ec/res4/scratch/itas/ece4", expname, "output", "nemo"),
-        'restart': os.path.join("/ec/res4/scratch/itas/ece4", expname, "restart"),
-        'backup': os.path.join("/ec/res4/scratch/itas/ece4", expname + "-backup"),
-        'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname),
-        'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo",
-        'perm': os.path.join("/perm/itas/ece4", expname, "nemo"),
-        'eof': os.path.join("/ec/res4/scratch/itas/eof", expname)
-    }
-
-    return dirs
 
 
 ##########################################################################################
@@ -639,3 +623,16 @@ def write_restart(expname, rdata, leg):
     return None
 
 ##########################################################################################
+
+def elements(expname):
+    """ define differential forms for integrals """
+
+    df = {}
+    domain = read_domain(expname=expname)
+    df['vol'] = domain['e1t']*domain['e2t']*domain['e3t_0']
+    df['area'] = domain['e1t']*domain['e2t']
+    df['dx'] = domain['e1t']
+    df['dy'] = domain['e2t']
+    df['dz'] = domain['e3t_0']
+
+    return df

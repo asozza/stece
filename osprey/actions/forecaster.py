@@ -8,15 +8,15 @@ Author: Alessandro Sozza (CNR-ISAC)
 Date: Mar 2024
 """
 
-import numpy as np
 import os
+import numpy as np
+from copy import deepcopy
 import cftime
 import xarray as xr
-from copy import deepcopy
 
-from osprey.reader import folders
+from osprey.utils.folders import folders
 from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
-from osprey.reader import read_T, read_rebuilt, read_restart
+from osprey.reader.reader import read_T, read_rebuilt, read_restart
 from osprey.means.eof import cdo_merge, cdo_selname, cdo_detrend, cdo_EOF, save_EOF, add_trend_EOF
 from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D, preproc_forecast_3D
 
@@ -60,8 +60,10 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     return rdata
 
 
-def forecaster_fit_re(expname, endleg, yearspan, yearleap,  varlist=list('tn', 'tb')):
+def forecaster_fit_re(expname, endleg, yearspan, yearleap):
     """ Function to forecast local temperature using linear fit of restart files """
+
+    varlist=['tn', 'tb']
 
     # get time interval
     endyear = get_year(endleg)

@@ -12,14 +12,10 @@ Alessandro Sozza (CNR-ISAC, 2023-2024)
 
 import os
 import yaml
-import subprocess
 import numpy as np
-import xarray as xr
-import dask
 import datetime
 import time
-import cftime
-import nc_time_axis
+
 
 
 def epoch(date):
@@ -43,7 +39,7 @@ def year_fraction(date):
 def dateDecimal(date):
     """ apply yearFraction to an array of dates """
 
-    x1 = [yearFraction(t) for t in date]
+    x1 = [year_fraction(t) for t in date]
 
     return x1
 

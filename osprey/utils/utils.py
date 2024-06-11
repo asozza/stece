@@ -11,15 +11,7 @@ Alessandro Sozza (CNR-ISAC, 2023-2024)
 """
 
 import os
-import yaml
 import subprocess
-import numpy as np
-import xarray as xr
-import dask
-import datetime
-import time
-import cftime
-import nc_time_axis
 
 def run_bash_command(command):
     """ Run a bash command using subprocess """

@@ -12,7 +12,7 @@ import os
 import glob
 import shutil
 
-from osprey.reader import folders
+from osprey.reader.reader import folders
 
 
 def replacer(expname, leg):

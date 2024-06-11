@@ -11,12 +11,7 @@ Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
 import numpy as np
-import xarray as xr
-import dask
-import cftime
-import nc_time_axis
-import osprey_io as osi
-import osprey_tools as ost
+from osprey.utils.utils import get_expname
 
 #################################################################################
 # MATRIX & FIELD MANIPULATION
@@ -32,19 +27,6 @@ def flatten_to_triad(m, nk, nj, ni):
 
 #################################################################################
 # FOR OPERATIONS ON THE DOMAIN: INTEGRALS AND SUBREGIONS
-
-def elements(expname):
-    """ define differential forms for integrals """
-
-    df = {}
-    domain = osi.read_domain(expname=expname)
-    df['vol'] = domain['e1t']*domain['e2t']*domain['e3t_0']
-    df['area'] = domain['e1t']*domain['e2t']
-    df['dx'] = domain['e1t']
-    df['dy'] = domain['e2t']
-    df['dz'] = domain['e3t_0']
-
-    return df
 
 def subrange(idx, orca):
     """ 
@@ -125,12 +107,12 @@ def timemean(data, var):
 def globalmean(data, var, ndim, subreg = None):
     """ Global average of a field """
 
-    expname = ost.get_expname(data)
+    expname = get_expname(data)
     df = elements(expname)
     if ndim == '3D':
         ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x']).values
         if subreg != None:
-            z1,z2 = ost.subrange(subreg)
+            z1,z2 = subrange(subreg,'ORCA2')
             subvol = df['vol'].isel(z=slice(z1,z2))
             subvar = data[var].isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x']).values
@@ -145,12 +127,12 @@ def globalmean(data, var, ndim, subreg = None):
 def spacemean(data, var, ndim, subreg = None):
     """ Spatial average of a field """
 
-    expname = ost.get_expname(data)
+    expname = get_expname(data)
     df = elements(expname) 
     if ndim == '3D':
         ave = data[var].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
         if subreg != None:
-            z1,z2 = ost.subrange(subreg,'ORCA2')
+            z1,z2 = subrange(subreg,'ORCA2')
             subvol = df['vol'].isel(z=slice(z1,z2))
             subvar = data[var].isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values
@@ -194,39 +176,33 @@ def cost(var, varref, idx):
     return x
 
 
-# mean state
-def mean_state(expname, startyear, endyear):
+# # mean state
+# def mean_state(expname, startyear, endyear):
 
-    df = elements(expname=expname)
-    data = osi.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
-    field = data.mean(dim=['time'])
-    field = field.drop_dims({'axis_nbounds'})
+#     df = elements(expname=expname)
+#     data = read_T(expname=expname, startyear=startyear, endyear=endyear)
+#     field = data.mean(dim=['time'])
+#     field = field.drop_dims({'axis_nbounds'})
 
-    return field
+#     return field
 
 
-def anomaly_local(expname, year, field, idx):
+# def anomaly_local(expname, year, field, idx):
     
-    data = osi.read_T(expname=expname, year=year)
-    delta = cost(data, field, idx)
+#     data = read_T(expname=expname, year=year)
+#     delta = cost(data, field, idx)
 
-    return delta
-
-
-def mean_forecast_error(expname, year, var, xfield):
-    """ function to compute mean forecast error """
-
-    df = elements(expname=expname)  
-    data = osi.read_T(expname=expname, year=year)
-    mdata = data[var].mean('time')
-    xdata = xr.where(mdata!=0.0, xfield, 0.0)
-    delta = xr.where(mdata!=0.0, mdata.values-xdata.values, 0.0)
-    dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
-
-    return dd
+#     return delta
 
 
-def yeargain(expname, year, refname, var):
-    """ compute delta of years between simulations """
+# def mean_forecast_error(expname, year, var, xfield):
+#     """ function to compute mean forecast error """
 
-    ave = globalmean(expname, var)
+#     df = elements(expname=expname)  
+#     data = read_T(expname=expname, year=year)
+#     mdata = data[var].mean('time')
+#     xdata = xr.where(mdata!=0.0, xfield, 0.0)
+#     delta = xr.where(mdata!=0.0, mdata.values-xdata.values, 0.0)
+#     dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
+
+#     return dd

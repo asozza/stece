@@ -12,8 +12,8 @@ import subprocess
 import os
 import glob
 
-from osprey.reader import folders
-from osprey.utils import get_nemo_timestep
+from osprey.reader.reader import folders
+from osprey.utils.utils import get_nemo_timestep
 
 def rebuilder(expname, leg):
     """Function to rebuild NEMO restart """
