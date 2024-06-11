@@ -16,7 +16,7 @@ import xarray as xr
 
 from osprey.utils.folders import folders
 from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
-from osprey.reader.reader import read_T, read_rebuilt, read_restart
+from osprey.reader.reader import read_nemo, read_rebuilt, read_restart
 from osprey.means.eof import cdo_merge, cdo_selname, cdo_detrend, cdo_EOF, save_EOF, add_trend_EOF
 from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D, preproc_forecast_3D
 
@@ -43,7 +43,7 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     xf = _forecast_xarray(foreyear)
 
     # load data
-    data = read_T(expname, startyear, endyear)
+    data = read_nemo(expname, startyear, endyear)
 
     # fit
     p = data[var].polyfit(dim='time', deg=1, skipna=True)

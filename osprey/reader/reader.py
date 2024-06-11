@@ -11,6 +11,7 @@ Date: March 2024
 import os
 import glob
 import shutil
+import logging
 import numpy as np
 import xarray as xr
 
@@ -18,18 +19,46 @@ from osprey.means.means import timemean, spacemean
 from osprey.utils.utils import get_nemo_timestep
 from osprey.utils.folders import folders
 from osprey.utils.time import get_leg, dateDecimal
-from osprey.actions import rebuilder
+from osprey.actions.rebuilder import rebuilder
 
 
 ##########################################################################################
 # Readers of NEMO output
+
+def read_nemo(expname, startyear, endyear, grid="T", freq="1m"):
+    """Main function to read nemo data"""
+
+    dirs = folders(expname)
+    filelist = []
+
+    mapping_dictionary = {
+        "T": {
+            "preproc": preproc_nemo_T,
+            "format": f"oce_{freq}_{grid}"
+        },
+        "ice": {
+            "preproc": preproc_nemo_ice,
+            "format": f"ice_{freq}"
+        }
+    }
+
+    for year in range(startyear, endyear+1):
+        pattern = os.path.join(dirs['nemo'], f"{expname}_{mapping_dictionary[grid]['format']}_{year}-{year}.nc")
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+    logging.info('Files to be loaded %s', filelist)
+    data = xr.open_mfdataset(filelist, preprocess=mapping_dictionary[grid]["preproc"], use_cftime=True)
+
+    return data
+
+    
 
 def read_T(expname, startyear, endyear):
     """ read T_grid fields """
 
     dirs = folders(expname)
     filelist = []
-    for year in range(startyear, endyear):
+    for year in range(startyear, endyear+1):
         pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)

@@ -15,6 +15,7 @@ import yaml
 import numpy as np
 import datetime
 import time
+from osprey.utils.folders import folders
 
 
 
@@ -71,7 +72,7 @@ def count_total_steps(start_year, end_year, steps_per_day):
 def read_legfile(expname):
     """ Read date & leg from legfile """
 
-    dirs = osi.folders(expname)
+    dirs = folders(expname)
     legfile = os.path.join(dirs['exp'], 'leginfo.yml')
     with open(legfile, 'r', encoding='utf-8') as file:
         leginfo = yaml.load(file, Loader=yaml.FullLoader)
@@ -96,12 +97,12 @@ def get_forecast_year(year, yearleap):
 
     return (year + yearleap)
 
-def get_year(leg):
+def get_year(leg, year_zero=1990):
     """ Get date from leg """
     
-    return (1990 + leg - 2)
+    return (year_zero + leg - 2)
 
-def get_leg(year):
+def get_leg(year, year_zero=1990):
     """ Get leg from date """
 
-    return (year - 1990 + 2)
+    return (year - year_zero + 2)
