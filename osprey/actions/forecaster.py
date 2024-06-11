@@ -60,7 +60,7 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     return rdata
 
 
-def forecaster_fit_re(expname, endleg, yearspan, yearleap,  varlist=['tn', 'tb']):
+def forecaster_fit_re(expname, endleg, yearspan, yearleap,  varlist=list('tn', 'tb')):
     """ Function to forecast local temperature using linear fit of restart files """
 
     # get time interval
@@ -136,7 +136,7 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
     add_trend_EOF(expname, startyear, endyear, var)
 
     # read forecast and change restart
-    data = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc"), 
+    data = xr.open_mfdataset(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc"),
                              use_cftime=True, preprocess=preproc_forecast_3D)
     rdata = read_rebuilt(expname, endleg, endleg)
     data['time_counter'] = rdata['time_counter']

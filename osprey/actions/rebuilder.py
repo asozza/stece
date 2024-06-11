@@ -22,7 +22,7 @@ def rebuilder(expname, leg):
     
     os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
 
-    rebuilder = os.path.join(dirs['rebuild'], "rebuild_nemo")
+    rebuild_exe = os.path.join(dirs['rebuild'], "rebuild_nemo")
   
     for kind in ['restart', 'restart_ice']:
         print(' Processing ' + kind)
@@ -36,14 +36,14 @@ def rebuilder(expname, leg):
             except FileExistsError:
                 pass
 
-        rebuild_command = [rebuilder, "-m", os.path.join(dirs['tmp'], str(leg).zfill(3), expname + "_" + tstep + "_" + kind ), str(len(flist))]
+        rebuild_command = [rebuild_exe, "-m", os.path.join(dirs['tmp'], str(leg).zfill(3), expname + "_" + tstep + "_" + kind ), str(len(flist))]
         try:
             subprocess.run(rebuild_command, stderr=subprocess.PIPE, text=True, check=True)
-            for file in glob.glob('nam_rebuld_*') : 
+            for file in glob.glob('nam_rebuld_*'):
                 os.remove(file)
         except subprocess.CalledProcessError as e:
             error_message = e.stderr
-            print(error_message) 
+            print(error_message)
 
         for filename in flist:
             destination_path = os.path.join(dirs['tmp'], str(leg).zfill(3), os.path.basename(filename))
@@ -64,6 +64,4 @@ def rebuilder(expname, leg):
     flist = glob.glob('nam_rebuild*')
     for file in flist:
         os.remove(file)
-
-    return None
 
