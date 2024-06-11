@@ -6,3 +6,4 @@ lobs/__pycache__
 osprey/*/__pycache__
 osprey/__pycache__
 figs
+*.egg-info/

@@ -19,3 +19,6 @@ dependencies:
   - netcdf4
   - ruamel.yaml
   - nc-time-axis
+  - pip
+  - pip:
+    - -e .
