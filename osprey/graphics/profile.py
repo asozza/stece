@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
---------------------------------------------------------
-Plotting profiles
+Graphics for profiles
 
-Authors
-Alessandro Sozza (CNR-ISAC, 2023-2024)
+Author: Alessandro Sozza (CNR-ISAC) 
+Date: Mar 2024
 """
 
 import os

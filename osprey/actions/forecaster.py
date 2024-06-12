@@ -9,12 +9,15 @@ Date: Mar 2024
 """
 
 import os
+import glob
+import shutil
 import numpy as np
 from copy import deepcopy
 import cftime
 import xarray as xr
 
 from osprey.utils.folders import folders
+from osprey.utils.utils import get_nemo_timestep
 from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
 from osprey.reader.reader import read_nemo, read_rebuilt, read_restart
 from osprey.means.eof import cdo_merge, cdo_selname, cdo_detrend, cdo_EOF, save_EOF, add_trend_EOF
@@ -147,3 +150,22 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
         rdata[var1] = data[var]
 
     return rdata
+
+
+def write_restart(expname, rdata, leg):
+    """ Write NEMO restart file """
+
+    dirs = folders(expname)
+    flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
+    timestep = get_nemo_timestep(flist[0])
+
+    # ocean restart creation
+    oceout = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')
+    rdata.to_netcdf(oceout, mode='w', unlimited_dims={'time_counter': True})
+
+    # copy ice restart
+    orig = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc')
+    dest = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc')
+    shutil.copy(orig, dest)
+
+    return None
