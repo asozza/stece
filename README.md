@@ -2,11 +2,8 @@
 Scripts & tools for EC-Earth4
 
 - [ ] CRJO: Create new job for EC-Earth4
-        
 - [ ] LOBSTER: Load balancing scripts for EC-Earth4
-
 - [ ] OSPREY: Ocean spin-up accelerator for Earth climatology (MARTINI Project)
-
 - [ ] EPOCHAL: scripts for paleoclimate.
-      * tools for the generation of new oifs and nemo grids
+     * tools for the generation of new oifs and nemo grids
 
