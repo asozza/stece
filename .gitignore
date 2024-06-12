@@ -1,9 +1,6 @@
-martini/nam_*
-martini/__pycache__
 epochal/__pycache__
-goat/__pycache__
-lobs/__pycache__
+lobster/__pycache__
 osprey/*/__pycache__
 osprey/__pycache__
-figs
+osprey/nam_*
 *.egg-info/
