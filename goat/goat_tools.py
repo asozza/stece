@@ -2,35 +2,32 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |  | |/ /__ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT library for tools
-(options, simple functions & miscellanea)
+GOAT: Global Ocean & Atmosphere Trends
+------------------------------------------------------
+GOAT library for tools (options, simple functions & miscellanea)
 
 Authors
 Alessandro Sozza (CNR-ISAC, 2023-2024)
 """
 
+
 import os
-import glob
 import numpy as np
 import xarray as xr
 import cftime
+import dask
 import datetime
 import time
-from sklearn.linear_model import LinearRegression
 
 def epoch(date):
+    """ get epoch from date """
 
     s = time.mktime(date.timetuple())
 
     return s
 
 def yearFraction(date):
+    """ transform date into year fraction """
 
     StartOfYear = datetime.datetime(date.year,1,1,0,0,0)
     EndOfYear = datetime.datetime(date.year+1,1,1,0,0,0)
@@ -41,13 +38,25 @@ def yearFraction(date):
     return  date.year + Frac
 
 def dateDecimal(date):
+    """ apply yearFraction to an array of dates """
 
     x1 = [yearFraction(t) for t in date]
 
     return x1
 
+def get_expname(data):
+    """" Get expname from a NEMO dataset & output file path """
+
+    return os.path.basename(data.attrs['name']).split('_')[0]
+
+def get_nemo_timestep(filename):
+    """ Get timestep from a NEMO restart file """
+
+    return os.path.basename(filename).split('_')[1]
+
 # container for multiple cost functions
 def cost(var, varref, idx):
+    """ multiple cost functions """
 
     # normalized
     if idx == 'norm':
@@ -74,3 +83,32 @@ def cost(var, varref, idx):
 
     return x
 
+# VERTICAL SUBREGIONS
+# mixed layer (0-100 m), pycnocline (100-1000 m), abyss (1000-5000 m)
+# levels in ORCA2: [0,9] [10,20] [21,30]
+# levels in eORCA1: [0,23] [24,45] [46,74]
+def subrange(idx, orca):
+    """ definition of vertical subregions (mixed layer, pycnocline & abyss) for ORCAs """
+
+    if orca == 'ORCA2':
+        if idx == 'mix':
+            z1 = 0; z2 = 9
+        elif idx == 'pyc':
+            z1 = 10; z2 = 20
+        elif idx == 'aby':
+            z1 = 21; z2 = 30
+        else:
+            raise ValueError(" Invalid subrange ")
+    elif orca == 'eORCA1':
+        if idx == 'mix':
+            z1 = 0; z2 = 23
+        elif idx == 'pyc':
+            z1 = 24; z2 = 45
+        elif idx == 'aby':
+            z1 = 46; z2 = 74
+        else:
+            raise ValueError(" Invalid subrange ")
+    else:
+        raise ValueError(" Invalid ORCA grid ")
+    
+    return z1,z2

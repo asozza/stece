@@ -2,81 +2,27 @@
 # -*- coding: utf-8 -*-
 
 """
-This is a simple tool to roll back a restart for EC-Earth4 experiment to a given leg
-If you want to restore the model to a specific date, just run this tool defining 
-at which leg you want to go. It is important to define the directory where the data is, 
-so please check the RUNDIR variable here below
+Rollacker
 
-There is also the option of creating a backup (--backup) and to rerun from this backup
-if something went south (--rurun)
-
-Beware! it works only if frequency is set to YEARLY (not MONTHLY or others)
-
-Paolo Davini, CNR-ISAC (Oct 2023)
-Alessandro Sozza, CNR-ISAC (Mar 2024)
+Author: Paolo Davini, Alessandro Sozza (CNR-ISAC) 
+Date: Oct 2023
 """
 
-import argparse
 import os
 import glob
-import sys
 import shutil
 import yaml
 from dateutil.relativedelta import relativedelta
 
-# important: the folder where the experiments are
-RUNDIR="/ec/res4/scratch/itas/ece4"
+from osprey.reader.reader import folders
+from osprey.utils.utils import get_nemo_timestep
 
-def parse_args():
-    """Command line parser for nemo-restart"""
 
-    parser = argparse.ArgumentParser(description="Command Line Parser for nemo-restart")
-
-    # add positional argument (mandatory)
-    parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
-    parser.add_argument("leg", metavar="LEG", help="The leg you want roll back", type=str)
-    
-    # optional to activate nemo rebuild
-    parser.add_argument("--restore", action="store_true", help="Restore the backup (if available)")
-    parser.add_argument("--backup", action="store_true", help="Before running, create a backup of the entire folder. It might be slow!")
-
-    parsed = parser.parse_args()
-
-    return parsed
-
-def get_nemo_timestep(filename):
-    """Minimal function to get the timestep from a nemo restart file"""
-
-    return os.path.basename(filename).split('_')[1]
-
-if __name__ == "__main__":
-    
-    # parser
-    args = parse_args()
-    expname = args.expname
-    leg = args.leg    
+def rollbacker(expname, leg):
+    """ Function to rollback ECE4 run to a previous leg """
 
     # define directories
-    dirs = {
-        'exp': os.path.join(RUNDIR, expname),
-        'backup': os.path.join(RUNDIR, expname + "-backup")
-    }
-
-    # if I have been asked to restore everything, copy from the backup
-    if args.restore:
-        if os.path.isdir(dirs['backup']):
-            print('Rerunning required, copying backup to exp folder, it can be VERY LONG...')
-            shutil.copytree(dirs['backup'], dirs['exp'], symlinks=True)
-        else:
-            sys.exit('Cannot exploit the backup, you need to create it before with --backup')
-
-    # if a backup has been asked, create it if necessary
-    if args.backup:
-        if os.path.isdir(dirs['backup']):
-            print('Backup directory found, no need to recreate it!')
-        else:
-            print('Creating a backup, it can be VERY LONG...')
-            shutil.copytree(dirs['exp'], dirs['backup'], symlinks=True)
+    dirs = folders(expname)
 
     # cleaning
     # create list of files to be remove in the run folder
@@ -89,7 +35,7 @@ if __name__ == "__main__":
                 os.remove(file)
 
     # update time.step
-    flist = glob.glob(os.path.join(dirs['exp'], 'restart', leg.zfill(3), expname + '*_' + 'restart' + '_????.nc'))
+    flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
     timestep = get_nemo_timestep(flist[0])
     tstepfile = os.path.join(dirs['exp'], 'time.step')
     with open(tstepfile, 'w', encoding='utf-8') as file:
@@ -125,7 +71,7 @@ if __name__ == "__main__":
     # copying from the restart folder required for the leg you asked
     browser = ['rstas.nc', 'rstos.nc',  'srf000*.????', 'rcf', '*restart*']
     for file in browser:
-        filelist = sorted(glob.glob(os.path.join(dirs['exp'],  'restart', leg.zfill(3), file)))
+        filelist = sorted(glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), file)))
         for file in filelist:
             basefile = os.path.basename(file)
             targetfile = os.path.join(dirs['exp'], basefile)
@@ -153,3 +99,4 @@ if __name__ == "__main__":
                 print('Removing output file', file)
                 os.remove(file)
 
+    return None

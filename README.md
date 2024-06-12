@@ -5,10 +5,10 @@ Scripts & tools for ece4
         
 - LOBS: Load balancing scripts for ece4
         
-- GOAT: Global Ocean Analysis & Trends
-        (for plots and post-processing of nemo fields)
+- GOAT: Global Ocean & Atmosphere Trends
 
-- MARTINI: tools for spinup acceleration
+- MARTINI/OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
+                  tools for spinup acceleration
 
 - EPOCHAL: scripts for paleoclimate
            tools for the generation of new oifs and nemo grids

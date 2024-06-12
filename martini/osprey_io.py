@@ -2,13 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |  | |/ /__ \ | |  
- \____| \____//_/   \_\|_|  
-
-GOAT library for i/o operations
+OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
+--------------------------------------------------------
+Osprey library for i/o operations
 
 Authors
 Alessandro Sozza (CNR-ISAC, 2023-2024)
@@ -17,27 +13,41 @@ Alessandro Sozza (CNR-ISAC, 2023-2024)
 import subprocess
 import os
 import glob
+import shutil
 import yaml
+import dask
+import cftime
+import nc_time_axis
+import netCDF4
 import numpy as np
 import xarray as xr
-import cftime
-from sklearn.linear_model import LinearRegression
+import osprey_means as osm
+import osprey_tools as ost
+import osprey_actions as osa
+
 
 def folders(expname):
+    """ List of global paths """
+
     dirs = {
         'exp': os.path.join("/ec/res4/scratch/itas/ece4", expname),
-        'nemo': os.path.join("/ec/res4/scratch/itas/ece4/", expname, "output", "nemo"),
-        'perm': os.path.join("/perm/itas/ece4", expname, "nemo")
+        'nemo': os.path.join("/ec/res4/scratch/itas/ece4", expname, "output", "nemo"),
+        'restart': os.path.join("/ec/res4/scratch/itas/ece4", expname, "restart"),
+        'backup': os.path.join("/ec/res4/scratch/itas/ece4", expname + "-backup"),
+        'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname),
+        'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo",
+        'perm': os.path.join("/perm/itas/ece4", expname, "nemo"),
+        'eof': os.path.join("/ec/res4/scratch/itas/eof", expname)
     }
-
-    os.makedirs(dirs['perm'], exist_ok=True)
 
     return dirs
 
+
+##########################################################################################
 # Readers of NEMO output
 
-def readmf_T(expname, startyear, endyear):
-    """ read multiple T_grid fields """
+def read_T(expname, startyear, endyear):
+    """ read T_grid fields """
 
     dirs = folders(expname)
     filelist = []
@@ -49,7 +59,7 @@ def readmf_T(expname, startyear, endyear):
 
     return data
 
-def readmf_ice(expname, startyear, endyear):
+def read_ice(expname, startyear, endyear):
     """ read multiple ice fields """
 
     dirs = folders(expname)
@@ -62,22 +72,6 @@ def readmf_ice(expname, startyear, endyear):
 
     return data
 
-def read_T(expname, year):
-    """ read single T_grid field """
-
-    dirs = folders(expname)
-    filelist = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
-    return data
-
-def read_ice(expname, year):
-    """ read single ice field """
-
-    dirs = folders(expname)
-    filelist = os.path.join(dirs['nemo'], f"{expname}_ice_*_{year}-{year}.nc")
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_ice, use_cftime=True)
-    return data
-
 def read_domain(expname):
     """ read NEMO domain configuration file """
 
@@ -87,6 +81,7 @@ def read_domain(expname):
     domain = domain.isel(time=0)
 
     return domain
+
 
 ##########################################################################################
 # Pre-processing options for NEMO readers
@@ -107,7 +102,6 @@ def preproc_nemo_T(data):
     data = data.swap_dims({'x_grid_T_inner': 'x', 'y_grid_T_inner': 'y'})
     data = data.drop({'time_centered'})
     data = data.drop_dims({'axis_nbounds'})
-    #data.coords['z'] = -data['z']
         
     return data
 
@@ -144,6 +138,7 @@ def preproc_nemo_ice(data):
     data = data.rename({'time_counter': 'time'})
     
     return data
+
 
 ##########################################################################################
 # Readers of averaged data: timeseries, profiles, maps, hovmoller, pdfs etc ...
@@ -231,6 +226,7 @@ def read_map_local_anomaly_T(expname, startyear, endyear, var):
 
     return data
 
+
 ##########################################################################################
 # Containers for reader/creator of averaged data
 
@@ -245,7 +241,7 @@ def read_averaged_timeseries_T(expname, startyear, endyear, inivar, ndim, isub, 
         var = inivar
 
     dirs = folders(expname)
-    df = gm.elements(expname)
+    df = osm.elements(expname)
 
     # try to read averaged data
     try:
@@ -258,19 +254,19 @@ def read_averaged_timeseries_T(expname, startyear, endyear, inivar, ndim, isub, 
     # If averaged data not existing, read original data
     print(" Loading data ... ")
     if iload == 'orig':
-        data = readmf_T(expname, startyear, endyear)
+        data = read_T(expname, startyear, endyear)
         print(" Averaging ... ")
-        tvec = gt.dateDecimal(data['time'].values)
-        vec = gm.spacemean(expname, data[var], ndim)
+        tvec = ost.dateDecimal(data['time'].values)
+        vec = osm.spacemean(expname, data[var], ndim)
     elif iload == 'post':
         data = read_from_cdo_T(expname, startyear, endyear, var)
-        tvec = gt.dateDecimal(data['time'].values)
-        vec = gm.spacemean(expname, data[var], ndim)
+        tvec = ost.dateDecimal(data['time'].values)
+        vec = osm.spacemean(expname, data[var], ndim)
 
     # ONLY for 3D variables! 
     # compute var in subregions: mixed layer (mix), pycnocline (pyc), abyss (aby)
     if isub == True:
-        subvec = gm.spacemean3d_suball(expname, data[var])
+        subvec = osm.spacemean3d_suball(expname, data[var])
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
                             attrs = {'units' : 'years', 'long_name' : 'years'}),
@@ -313,7 +309,7 @@ def read_averaged_profile_T(expname, startyear, endyear, var, iload):
     """ reader/creator of averaged profiles for T grid """
 
     dirs = folders(expname)
-    df = gm.elements(expname)
+    df = osm.elements(expname)
 
     # try to read averaged data
     try:
@@ -326,7 +322,7 @@ def read_averaged_profile_T(expname, startyear, endyear, var, iload):
     # If averaged data not existing, read original data
     print(" Loading data ... ")
     if iload == 'orig':
-        data = readmf_T(expname, startyear, endyear)
+        data = read_T(expname, startyear, endyear)
         print(" Averaging ... ")
         # and spatial averaging of the desidered variable
         zvec = data['z'].values.flatten()
@@ -357,7 +353,7 @@ def read_averaged_hovmoller_T(expname, startyear, endyear, var):
     """ reader/creator of averaged hovmöller diagram for T grid """
 
     dirs = folders(expname)
-    df = gm.elements(expname)
+    df = osm.elements(expname)
 
     # try to read averaged data
     try:
@@ -369,11 +365,11 @@ def read_averaged_hovmoller_T(expname, startyear, endyear, var):
 
     # If averaged data not existing, read original data
     print(" Loading data ... ")
-    data = readmf_T(expname, startyear, endyear)
+    data = read_T(expname, startyear, endyear)
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    tvec = gt.dateDecimal(data['time'].values)
-    vec = gm.spacemean(expname, data[var], '2D')
+    tvec = ost.dateDecimal(data['time'].values)
+    vec = osm.spacemean(expname, data[var], '2D')
 
     # create xarray dataset
     print(" Allocating new xarray dataset ... ")
@@ -399,7 +395,7 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
     """ reader/creator of averaged field for T grid """
 
     dirs = folders(expname)
-    df = gm.elements(expname)
+    df = osm.elements(expname)
 
     # try to read averaged data
     try:
@@ -411,10 +407,10 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
 
     # If averaged data not existing, read original data
     print(" Loading data ... ")
-    data = readmf_T(expname, startyear, endyear)
+    data = read_T(expname, startyear, endyear)
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    vec = gm.timemean(data[var])
+    vec = osm.timemean(data[var])
 
     # create xarray dataset
     print(" Allocating new xarray dataset ... ")
@@ -448,15 +444,16 @@ def read_averaged_field_T(expname, startyear, endyear, var, ndim):
 
     return data
 
+
 ##################################################################################################################
-# reader/creator of averaged local anomaly
+# Reader/Creator of averaged local anomaly
 
 # timeseries of averaged rms local anomaly
 def read_averaged_timeseries_local_anomaly_T(expname, startyear, endyear, refname, startref, endref, var, ndim):
     """ reader/creator of averaged timeseries of rms local anomaly for T grid """
 
     dirs = folders(expname)
-    df = gm.elements(expname)
+    df = osm.elements(expname)
 
     # try to read averaged data
     try:
@@ -470,13 +467,13 @@ def read_averaged_timeseries_local_anomaly_T(expname, startyear, endyear, refnam
     print(" Loading data ... ")
     # read field and meanfield
     mdata = read_averaged_field_T(refname, startref, endref, var, ndim)
-    data = readmf_T(expname, startyear, endyear)
+    data = read_T(expname, startyear, endyear)
     delta = np.square(data[var]-mdata[var]) # choose cost function: square
     
     print(" Averaging ... ")
     # spatial averaging of the desidered variable
-    tvec = gt.dateDecimal(data['time'].values)
-    vec = gm.spacemean(expname, delta, ndim)
+    tvec = ost.dateDecimal(data['time'].values)
+    vec = osm.spacemean(expname, delta, ndim)
     vec = np.power(vec,0.5)
 
     # create xarray dataset
@@ -500,7 +497,7 @@ def read_averaged_profile_local_anomaly_T(expname, startyear, endyear, refname, 
     """ reader/creator of averaged profile of rms local anomaly for T grid """
 
     dirs = folders(expname)
-    df = gm.elements(expname)    
+    df = osm.elements(expname)    
 
     # try to read averaged data
     try:
@@ -514,7 +511,7 @@ def read_averaged_profile_local_anomaly_T(expname, startyear, endyear, refname, 
     print(" Loading data ... ")
     # read field and meanfield
     mdata = read_averaged_field_T(refname, startref, endref, var, '3D')
-    data = readmf_T(expname, startyear, endyear)
+    data = read_T(expname, startyear, endyear)
     delta = np.power(data[var]-mdata[var],2) # choose cost function: square
 
     print(" Averaging ... ")
@@ -560,13 +557,13 @@ def read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname
     print(" Loading data ... ")
     # read field and meanfield
     mdata = read_averaged_field_T(refname, startref, endref, var, '3D')
-    data = readmf_T(expname, startyear, endyear)
+    data = read_T(expname, startyear, endyear)
     delta = np.power(data[var]-mdata[var],2) # choose cost function: square
 
     print(" Averaging ... ")
     # and spatial averaging of the desidered variable
-    tvec = gt.dateDecimal(data['time'].values)
-    vec = gm.spacemean(expname, delta, '2D')
+    tvec = ost.dateDecimal(data['time'].values)
+    vec = osm.spacemean(expname, delta, '2D')
     vec = np.power(vec,0.5)
 
     # create xarray dataset
@@ -592,35 +589,58 @@ def read_averaged_hovmoller_local_anomaly_T(expname, startyear, endyear, refname
 
 
 ##########################################################################################
-# OPEN ISSUES:
+# Reader/Writer of NEMO restart files
 
-# - merger of long simulations
-# - append new data on existing averaged file
-# - saving figure and launch functions for command line
+def read_restart(expname, startyear, endyear):
+    """ Reader of NEMO restart files in a range of legs """
 
-##########################################################################################
-# Reading from CDO
+    startleg,endleg = ost.get_legs(startyear, endyear)
+    dirs = folders(expname)
 
-def readmf_var_T(expname, startyear, endyear, var):
-    """ read multiple T_grid fields extracted using CDO """
+    try:
+        data = read_rebuilt(expname, startleg, endleg)
+        return data
+    except FileNotFoundError:
+        print(" Restart file not found. Rebuilding ... ")
+
+    # rebuild files
+    for leg in range(startleg,endleg+1):
+        osa.rebuilder(expname, leg)
+
+    data = read_rebuilt(expname, startleg, endleg)
+
+    return data
+
+def read_rebuilt(expname, startleg, endleg):
+    """ Read rebuilt NEMO restart files """
 
     dirs = folders(expname)
+    
     filelist = []
-    for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['perm'], var, f"{var}_*_{year}-{year}.nc")
+    for leg in range(startleg,endleg+1):
+        pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
-    data = xr.open_mfdataset(filelist, preprocess=preproc_nemo_T, use_cftime=True)
+    data = xr.open_mfdataset(filelist, use_cftime=True)
 
     return data
 
-def read_from_cdo_T(expname, startyear, endyear, var):
-    """  read field extracted using with CDO """
+def write_restart(expname, rdata, leg):
+    """ Write NEMO restart file """
 
-    data = readmf_var_T(expname, startyear, endyear, var)
+    dirs = folders(expname)
+    flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
+    timestep = ost.get_nemo_timestep(flist[0])
 
-    return data
+    # ocean restart creation
+    oceout = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')
+    rdata.to_netcdf(oceout, mode='w', unlimited_dims={'time_counter': True})
+
+    # copy ice restart
+    orig = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc')
+    dest = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc')
+    shutil.copy(orig, dest)
+
+    return None
 
 ##########################################################################################
-# Reader of EOF
-

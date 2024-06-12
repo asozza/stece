@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OSPREY"
+dynamic = ["version"]
+authors = [
+  { name="Alessandro Sozza", email="asozza.ph@gmail.com" },
+  { name="Paolo Davini", email="p.davini@isac.cnr.it" }
+]
+description = "osprey"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "xarray",
+    "netcdf4",
+    "numba",
+    "dask",
+    "ruamel.yaml",
+    "matplotlib",
+    "cftime",
+    "nc-time-axis"
+]
+
+[tool.setuptools]
+py-modules = ["osprey"]
+
+[project.optional-dependencies]
+
+[project.urls]
+"Homepage" = "https://github.com/asozza/stece"
+"Repository" = "https://github.com/asozza/stece"
+"Documentation" = "https://github.com/asozza/stece"
+"Bug Tracker" = "https://github.com/asozza/stece/issues"

@@ -2,12 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-  ____   ____     _   _____
- / __/  / __ \   / \ |_   _|
-| |  _ | |  | | / _ \  | |  
-| |_| || |  | |/ /__ \ | |  
- \____| \____//_/   \_\|_|  
-
+GOAT: Global Ocean & Atmosphere Trends
+------------------------------------------------------
 GOAT library for plots
 
 Authors
@@ -18,6 +14,7 @@ import os
 import numpy as np
 import xarray as xr
 import cftime
+import dask
 import matplotlib.pyplot as plt
 import goat_tools as gt
 import goat_io as io
@@ -43,16 +40,16 @@ def plot_ts_ave3d(expname, startyear, endyear, var, norm, idx):
 
     return pp
 
-
 # time series with moving average
-def plot_ts_ma3d(expname, startyear, endyear, var, norm, idx):
+def plot_ts_ma3d(expname, startyear, endyear, var, offset, norm, idx):
     
     data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
     df = gm.elements(expname=expname)
     tt = gt.dateDecimal(data['time'].values)
     vv = gm.movave(data[var].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
     tt1 = tt[6:-6]; vv1 = vv[6:-6]
-    pp = plt.plot(tt1,gt.cost(vv1, norm, idx))
+    tt2 = [tt1[i]+offset for i in range(len(tt1))]
+    pp = plt.plot(tt2,gt.cost(vv1, norm, idx))
 
     return pp
 
@@ -107,6 +104,25 @@ def plot_ts_ma3d_sub(expname, startyear, endyear, var, z1, z2, norm, idx):
 
     return pp
 
+# 3layers
+def plot_ts_ma3d_sub3(expname, startyear, endyear, var):
+
+    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+    df = gm.elements(expname=expname)
+    z1=0; z2=9
+    subvol = df['vol'].isel(z=slice(z1,z2))
+    subvar = data[var].isel(z=slice(z1,z2))
+    tt = gt.dateDecimal(data['time'].values)
+    vv = gm.movave(subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+    tt1 = tt[6:-6]; vv1 = vv[6:-6]
+    z1=10; z2=20
+    subvol = df['vol'].isel(z=slice(z1,z2))
+    subvar = data[var].isel(z=slice(z1,z2))
+    tt = gt.dateDecimal(data['time'].values)
+    vv = gm.movave(subvar.weighted(subvol).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+    tt2 = tt[6:-6]; vv2 = vv[6:-6]
+
+
 # running average
 def plot_ts_ra3d(expname, startyear, endyear, var):
     
@@ -133,17 +149,105 @@ def plot_ts_ra2d(expname, startyear, endyear, var):
     return pp
 
 ## gregory plots
-def gregory_plot_ma3d(expname, startyear, endyear, var1, var2):
+def gregory_plot_ma3d(expname, startyear, endyear, var1, var2, iperm):
     
-    data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
     df = gm.elements(expname=expname)
-    tf = len(data['time'].values) 
-    vv1 = gm.movave(data[var1].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
-    vv2 = gm.movave(data[var2].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+    if iperm == 0:
+        data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+        vv1 = gm.movave(data[var1].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+        vv2 = gm.movave(data[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data
+        del df
+        gc.collect()
+    else:
+        data1 = io.readperm_T(expname=expname, var=var1)
+        data2 = io.readperm_T(expname=expname, var=var2)
+        vv1 = gm.movave(data1[var1].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+        vv2 = gm.movave(data2[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data1
+        del data2
+        del df
+        gc.collect()
     pp = plt.plot(vv1[6:-6],vv2[6:-6])
 
     return pp
 
+def gregory_plot_ma2d(expname, startyear, endyear, var1, var2, iperm):
+    
+    df = gm.elements(expname=expname)
+    if iperm == 0:
+        data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+        vv1 = gm.movave(data[var1].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        vv2 = gm.movave(data[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data
+        del df
+        gc.collect()
+    else:
+        data1 = io.readperm_T(expname=expname, var=var1)
+        data2 = io.readperm_T(expname=expname, var=var2)
+        vv1 = gm.movave(data1[var1].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        vv2 = gm.movave(data2[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data1
+        del data2
+        del df
+        gc.collect()
+    pp = plt.plot(vv1[6:-6],vv2[6:-6])
+
+    return pp
+
+def fit_plot_ma3d(expname, startyear, endyear, var1, var2, xm, xp, iperm):
+
+    df = gm.elements(expname=expname)
+    if iperm == 0:
+        data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+        x = gm.movave(data[var1].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+        y = gm.movave(data[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data
+        del df
+        gc.collect()
+    else:
+        data1 = io.readperm_T(expname=expname, var=var1)
+        data2 = io.readperm_T(expname=expname, var=var2)
+        x = gm.movave(data1[var1].weighted(df['vol']).mean(dim=['z', 'y', 'x']).values.flatten(),12)
+        y = gm.movave(data2[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data1
+        del data2
+        del df
+        gc.collect()
+    nb=100
+    mp,qp = gm.linear_fit(x, y)
+    xa = [xm+(xp-xm)*i/nb for i in range(1,nb)]
+    ya = [[mp*xa[i]+qp] for i in range(len(xa))]
+    pp = plt.plot(xa,ya,'--')
+
+    return pp
+
+def fit_plot_ma2d(expname, startyear, endyear, var1, var2, xm, xp, iperm):
+
+    df = gm.elements(expname=expname)
+    if iperm == 0:
+        data = io.readmf_T(expname=expname, startyear=startyear, endyear=endyear)
+        x = gm.movave(data[var1].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        y = gm.movave(data[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data
+        del df
+        gc.collect()
+    else:
+        data1 = io.readperm_T(expname=expname, var=var1)
+        data2 = io.readperm_T(expname=expname, var=var2)
+        x = gm.movave(data1[var1].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        y = gm.movave(data2[var2].weighted(df['area']).mean(dim=['y', 'x']).values.flatten(),12)
+        del data1
+        del data2
+        del df
+        gc.collect()
+    nb=100
+    mp,qp = gm.linear_fit(x, y)
+    xa = [xm+(xp-xm)*i/nb for i in range(1,nb)]
+    ya = [[mp*xa[i]+qp] for i in range(len(xa))]
+    pp = plt.plot(xa,ya,'--')
+
+    return pp
 
 # moving average in a specific spot
 def plot_ts_ma3d_xyz(expname, startyear, endyear, var, x0, y0, z0, norm, idx):
