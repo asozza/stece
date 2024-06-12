@@ -51,3 +51,4 @@ sed -i "s@INIDIR@${inidir}@g" $expdir/$jobname/user-config.yml
 cp launch.sh $expdir/$jobname
 sed -i "s@TEST@${jobname}@g" $expdir/$jobname/launch.sh
 sed -i "s@BASEDIR@${ecedir}@g" $expdir/$jobname/launch.sh
+
