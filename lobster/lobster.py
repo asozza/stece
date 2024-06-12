@@ -10,11 +10,8 @@ Authors
 Alessandro Sozza (CNR-ISAC, Mar 2024)
 """
 
-import sys
 import os
 import re
-import time
-import math
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt

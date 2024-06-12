@@ -36,11 +36,3 @@ def get_nemo_timestep(filename):
 
     return os.path.basename(filename).split('_')[1]
 
-def flatten_to_triad(m, nj, ni):
-    """ Recover triad indexes from flatten array length """
-
-    k = m // (ni * nj)
-    j = (m - k * ni * nj) // ni
-    i = m - k * ni * nj - j * ni
-
-    return k, j, i

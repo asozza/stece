@@ -5,7 +5,7 @@
 Time module
 
 Author: Alessandro Sozza (CNR-ISAC) 
-Date: June 2024)
+Date: June 2024
 """
 
 import os
