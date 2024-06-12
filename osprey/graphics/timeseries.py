@@ -16,26 +16,25 @@ import cftime
 import nc_time_axis
 import matplotlib.pyplot as plt
 
+from osprey.actions.post_reader import postreader_averaged
+from osprey.means.means import movave
+from osprey.means.means import cost
 
 def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset, color):
     """ graphics of timeseries """
 
-    isub = False
-    if '-' in var:
-        isub = True
-
     # read (or create) averaged data
-    data = osi.read_averaged_timeseries_T(expname, startyear, endyear, var, ndim, isub)
+    data = postreader_averaged(expname, startyear, endyear, var, ndim, 'series')
     # assembly and plot
     tt = data['time'].values.flatten()
     if idx_ave == 'ave':
         vv = data[var].values.flatten()
         tt1 = tt; vv1 = vv
     elif idx_ave == 'mave':
-        vv = osm.movave(data[var].values.flatten(),12)
+        vv = movave(data[var].values.flatten(),12)
         tt1 = tt[6:-6]; vv1 = vv[6:-6]
     tt2 = [tt1[i]+offset for i in range(len(tt1))]
-    pp = plt.plot(tt2, osm.cost(vv1, norm, idx_norm), color)
+    pp = plt.plot(tt2, cost(vv1, norm, idx_norm), color)
     plt.xlabel(data['time'].long_name)
     plt.ylabel(data[var].long_name)
 
@@ -44,10 +43,6 @@ def timeseries(expname, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, 
 
 def timeseries_diff(exp1, exp2, startyear, endyear, var, ndim, norm, idx_norm, idx_ave, offset):
     """ graphics of timeseries of two-field difference """
-
-    isub = False
-    if '-' in var:
-        isub = True
         
     # read (or create) averaged data 
     data1 = osi.read_averaged_timeseries_T(exp1, startyear, endyear, var, ndim, isub)

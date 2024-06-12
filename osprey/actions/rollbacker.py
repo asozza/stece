@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Rollacker
+Rollbacker
 
 Author: Paolo Davini, Alessandro Sozza (CNR-ISAC) 
 Date: Oct 2023

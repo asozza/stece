@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-OSPREY: Ocean Spin-uP acceleratoR for Earth climatologY
---------------------------------------------------------
-Osprey library for tools: bash operations and path management 
+Time module
 
-Authors
-Alessandro Sozza (CNR-ISAC, 2023-2024)
+Author: Alessandro Sozza (CNR-ISAC) 
+Date: June 2024)
 """
 
 import os
@@ -15,34 +13,30 @@ import yaml
 import numpy as np
 import datetime
 import time
+
 from osprey.utils.folders import folders
 
 
-
-def epoch(date):
+def get_epoch(date):
     """ Get epoch from date """
 
-    s = time.mktime(date.timetuple())
+    return time.mktime(date.timetuple())
 
-    return s
-
-def year_fraction(date):
+def get_year_fraction(date):
     """ Transform date into year fraction """
 
-    StartOfYear = datetime.datetime(date.year,1,1,0,0,0)
-    EndOfYear = datetime.datetime(date.year+1,1,1,0,0,0)
-    yearElapsed = epoch(date)-epoch(StartOfYear)
-    yearDuration = epoch(EndOfYear)-epoch(StartOfYear)
-    Frac = yearElapsed/yearDuration
+    start_of_year = datetime.datetime(date.year,1,1,0,0,0)
+    end_of_year = datetime.datetime(date.year+1,1,1,0,0,0)
+    year_elapsed = get_epoch(date) - get_epoch(start_of_year)
+    year_duration = get_epoch(end_of_year) - get_epoch(start_of_year)
+    Frac = year_elapsed/year_duration
 
     return  date.year + Frac
 
-def dateDecimal(date):
-    """ apply yearFraction to an array of dates """
+def get_decimal_year(date):
+    """ Get decimal year from year fraction """
 
-    x1 = [year_fraction(t) for t in date]
-
-    return x1
+    return [get_year_fraction(d) for d in date]
 
 def count_leap_years(year1, year2):
     """ Compute number of leap years (bissextile) """

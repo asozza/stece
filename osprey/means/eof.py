@@ -181,9 +181,18 @@ def cdo_retrend(expname, startyear, endyear, var):
     dirs = folders(expname)
     endleg = get_leg(endyear)
 
-    fld = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_{startyear}-{endyear}.nc")
-    flda = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc")
-    run_bash_command(f"cdo add {flda} -timmean {fld} {flda}")
+    # add mean time trend to the anomaly 
+    inifile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_{startyear}-{endyear}.nc")
+    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_product_{startyear}-{endyear}.nc")
+    newfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc")
+
+    try:
+        os.remove(newfile)
+        print(f"File {newfile} successfully removed.")
+    except FileNotFoundError:
+        print(f"File {newfile} not found. Unable to remove.")
+
+    run_bash_command(f"cdo add {auxfile} -timmean {inifile} {newfile}")
 
     return None
 

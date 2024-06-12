@@ -16,7 +16,7 @@ from osprey.reader.reader import folders
 
 
 def replacer(expname, leg):
-    """ Function to replace modified restart files in the run folder """
+    """ Replace modified restart files in the run folder """
 
     dirs = folders(expname)
 
