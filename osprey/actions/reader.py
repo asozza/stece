@@ -10,9 +10,7 @@ Date: June 2024
 
 import os
 import glob
-import shutil
 import logging
-import numpy as np
 import xarray as xr
 
 from osprey.utils.folders import folders

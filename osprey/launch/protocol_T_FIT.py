@@ -13,17 +13,13 @@ Authors
 Alessandro Sozza and Paolo Davini (CNR-ISAC, Apr 2024)
 """
 
-import subprocess
-import os
-import glob
-import shutil
-import yaml
 import argparse
-import xarray as xr
-import osprey_io as osi
-import osprey_actions as osa
-import osprey_means as osm
 
+from osprey.utils.folders import folders
+from osprey.actions.rebuilder import rebuilder
+from osprey.actions.forecaster import forecaster_fit
+from osprey.actions.writer import writer_restart
+from osprey.actions.replacer import replacer
 
 def parse_args():
     """Command line parser for nemo-restart"""
@@ -32,7 +28,7 @@ def parse_args():
 
     # add positional argument (mandatory)
     parser.add_argument("expname", metavar="EXPNAME", help="Experiment name")
-    parser.add_argument("leg", metavar="LEG", help="The leg you want to process for rebuilding", type=str)
+    parser.add_argument("leg", metavar="LEG", help="The leg you want to process for rebuilding", type=int)
     parser.add_argument("yearspan", metavar="YEARSPAN", help="Year span for fitting temperature", type=int)
     parser.add_argument("yearleap", metavar="YEARLEAP", help="Year leap for projecting temperature", type=int)
 
@@ -54,17 +50,18 @@ if __name__ == "__main__":
     yearleap = args.yearleap
 
     # define folders
-    dirs = osi.folders(expname)
+    dirs = folders(expname)
 
     # rebuild nemo restart files
     if args.rebuild:
-        osa.rebuild_nemo(expname, leg)
+        rebuilder(expname, leg)
 
     # forecast based on local temperature fit
-    rdata = osa.forecast_T_local_fit(expname, leg, yearspan, yearleap)
-    osi.write_nemo_restart(expname, rdata, leg)
+    var='thetao'
+    rdata = forecaster_fit(expname, var, leg, yearspan, yearleap)
+    writer_restart(expname, rdata, leg)
 
     # replace nemo restart files
     if args.replace:
-        osa.replace_nemo(expname, leg)
+        replacer(expname, leg)
 
