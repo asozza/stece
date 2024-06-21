@@ -10,8 +10,10 @@ Date: June 2024
 
 import os
 import glob
+import logging
+
 from osprey.utils.folders import folders
-from osprey.utils.utils import run_bash_command
+from osprey.utils.utils import run_bash_command, remove_existing_file, remove_existing_filelist
 from osprey.utils.time import get_leg
 
 
@@ -21,15 +23,16 @@ def merge(expname, startyear, endyear):
     dirs = folders(expname)
     leg = get_leg(endyear)
 
-    fldlist = []
+    filelist = []
     for year in range(startyear, endyear):
         pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
-        fldlist.extend(matching_files)
+        filelist.extend(matching_files)
     
     os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
-    fldcat = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{expname}_{startyear}-{endyear}.nc")
-    run_bash_command(f"cdo cat {' '.join(fldlist)} {fldcat}")
+    merged_file = os.path.join(dirs['tmp'], str(leg).zfill(3), "data.nc")
+    remove_existing_file(merged_file)
+    run_bash_command(f"cdo cat {' '.join(filelist)} {merged_file}")
 
     return None
 
@@ -39,10 +42,11 @@ def selname(expname, startyear, endyear, var):
     dirs = folders(expname)
     leg = get_leg(endyear)    
 
-    fld = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_{startyear}-{endyear}.nc")
-    fldcat = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{expname}_{startyear}-{endyear}.nc")
+    merged_file = os.path.join(dirs['tmp'], str(leg).zfill(3), "data.nc")
+    varfile = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}.nc")
+    remove_existing_file(varfile)
 
-    run_bash_command(f"cdo yearmean -selname,{var} {fldcat} {fld}")
+    run_bash_command(f"cdo yearmean -selname,{var} {merged_file} {varfile}")
 
     return None
 
@@ -52,44 +56,42 @@ def detrend(expname, startyear, endyear, var):
     dirs = folders(expname)
     leg = get_leg(endyear)
 
-    fld = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_{startyear}-{endyear}.nc")   
-    flda = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_anomaly_{startyear}-{endyear}.nc")
+    varfile = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}.nc")   
+    anomfile = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_anomaly.nc")
+    remove_existing_file(anomfile)
 
-    run_bash_command(f"cdo sub {fld} -timmean {fld} {flda}")
+    run_bash_command(f"cdo sub {varfile} -timmean {varfile} {anomfile}")
 
     return None
 
-def get_EOF(expname, startyear, endyear, var, ndim):
+def get_EOF(expname, startyear, endyear, var):
     """ CDO command to compute EOF """
     
+
     dirs = folders(expname)
     leg = get_leg(endyear)
     window = endyear - startyear
+    #print(' Time window = ',window)
+    print(' Time window ', window)
 
-    flda = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_anomaly_{startyear}-{endyear}.nc")    
-    fldcov = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_variance_{startyear}-{endyear}.nc")
-    fldpat = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_pattern_{startyear}-{endyear}.nc")
+    flda = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_anomaly.nc") 
+    #flda = os.path.join(f"{var}_anomaly_{startyear}-{endyear}.nc")    
+    fldcov = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_variance.nc")
+    #fldcov = os.path.join(f"{var}_var_{startyear}-{endyear}.nc")
+    fldpat = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_pattern.nc")
+    #fldpat = os.path.join(f"{var}_pat_{startyear}-{endyear}.nc")
+    remove_existing_file(fldcov)
+    remove_existing_file(fldpat)
 
-    try:
-        os.remove(fldcov)
-        print(f"File {fldcov} successfully removed.")
-    except FileNotFoundError:
-        print(f"File {fldcov} not found. Unable to remove.")
+    #if ndim == '2D':
+    # run_bash_command(f"cdo eof,{window} {flda} {fldcov} {fldpat}")
+    #if ndim == '3D':
+    run_bash_command(f"cdo eof3d,{window} {flda} {fldcov} {fldpat}")
 
-    try:
-        os.remove(fldpat)
-        print(f"File {fldpat} successfully removed.")
-    except FileNotFoundError:
-        print(f"File {fldpat} not found. Unable to remove.")
-
-    if ndim == '2D':
-        run_bash_command(f"cdo eof,{window} {flda} {fldcov} {fldpat}")
-    
-    if ndim == '3D':
-        run_bash_command(f"cdo eof3d,{window} {flda} {fldcov} {fldpat}")
-
-    timeseries = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_timeseries_{startyear}-{endyear}_")
-    run_bash_command(f"cdo eofcoeff {fldpat} {flda} {timeseries}")
+    timeseries = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_series_")
+    #timeseries = os.path.join(f"{var}_tseries_{startyear}-{endyear}_")
+    remove_existing_filelist(timeseries)
+    run_bash_command(f"cdo eofcoeff3d {fldpat} {flda} {timeseries}")
 
     return None
 
@@ -100,15 +102,10 @@ def retrend(expname, startyear, endyear, var):
     endleg = get_leg(endyear)
 
     # add mean time trend to the anomaly 
-    inifile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_{startyear}-{endyear}.nc")
-    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_product_{startyear}-{endyear}.nc")
-    newfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast_{startyear}-{endyear}.nc")
-
-    try:
-        os.remove(newfile)
-        print(f"File {newfile} successfully removed.")
-    except FileNotFoundError:
-        print(f"File {newfile} not found. Unable to remove.")
+    inifile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_product.nc")
+    newfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast.nc")
+    remove_existing_file(newfile)
 
     run_bash_command(f"cdo add {auxfile} -timmean {inifile} {newfile}")
 
@@ -120,8 +117,25 @@ def EOF_info(expname, startyear, endyear, var):
     dirs = folders(expname)
     leg = get_leg(endyear)
 
-    cov = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_variance_{startyear}-{endyear}.nc")
+    cov = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_variance.nc")
 
     run_bash_command(f"cdo info -div {cov} -timsum {cov}")
+
+    return None
+
+def merge_rebuilt(expname, startleg, endleg):
+    """ CDO command to merge rebuilt restart files """
+
+    dirs = folders(expname)
+
+    filelist = []
+    for leg in range(startleg, endleg+1):
+        pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+    
+    merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), "data.nc")
+    remove_existing_file(merged_file)
+    run_bash_command(f"cdo cat {' '.join(filelist)} {merged_file}")
 
     return None
