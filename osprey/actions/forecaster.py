@@ -21,6 +21,7 @@ from osprey.actions.post_reader import reader_restart
 from osprey.means.eof import save_EOF, detrend_3D, retrend_3D
 from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D, preproc_forecast_3D
 from osprey.utils import cdo
+from osprey.utils.utils import remove_existing_file, run_bash_command
 
 def _forecast_xarray(foreyear):
     """Get the xarray for the forecast time"""
@@ -31,6 +32,17 @@ def _forecast_xarray(foreyear):
 
     return xf
 
+def _time_xarray(startyear, endyear):
+    """Reconstruct the time array of restarts"""
+
+    dates=[]
+    for year in range(startyear,endyear+1):
+        x = cftime.DatetimeGregorian(year, 1, 1, 0, 0, 0, has_year_zero=False)
+        dates.append(x)
+    tdata = xr.DataArray(data = np.array(dates), dims = ['time_counter'], coords = {'time_counter': np.array(dates)}, 
+                         attrs = {'stardand_name': 'time', 'axis': 'T'})
+
+    return tdata
 
 def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     """ Function to forecast local temperature using linear fit of output files """
@@ -154,30 +166,45 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
     foreyear = get_forecast_year(endyear, yearleap)
     xf = _forecast_xarray(foreyear)
 
-    # read forecast and change restart
-    rdata = reader_rebuilt(expname, endleg, endleg)  
+    # read rebuilt
+    rdata = reader_rebuilt(expname, endleg, endleg)
 
-    # create EOF
-    cdo.merge_rebuilt(expname, startleg, endleg)
+    # merge and change time axis
+    #cdo.merge_rebuilt(expname, startleg, endleg)
+
     varlist=['tn', 'tb']
     for var in varlist:
-        cdo.selname(expname, startyear, endyear, var)
+        merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), "rdata.nc")
+        varfile = os.path.join(dirs['tmp'],  str(endleg).zfill(3), f"{var}.nc")
+        run_bash_command(f"cdo -selname,{var} {merged_file} {varfile}")
+
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+        field = xr.open_mfdataset(filename, use_cftime=True)    
+        tdata = _time_xarray(startyear, endyear)
+        field['time_counter'] = tdata
+        filename=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+        remove_existing_file(filename)
+        field.to_netcdf(filename, mode='w', unlimited_dims={'time_counter': True})
+
         cdo.detrend(expname, startyear, endyear, var)
         cdo.get_EOF(expname, startyear, endyear, var)
     
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
         pattern = xr.open_mfdataset(filename, use_cftime=True)
         field = pattern.isel(time_counter=0)*0
-        for i in range(window):      
+        for i in range(window):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")
             timeseries = xr.open_mfdataset(filename, use_cftime=True)
             p = timeseries.polyfit(dim='time_counter', deg=1, skipna = True)
             theta = timeseries[var].isel(time_counter=-1)
             laststep = pattern.isel(time_counter=i)
-            field = field + theta*laststep
-    
-        # save EOF
-        save_EOF(expname, startyear, endyear, field, var)
+            field = field + theta.isel(lat=0,lon=0,zaxis_Reduced=0)*laststep
+        
+        # save EOF        
+        field = field.drop_vars({'lon', 'lat', 'zaxis_Reduced'})
+        filename=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_product.nc")
+        remove_existing_file(filename)
+        field.to_netcdf(filename, mode='w', unlimited_dims={'time_counter': True})
 
         # add trend
         cdo.retrend(expname, startyear, endyear, var)
