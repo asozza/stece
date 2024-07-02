@@ -58,7 +58,7 @@ def globalmean(data, var, ndim, subreg = None):
     expname = get_expname(data)
     df = elements(expname)
     if ndim == '3D':
-        ave = data[var].weighted(df['vol']).mean(dim=['time', 'z', 'y', 'x'])
+        ave = data[var].weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
         if subreg != None:
             z1,z2 = subregions(subreg,'ORCA2')
             subvol = df['V'].isel(z=slice(z1,z2))

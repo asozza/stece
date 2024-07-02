@@ -59,8 +59,8 @@ if __name__ == "__main__":
         rebuilder(expname, leg)
     
     # forecast based on local temperature fit
-    rdata = forecaster_EOF(expname, 'thetao', '3D', leg, yearspan, yearleap)
-    writer_restart(expname, rdata, leg)
+    #rdata = forecaster_EOF(expname, 'thetao', '3D', leg, yearspan, yearleap)
+    #writer_restart(expname, rdata, leg)
 
     # replace nemo restart files
     if args.replace:

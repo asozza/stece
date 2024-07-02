@@ -94,9 +94,9 @@ def get_forecast_year(year, yearleap):
 def get_year(leg, year_zero=1990):
     """ Get date from leg """
     
-    return (year_zero + leg - 2)
+    return (year_zero + leg - 1)
 
 def get_leg(year, year_zero=1990):
     """ Get leg from date """
 
-    return (year - year_zero + 2)
+    return (year - year_zero + 1)

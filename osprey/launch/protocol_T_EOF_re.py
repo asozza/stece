@@ -66,5 +66,5 @@ if __name__ == "__main__":
 
     # replace nemo restart files
     if args.replace:
-        replacer(expname, leg)
+        replacer(expname, endleg)
 

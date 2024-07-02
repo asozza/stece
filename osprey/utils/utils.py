@@ -36,9 +36,10 @@ def remove_existing_file(filename):
     except FileNotFoundError:
         print(f"File {filename} not found.")
 
+
 def remove_existing_filelist(filename):
 
-    pattern = os.path.join(filename, '*.nc')
+    pattern = os.path.join(filename + '*.nc')
     files = glob.glob(pattern)
     try:
         for file in files:
@@ -46,6 +47,7 @@ def remove_existing_filelist(filename):
             print(f"File {file} successfully removed.")
     except FileNotFoundError:
         print(f"File {file} not found.")
+
 
 def get_expname(data):
     """" Get expname from a NEMO dataset & output file path """

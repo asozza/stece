@@ -1,6 +1,0 @@
-INFO:root: Time window 9
-INFO:root:cdo eof3d,9 /ec/res4/scratch/itas/martini/lfr0/071/thetao_anomaly_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_variance_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_pattern_2050-2059.nc
-INFO:root:cdo eofcoeff /ec/res4/scratch/itas/martini/lfr0/071/thetao_pattern_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_anomaly_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_timeseries_2050-2059_
-INFO:root: Time window 9
-INFO:root:cdo eof3d,9 /ec/res4/scratch/itas/martini/lfr0/071/thetao_anomaly_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_variance_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_pattern_2050-2059.nc
-INFO:root:cdo eofcoeff /ec/res4/scratch/itas/martini/lfr0/071/thetao_pattern_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_anomaly_2050-2059.nc /ec/res4/scratch/itas/martini/lfr0/071/thetao_timeseries_2050-2059_

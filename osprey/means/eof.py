@@ -14,7 +14,7 @@ import xarray as xr
 
 from osprey.utils.folders import folders
 from osprey.utils.time import get_leg
-from osprey.utils import cdo
+from osprey.utils import run_cdo
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import globalmean
 
@@ -26,6 +26,7 @@ def preproc_timeseries_3D(data):
 
     data = data.rename({'time_counter': 'time'})
     data = data.isel(lon=0,lat=0,zaxis_Reduced=0)
+    data = data.drop_vars({'time_counter_bnds','lon','lat','zaxis_Reduced'})
 
     return data
 
@@ -57,71 +58,9 @@ def preproc_pattern_2D(data):
 
     return data
 
-def preproc_variance(data):
-    """ preprocessing routine for EOF variance """
-
-    data = data.rename({'time_counter': 'time'})
-    data = data.drop_vars({'time_counter_bnds'})
-        
-    return data
-
-def postproc_field_2D(data):
-    """ postprocessing routime for field from EOF """
-
-    data = data.rename_dims({'x': 'x_grid_T', 'y': 'y_grid_T'})
-    data = data.rename({'lat': 'nav_lat_grid_T', 'lon': 'nav_lon_grid_T'})
-    data = data.rename({'time': 'time_counter'})
-        
-    return data
-
-def postproc_field_3D(data):
-    """ postprocessing routime for field from EOF """
-
-    data = data.rename_dims({'x': 'x_grid_T', 'y': 'y_grid_T'})
-    data = data.rename({'lat': 'nav_lat_grid_T', 'lon': 'nav_lon_grid_T'})
-    data = data.rename({'time': 'time_counter'})
-    data = data.rename({'z': 'deptht'})
-
-    return data
-
-def preproc_forecast_2D(data):
-    """ preprocessing routine for EOF pattern """
-
-    data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
-    data = data.rename({'nav_lat_grid_T': 'nav_lat', 'nav_lon_grid_T': 'nav_lon'})
-    data = data.expand_dims(time_counter=1)
-    nav_lon_expanded = data["nav_lon"].expand_dims(time_counter=data.coords['time_counter'])
-    nav_lat_expanded = data["nav_lat"].expand_dims(time_counter=data.coords['time_counter'])
-    data_expanded_coords = data.assign_coords(nav_lon=nav_lon_expanded, nav_lat=nav_lat_expanded)
-    data = data_expanded_coords.reset_coords(["nav_lon", "nav_lat"])
-    
-    return data
-
-def preproc_forecast_3D(data):
-    """ preprocessing routine for EOF pattern """
-
-    data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
-    data = data.rename({'nav_lat_grid_T': 'nav_lat', 'nav_lon_grid_T': 'nav_lon'})
-    data = data.rename({'deptht': 'nav_lev'})
-    data = data.expand_dims(time_counter=1)
-    nav_lon_expanded = data["nav_lon"].expand_dims(time_counter=data.coords['time_counter'])
-    nav_lat_expanded = data["nav_lat"].expand_dims(time_counter=data.coords['time_counter'])
-    data_expanded_coords = data.assign_coords(nav_lon=nav_lon_expanded, nav_lat=nav_lat_expanded)
-    data = data_expanded_coords.reset_coords(["nav_lon", "nav_lat"])
-    
-    return data
-
-def preproc_var_3D(data):
-    
-    data = data.rename_dims({"x_grid_T": 'x', "y_grid_T": 'y'})
-    data = data.rename({'time_counter': 'time', 'deptht': 'z'})
-
-    return data
-
 def postproc_var_3D(data):
     
-    data = data.rename_dims({'x': 'x_grid_T', 'y': 'y_grid_T'})
-    data = data.rename({'time': 'time_counter', 'z': 'deptht'})
+    data = data.rename({'time': 'time_counter', 'z': 'nav_lev'})
 
     return data
 
@@ -171,10 +110,10 @@ def retrend_3D(expname, startyear, endyear, var):
 def create_EOF(expname, startyear, endyear, var, ndim):
     """ Create EOF """
 
-    cdo.merge(expname, startyear, endyear)
-    cdo.selname(expname, startyear, endyear, var)
-    cdo.detrend(expname, startyear, endyear, var)
-    cdo.get_EOF(expname, startyear, endyear, var, ndim)
+    run_cdo.merge(expname, startyear, endyear)
+    run_cdo.selname(expname, startyear, endyear, var)
+    run_cdo.detrend(expname, startyear, endyear, var)
+    run_cdo.get_EOF(expname, startyear, endyear, var, ndim)
 
     return None
 
