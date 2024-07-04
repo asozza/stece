@@ -18,7 +18,7 @@ from osprey.utils.folders import folders
 from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
 from osprey.actions.reader import reader_nemo, reader_rebuilt 
 from osprey.actions.post_reader import reader_restart
-from osprey.means.eof import save_EOF, detrend_3D, retrend_3D, postproc_var_3D
+from osprey.means.eof import change_timeaxis, postproc_var_3D
 from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D
 from osprey.means.means import timemean
 from osprey.utils import run_cdo
@@ -108,7 +108,7 @@ def forecaster_fit_restart(expname, endleg, yearspan, yearleap):
     return yf
 
 
-def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
+def forecaster_EOF(expname, var, endleg, yearspan, yearleap):
     """ Function to forecast temperature field using EOF """
 
     dirs = folders(expname)
@@ -163,7 +163,9 @@ def forecaster_EOF(expname, var, ndim, endleg, yearspan, yearleap):
     total = total.expand_dims({'time': 1})
     total = postproc_var_3D(total)
     total['time_counter'] = rdata['time_counter']
-    rdata[var] = total[var]
+    varlist=['tn', 'tb']
+    for vars in varlist:
+        rdata[vars] = total[var]
 
     return rdata
 
@@ -180,23 +182,25 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
     # forecast year
     foreyear = get_forecast_year(endyear, yearleap)
     xf = _forecast_xarray(foreyear)
+    tdata = _time_xarray(startyear, endyear)
 
     # read rebuilt
     rdata = reader_rebuilt(expname, endleg, endleg)
+    rdata['time_counter'] = tdata
 
     # merge and change time axis
-    # run_cdo.merge_rebuilt(expname, startleg, endleg)
+    run_cdo.merge_rebuilt(expname, startleg, endleg)
+    change_timeaxis(expname, var, startyear, endyear)
 
     varlist=['tn', 'tb']
     for var in varlist:
-        
+
         run_cdo.detrend(expname, var, endleg)
         run_cdo.get_EOF(expname, var, endleg, window)
-    
+        
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
         pattern = xr.open_mfdataset(filename, use_cftime=True)
-        field = pattern.isel(time_counter=0)*0
-        print(' Summing patterns ')        
+        field = pattern.isel(time_counter=0)*0        
         for i in range(window):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")
             print(filename)
@@ -207,16 +211,14 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
             basis = pattern.isel(time_counter=i)
             field = field + theta*basis
         
-        # save EOF        
-        field = field.drop_vars({'time_counter','lon','lat','zaxis_Reduced'})        
+        # add mean
+        field = field.drop_vars({'time_counter','lon','lat','zaxis_Reduced'})
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
         xdata = xr.open_mfdataset(filename, use_cftime=True)
         xdata = xdata.rename({'time_counter': 'time'})
         ave = timemean(xdata, var)
         total = field + ave
-
-        #filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_forecast.nc")
-        #field = xr.open_mfdataset(filename, use_cftime=True)
+        #
         total = total.expand_dims({'time_counter': 1})
         total['time_counter'] = rdata['time_counter']
         rdata[var] = total[var]

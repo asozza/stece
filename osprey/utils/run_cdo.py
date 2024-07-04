@@ -131,7 +131,7 @@ def merge_rebuilt(expname, startleg, endleg):
             matching_files = glob.glob(pattern)
             filelist.extend(matching_files)
     
-        merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+        merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_nt.nc")
         remove_existing_file(merged_file)
         run_bash_command(f"cdo cat {' '.join(filelist)} {merged_file}")
 
