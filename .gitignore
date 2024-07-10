@@ -4,3 +4,4 @@ osprey/*/__pycache__
 osprey/__pycache__
 osprey/nam_*
 *.egg-info/
+figs

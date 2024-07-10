@@ -71,7 +71,7 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
     rdata = reader_rebuilt(expname, endleg, endleg)
     varlist = ['tn', 'tb']
     for var1 in varlist:
-        rdata[var1] = xr.where(rdata[var1] !=0, yf.values, 0.0)
+        rdata[var1] = xr.where(rdata[var1] != 0 , yf.values, 0.0)
 
     return rdata
 
@@ -123,21 +123,9 @@ def forecaster_EOF(expname, var, endleg, yearspan, yearleap):
 
     # create EOF
     run_cdo.merge(expname, startyear, endyear)
-    run_cdo.selname(expname, var, endleg)
+    run_cdo.selname(expname, var, endleg, 'year')
     run_cdo.detrend(expname, var, endleg)
     run_cdo.get_EOF(expname, var, endleg, window)
-    
-    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
-    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
-    field = pattern.isel(time=0)*0
-    for i in range(window):      
-        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")
-        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
-        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
-        #theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
-        theta = timeseries[var].isel(time=-1)
-        laststep = pattern.isel(time=i)
-        field = field + theta*laststep
     
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
@@ -145,12 +133,12 @@ def forecaster_EOF(expname, var, endleg, yearspan, yearleap):
     for i in range(window):
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")    
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
-        #p = timeseries.polyfit(dim='time', deg=1, skipna = True)
-        # theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
-        theta = timeseries[var].isel(time=-1)
+        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
+        #theta = timeseries[var].isel(time=-1)
         basis = pattern.isel(time=i)
         field = field + theta*basis
-    field = field.drop_vars({'time'})
+    #field = field.drop_vars({'time'})
 
     # retrend
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
@@ -160,12 +148,61 @@ def forecaster_EOF(expname, var, endleg, yearspan, yearleap):
 
     # read forecast and change restart
     rdata = reader_rebuilt(expname, endleg, endleg)
-    total = total.expand_dims({'time': 1})
+    #total = total.expand_dims({'time': 1})
     total = postproc_var_3D(total)
     total['time_counter'] = rdata['time_counter']
     varlist=['tn', 'tb']
     for vars in varlist:
-        rdata[vars] = total[var]
+        rdata[vars] = xr.where(rdata[vars]!=0.0, total[var], 0.0)
+
+    return rdata
+
+
+def forecaster_EOF_winter(expname, var, endleg, yearspan, yearleap):
+    """ Function to forecast winter temperature field using EOF """
+
+    dirs = folders(expname)
+    startleg = get_startleg(endleg, yearspan)
+    startyear = get_year(startleg)
+    endyear = get_year(endleg)
+    window = endyear - startyear + 1
+
+    # forecast year
+    foreyear = get_forecast_year(endyear, yearleap)
+    xf = _forecast_xarray(foreyear)
+
+    # create EOF
+    run_cdo.merge_winter(expname, var, startyear, endyear)    
+    run_cdo.detrend(expname, var, endleg)
+    run_cdo.get_EOF(expname, var, endleg, window)
+    
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
+    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+    field = pattern.isel(time=0)*0
+    for i in range(window):
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")    
+        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
+        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
+        #theta = timeseries[var].isel(time=-1)
+        basis = pattern.isel(time=i)
+        field = field + theta*basis
+    #field = field.drop_vars({'time'})
+
+    # retrend
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+    xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+    ave = timemean(xdata, var)
+    total = field + ave
+
+    # read forecast and change restart
+    rdata = reader_rebuilt(expname, endleg, endleg)
+    #total = total.expand_dims({'time': 1})
+    total = postproc_var_3D(total)
+    total['time_counter'] = rdata['time_counter']
+    varlist=['tn', 'tb']
+    for vars in varlist:
+        rdata[vars] = xr.where(rdata[vars]!=0.0, total[var], 0.0)
 
     return rdata
 
@@ -222,6 +259,10 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
         total = total.expand_dims({'time_counter': 1})
         total['time_counter'] = rdata['time_counter']
         rdata[var] = total[var]
+
+
+
+
 
     return rdata
 

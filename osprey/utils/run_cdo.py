@@ -24,8 +24,9 @@ def merge(expname, startyear, endyear):
     leg = get_leg(endyear)
 
     filelist = []
-    for year in range(startyear-1, endyear):
+    for year in range(startyear-2, endyear+1):
         pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
+        print(pattern)
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     
@@ -37,7 +38,7 @@ def merge(expname, startyear, endyear):
 
     return None
 
-def selname(expname, var, leg):
+def selname(expname, var, leg, interval):
     """ CDO command to select variable """
 
     dirs = folders(expname)
@@ -45,7 +46,12 @@ def selname(expname, var, leg):
     varfile = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}.nc")
     remove_existing_file(varfile)
 
-    run_bash_command(f"cdo yearmean -selname,{var} {merged_file} {varfile}")
+    if interval == 'year':
+        run_bash_command(f"cdo yearmean -selname,{var} {merged_file} {varfile}")
+    elif interval == 'winter':
+        run_bash_command(f"cdo timmean -selmon,12,1,2 -selname,{var} {merged_file} {varfile}")
+    else:
+        print(f"Interval {interval} is not recognized. Please use 'year' or 'winter'.")
 
     return None
 
@@ -134,6 +140,49 @@ def merge_rebuilt(expname, startleg, endleg):
         merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_nt.nc")
         remove_existing_file(merged_file)
         run_bash_command(f"cdo cat {' '.join(filelist)} {merged_file}")
+
+    return None
+
+def merge_winter(expname, var, startyear, endyear):
+    """ CDO command to merge winter-only data """
+
+    dirs = folders(expname)
+    endleg = get_leg(endyear)
+    os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
+
+    for year in range(startyear-1, endyear):
+        filelist = []
+        for i in range(2):
+            pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year-i}-{year-i}.nc")
+            matching_files = glob.glob(pattern)
+            filelist.extend(matching_files)
+        datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_data.nc")
+        remove_existing_file(datafile)
+        run_bash_command(f"cdo cat {' '.join(filelist)} {datafile}")
+        varfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_monthly.nc")
+        remove_existing_file(varfile)
+        run_bash_command(f"cdo selname,{var} {datafile} {varfile}")
+        djfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ.nc")
+        remove_existing_file(djfile)
+        run_bash_command(f"cdo selmon,12,1 {varfile} {djfile}")
+        auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ2.nc")
+        remove_existing_file(auxfile)
+        run_bash_command(f"cdo delete,timestep=1,-1 {djfile} {auxfile}")
+        winterfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")
+        remove_existing_file(winterfile)
+        run_bash_command(f"cdo timmean {auxfile} {winterfile}")
+
+    filelist = []
+    for year in range(startyear-1, endyear):
+        pattern = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")                        
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+    datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+    remove_existing_file(datafile)
+    run_bash_command(f"cdo cat {' '.join(filelist)} {datafile}")
+
+    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_")
+    remove_existing_filelist(auxfile)
 
     return None
 

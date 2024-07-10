@@ -41,3 +41,21 @@ def replacer(expname, leg):
     
     return None
 
+def restorer(expname, leg):
+
+    dirs = folders(expname)
+
+    # copying from the restart folder required for the leg you asked
+    browser = ['*restart*']
+    for file in browser:
+        filelist = sorted(glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), file)))
+        for file in filelist:
+            basefile = os.path.basename(file)
+            targetfile = os.path.join(dirs['exp'], basefile)
+            if not os.path.isfile(targetfile):
+                if 'restart' in basefile:
+                    newfile = os.path.join(dirs['exp'], '_'.join(basefile.split('_')[2:]))
+                    print("Linking NEMO restart", file)
+                    os.symlink(file, newfile)
+
+    return None 
