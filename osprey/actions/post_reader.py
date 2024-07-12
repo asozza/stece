@@ -13,6 +13,7 @@ import logging
 import numpy as np
 import xarray as xr
 
+from osprey.utils import vardict
 from osprey.utils.folders import folders
 from osprey.utils.time import get_leg, get_decimal_year
 from osprey.means.means import spacemean, timemean
@@ -68,15 +69,16 @@ def reader_averaged(expname, startyear, endyear, var, diag):
     return data
 
 
-def postreader_averaged(expname, startyear, endyear, var, ndim, diag):
+def postreader_averaged(expname, startyear, endyear, var, diagnostics_type):
     """ Post-reader container of averaged data """
 
     dirs = folders(expname)
     df = elements(expname)
+    ndim = vardict('nemo')[var]
 
     # try to read averaged data
     try:
-        data = reader_averaged(expname, startyear, endyear, var, diag)
+        data = reader_averaged(expname, startyear, endyear, var, diagnostics_type)
         logging.info(' Averaged data found ')
         print(" Averaged data found ")
         return data
@@ -86,10 +88,10 @@ def postreader_averaged(expname, startyear, endyear, var, ndim, diag):
     # If averaged data not existing, read original data
     data = reader_nemo(expname, startyear, endyear)
 
-    ds = averaging(expname, data, var, ndim, diag)
+    ds = averaging(expname, data, var, ndim, diagnostics_type)
 
     # Write averaged data on file
-    filename = os.path.join(dirs['perm'], f"{diag}_{var}_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['perm'], f"{diagnostics_type}_{var}_{startyear}-{endyear}.nc")
     logging.info(' File to be saved at %s', filename)
     ds.to_netcdf(filename)
 
@@ -99,13 +101,14 @@ def postreader_averaged(expname, startyear, endyear, var, ndim, diag):
     return data
 
 
-def averaging(expname, data, var, ndim, diag):
+def averaging(expname, data, var, diagnostics_type):
     """ Perform different flavours of averaging """
 
     df = elements(expname)
+    ndim = vardict('nemo')[var]
 
     # timeseries (why not saving in cftime?)
-    if diag  == 'series':
+    if diagnostics_type  == 'timeseries':
         tvec = get_decimal_year(data['time'].values)
         vec = spacemean(expname, data[var], ndim)
         ds = xr.Dataset({
@@ -116,7 +119,7 @@ def averaging(expname, data, var, ndim, diag):
             attrs = {'description': 'ECE4/NEMO averaged timeseries data'})
 
     # vertical profile
-    if diag == 'prof' and ndim == '3D':
+    if diagnostics_type == 'profile' and ndim == '3D':
         zvec = data['z'].values.flatten()
         vec = data[var].weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
         ds = xr.Dataset({
@@ -127,7 +130,7 @@ def averaging(expname, data, var, ndim, diag):
             attrs = {'description': 'ECE4/NEMO averaged profiles'})
 
     # hovmoller diagram
-    if diag == 'hovm' and ndim == '3D':
+    if diagnostics_type == 'hovmoller' and ndim == '3D':
         tvec = get_decimal_year(data['time'].values)
         vec = spacemean(expname, data[var], '2D')
         ds = xr.Dataset({
@@ -140,7 +143,7 @@ def averaging(expname, data, var, ndim, diag):
             attrs = {'description': 'ECE4/NEMO averaged hovmoller diagram'})
 
     # map
-    if diag == 'map':
+    if diagnostics_type == 'map':
         if ndim == '2D':
             vec = timemean(data[var])
         if ndim == '3D':
@@ -155,7 +158,7 @@ def averaging(expname, data, var, ndim, diag):
             attrs = {'description': 'ECE4/NEMO averaged map'})
 
     # field
-    if diag == 'field' and ndim == '3D':
+    if diagnostics_type == 'field' and ndim == '3D':
         vec = timemean(data[var])
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
@@ -168,7 +171,7 @@ def averaging(expname, data, var, ndim, diag):
                         attrs  = {'units' : data[var].units, 'long_name' : data[var].long_name})}, 
             attrs = {'description': 'ECE4/NEMO time-averaged field'})
 
-    if diag == 'field' and ndim == '2D':
+    if diagnostics_type == 'field' and ndim == '2D':
         vec = timemean(data[var])
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 

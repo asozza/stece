@@ -113,20 +113,20 @@ def subregions(idx, orca):
     """
 
     if orca == 'ORCA2':
-        if idx == 'mix':
+        if idx == 'mixed-layer':
             z1 = 0; z2 = 9
-        elif idx == 'pyc':
+        elif idx == 'pycnocline':
             z1 = 10; z2 = 20
-        elif idx == 'aby':
+        elif idx == 'abyss':
             z1 = 21; z2 = 30
         else:
             raise ValueError(" Invalid subrange ")
     elif orca == 'eORCA1':
-        if idx == 'mix':
+        if idx == 'mixed-layer':
             z1 = 0; z2 = 23
-        elif idx == 'pyc':
+        elif idx == 'pycnocline':
             z1 = 24; z2 = 45
-        elif idx == 'aby':
+        elif idx == 'abyss':
             z1 = 46; z2 = 74
         else:
             raise ValueError(" Invalid subrange ")
