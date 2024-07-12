@@ -16,31 +16,36 @@ import cftime
 import nc_time_axis
 import matplotlib.pyplot as plt
 
+from osprey.actions.reader import reader_nemo
+from osprey.actions.post_reader import postreader_averaged
+from osprey.means.means import cost
+from osprey.means.means import globalmean
+from osprey.utils.vardict import vardict
 
-def profile(expname, startyear, endyear, var, norm, idx_norm):
-    """ graphics profile """
 
-    data = osi.read_averaged_profile_T(expname, startyear, endyear, var)
-    zz = data['z'].values.flatten() 
-    vv = data[var].values.flatten()
-    pp = plt.plot(osm.cost(vv, norm, idx_norm),zz)
-    plt.ylabel(data['z'].long_name)
+def profile(expname, 
+            startyear, endyear, 
+            var, cost_value, 
+            color, 
+            reader_type="output", 
+            cost_type="norm", 
+            average_type="moving"): 
+    """ Graphics of vertical profile """
+    
+    if reader_type == 'output':
+        data = reader_nemo(expname, startyear, endyear)
+    elif reader_type == 'averaged':
+        data = postreader_averaged(expname, startyear, endyear, var, 'profile')
+        
+    zvec = data['z'].values.flatten()
+
+    vec = data[var].values.flatten()
+    if average_type == 'moving':
+        ndim = vardict('nemo')[var]
+        vec = globalmean(data, var, '2D')
+
+    pp = plt.plot(cost(vec, cost_value, cost_type), -zvec, color)
     plt.xlabel(data[var].long_name)
+    plt.ylabel(data['z'].long_name)
 
     return pp
-
-
-def profile_diff(exp1, exp2, startyear, endyear, var, norm, idx_norm):
-    """ graphics of profile difference """
-
-    data1 = osi.read_averaged_profile_T(exp1, startyear, endyear, var)
-    data2 = osi.read_averaged_profile_T(exp2, startyear, endyear, var)
-    delta = data2[var]-data1[var]
-    zz = data1['z'].values.flatten()     
-    vv = delta.values.flatten()
-    pp = plt.plot(osm.cost(vv, norm, idx_norm),zz)
-    plt.xlabel(data1['z'].long_name)
-    plt.ylabel(data1[var].long_name)
-
-    return pp
-

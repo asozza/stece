@@ -15,9 +15,10 @@ import cftime
 import nc_time_axis
 import matplotlib.pyplot as plt
 
-from osprey.actions.post_reader import postreader_averaged, reader_nemo
+from osprey.actions.reader import reader_nemo
+from osprey.actions.post_reader import postreader_averaged
 from osprey.utils.time import get_decimal_year
-from osprey.means.means import movave, cost
+from osprey.means.means import movave
 from osprey.means.means import cost
 from osprey.means.means import spacemean
 from osprey.utils.vardict import vardict
