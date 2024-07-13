@@ -182,9 +182,9 @@ def forecaster_EOF_winter(expname, var, endleg, yearspan, yearleap):
     for i in range(window):
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")    
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
-        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
-        theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
-        #theta = timeseries[var].isel(time=-1)
+        #p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        #theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
+        theta = timeseries[var].isel(time=-1)
         basis = pattern.isel(time=i)
         field = field + theta*basis
     #field = field.drop_vars({'time'})

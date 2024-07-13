@@ -74,7 +74,7 @@ def globalmean(data, var, ndim, subreg = None):
     return ave
 
 
-def spacemean(data, var, ndim, subregion = None, orca = 'ORCA2'):
+def spacemean(data, var, ndim, subregion=None, orca = 'ORCA2'):
     """ Spatial average of a field """
 
     expname = get_expname(data)
@@ -186,14 +186,14 @@ def cost(var, varref, idx):
 #     return delta
 
 
-# def mean_forecast_error(expname, year, var, xfield):
-#     """ function to compute mean forecast error """
+def mean_forecast_error(expname, year, var, xfield):
+     """ function to compute mean forecast error """
 
-#     df = elements(expname=expname)  
-#     data = read_T(expname=expname, year=year)
-#     mdata = data[var].mean('time')
-#     xdata = xr.where(mdata!=0.0, xfield, 0.0)
-#     delta = xr.where(mdata!=0.0, mdata.values-xdata.values, 0.0)
-#     dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
+     df = elements(expname=expname)
+     data = read_T(expname=expname, year=year)
+     mdata = data[var].mean('time')
+     xdata = xr.where(mdata!=0.0, xfield, 0.0)
+     delta = xr.where(mdata!=0.0, mdata.values-xdata.values, 0.0)
+     dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
 
-#     return dd
+     return dd
