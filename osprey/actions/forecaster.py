@@ -201,7 +201,7 @@ def forecaster_EOF_winter(expname, var, endleg, yearspan, yearleap):
     total = postproc_var_3D(total)
     total['time_counter'] = rdata['time_counter']
     varlist=['tn', 'tb']
-    for vars in varlist:
+    for vars in varlist: 
         rdata[vars] = xr.where(rdata[vars]!=0.0, total[var], 0.0)
 
     return rdata
@@ -249,7 +249,7 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
             field = field + theta*basis
         
         # add mean
-        field = field.drop_vars({'time_counter','lon','lat','zaxis_Reduced'})
+        field = field.drop_vars({'time_counter', 'lon', 'lat', 'zaxis_Reduced'})
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
         xdata = xr.open_mfdataset(filename, use_cftime=True)
         xdata = xdata.rename({'time_counter': 'time'})
@@ -259,10 +259,6 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
         total = total.expand_dims({'time_counter': 1})
         total['time_counter'] = rdata['time_counter']
         rdata[var] = total[var]
-
-
-
-
 
     return rdata
 

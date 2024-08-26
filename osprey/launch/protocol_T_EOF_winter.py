@@ -35,8 +35,8 @@ def parse_args():
     parser.add_argument("yearleap", metavar="YEARLEAP", help="Year leap for projecting temperature", type=int)
 
     # optional to activate nemo rebuild
-    parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")   
-    parser.add_argument("--forecast", action="store_true", help="Create forecast")    
+    parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")
+    parser.add_argument("--forecast", action="store_true", help="Create forecast")
     parser.add_argument("--replace", action="store_true", help="Replace nemo restart files")
     parser.add_argument("--restore", action="store_true", help="Restore nemo restart files")
 

@@ -11,12 +11,14 @@ dependencies:
   - python>=3.9,<3.12
   - cdo=2.4.0
   - eccodes>=2.31.0,<2.34.0 
+  - numpy
   - xarray
   - ipykernel
   - dask
   - pandas
   - matplotlib
   - netcdf4
+  - scikit-learn
   - ruamel.yaml
   - nc-time-axis
   - pip

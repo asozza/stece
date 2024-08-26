@@ -60,6 +60,7 @@ def profile(expname,
 
     return pp
 
+
 def profile_diff(expname1, expname2, 
             startyear, endyear, 
             var, 
@@ -68,7 +69,7 @@ def profile_diff(expname1, expname2,
             reader_type="output", 
             cost_type="norm", 
             average_type="moving"): 
-    """ Graphics of vertical profile """
+    """ Graphics of two-field difference vertical profile """
     
     # reading data
     if reader_type == 'output':
@@ -77,7 +78,6 @@ def profile_diff(expname1, expname2,
     elif reader_type == 'averaged':
         data1 = postreader_averaged(expname1, startyear, endyear, var, 'profile')
         data2 = postreader_averaged(expname2, startyear, endyear, var, 'profile')
-
 
     # depth y-axis 
     zvec = data1['z'].values.flatten()
