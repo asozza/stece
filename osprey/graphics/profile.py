@@ -13,7 +13,7 @@ import numpy as np
 import xarray as xr
 import dask
 import cftime
-import nc_time_axis
+#import nc_time_axis
 import matplotlib.pyplot as plt
 
 from osprey.actions.reader import reader_nemo
@@ -78,6 +78,49 @@ def profile_diff(expname1, expname2,
     elif reader_type == 'averaged':
         data1 = postreader_averaged(expname1, startyear, endyear, var, 'profile')
         data2 = postreader_averaged(expname2, startyear, endyear, var, 'profile')
+
+    # depth y-axis 
+    zvec = data1['z'].values.flatten()
+
+    # variable x-axis
+    vec1 = data1[var].values.flatten()
+    vec2 = data2[var].values.flatten()
+    if average_type == 'moving':
+        ndim = vardict('nemo')[var]
+        vec1 = globalmean(data1, var, '2D')
+        vec2 = globalmean(data2, var, '2D')
+
+    # apply cost function
+    vec_cost = cost(vec1, vec2, cost_type)
+
+    # plot
+    plot_kwargs = {}
+    if color is not None:
+        plot_kwargs['color'] = color
+
+    pp = plt.plot(vec_cost, -zvec, **plot_kwargs)
+    plt.xlabel(data1[var].long_name)
+    plt.ylabel(data1['z'].long_name)
+
+    return pp
+
+def profile_diff_two(expname1, expname2, 
+            startyear1, endyear1, startyear2, endyear2,
+            var, 
+            cost_value=1, 
+            color=None, 
+            reader_type="output", 
+            cost_type="norm", 
+            average_type="moving"): 
+    """ Graphics of two-field difference vertical profile """
+    
+    # reading data
+    if reader_type == 'output':
+        data1 = reader_nemo(expname1, startyear1, endyear1)
+        data2 = reader_nemo(expname2, startyear2, endyear2)
+    elif reader_type == 'averaged':
+        data1 = postreader_averaged(expname1, startyear1, endyear1, var, 'profile')
+        data2 = postreader_averaged(expname2, startyear2, endyear2, var, 'profile')
 
     # depth y-axis 
     zvec = data1['z'].values.flatten()

@@ -9,6 +9,9 @@ Date: Mar 2024
 """
 
 import numpy as np
+import xarray as xr
+import cftime
+
 from osprey.utils.utils import get_expname
 from osprey.actions.reader import elements
 
