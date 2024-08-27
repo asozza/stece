@@ -4,7 +4,7 @@
 """
 Graphics for Gregory plots
 
-Author: Alessandro Sozza (CNR-ISAC) 
+Author: Alessandro Sozza, Paolo Davini (CNR-ISAC) 
 Date: Mar 2024
 """
 

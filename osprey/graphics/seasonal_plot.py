@@ -4,7 +4,7 @@
 """
 Graphics for Seasonal plots
 
-Author: Alessandro Sozza (CNR-ISAC) 
+Author: Alessandro Sozza, Paolo Davini (CNR-ISAC) 
 Date: Mar 2024
 """
 
@@ -13,7 +13,7 @@ import numpy as np
 import xarray as xr
 import dask
 import cftime
-import nc_time_axis
+#import nc_time_axis
 import matplotlib.pyplot as plt
 
 from osprey.actions.reader import reader_nemo

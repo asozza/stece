@@ -4,7 +4,7 @@
 """
 Stabilizer of water column
 
-Author: Alessandro Sozza (CNR-ISAC) 
+Author: Alessandro Sozza, Paolo Davini (CNR-ISAC) 
 Date: Jun 2024
 """
 

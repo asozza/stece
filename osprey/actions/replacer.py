@@ -4,7 +4,7 @@
 """
 Replacer
 
-Author: Alessandro Sozza (CNR-ISAC)
+Author: Alessandro Sozza, Paolo Davini (CNR-ISAC)
 Date: Oct 2023
 """
 
@@ -40,6 +40,7 @@ def replacer(expname, leg):
         os.symlink(resfile, newfile)
     
     return None
+
 
 def restorer(expname, leg):
 

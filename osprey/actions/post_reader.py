@@ -4,7 +4,7 @@
 """
 Post-Reader module
 
-Author: Alessandro Sozza
+Author: Alessandro Sozza, Paolo Davini (CNR-ISAC)
 Date: June 2024
 """
 

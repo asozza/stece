@@ -4,7 +4,7 @@
 """
 Writer
 
-Author: Alessandro Sozza (CNR-ISAC)
+Authors: Paolo Davini, Alessandro Sozza (CNR-ISAC)
 Date: June 2024
 """
 

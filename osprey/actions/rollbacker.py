@@ -14,7 +14,7 @@ import shutil
 import yaml
 from dateutil.relativedelta import relativedelta
 
-from osprey.reader.reader import folders
+from osprey.actions.reader import folders
 from osprey.utils.utils import get_nemo_timestep
 
 
