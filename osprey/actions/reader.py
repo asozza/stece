@@ -19,7 +19,15 @@ from osprey.utils.folders import folders
 # Readers of NEMO output
 
 def _nemodict(grid, freq):
-    """Dictionary of NEMO output fields"""
+    """ 
+    Nemodict: Dictionary of NEMO output fields
+    
+    Args: 
+    grid: grid name [T, U, V, W]
+    freq: output frequency [1m, 1y, ...]
+
+    """
+
 
     gridlist = ["T", "U", "V", "W"]    
     if grid in gridlist:
@@ -49,7 +57,14 @@ def _nemodict(grid, freq):
 
 
 def preproc_nemo(data, grid):
-    """General preprocessing routine for NEMO data based on grid type"""
+    """ 
+    General preprocessing routine for NEMO data based on grid type
+    
+    Args: 
+    data: dataset
+    grid: gridname [T, U, V, W]
+
+    """
     
     grid_mappings = _nemodict(grid, None)[grid]  # None for freq as it is not used here
 
@@ -76,7 +91,16 @@ def preproc_nemo_ice(data):
 
 
 def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
-    """Main function to read nemo data"""
+    """ 
+    Reader_nemo: Main function to read NEMO data 
+    
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+    grid: grid name [T, U, V, W]
+    frequency: output frequency [1m, 1y, ...]
+
+    """
 
     dirs = folders(expname)
     dict = _nemodict(grid, freq)
@@ -96,14 +120,14 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
 # Reader of NEMO domain
 
 def preproc_nemo_domain(data):
-    """ preprocessing routine for nemo domain """
+    """ Pre-processing routine for nemo domain """
 
     data = data.rename({'time_counter': 'time'})
 
     return data
 
 def read_domain(expname):
-    """ read NEMO domain configuration file """
+    """ Read NEMO domain configuration file """
 
     dirs = folders(expname)
     filename = os.path.join(dirs['exp'], 'domain_cfg.nc')
@@ -113,7 +137,7 @@ def read_domain(expname):
     return domain
 
 def elements(expname):
-    """ define differential forms for integrals """
+    """ Define differential forms for integrals """
 
     df = {}
     domain = read_domain(expname)

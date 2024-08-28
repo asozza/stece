@@ -15,18 +15,16 @@ import cftime
 #import nc_time_axis
 import matplotlib.pyplot as plt
 
+from osprey.utils.time import get_decimal_year
+from osprey.utils.vardict import vardict
+from osprey.means.means import cost, movave
+from osprey.means.means import spacemean, timemean
 from osprey.actions.reader import reader_nemo
 from osprey.actions.post_reader import postreader_averaged
-from osprey.utils.time import get_decimal_year
-from osprey.means.means import movave
-from osprey.means.means import cost
-from osprey.means.means import spacemean, timemean
-from osprey.utils.vardict import vardict
-
 
 def timeseries(expname, 
                startyear, endyear, 
-               var, 
+               varname, 
                cost_value=1, 
                offset=0, 
                color=None, 
@@ -35,14 +33,29 @@ def timeseries(expname,
                cost_type="norm", 
                average_type="moving", 
                subregion=None): 
-    """ Graphics of timeseries """
+    """ 
+    Graphics of timeseries 
+    
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+    varname: variable name
+    cost_value: ?
+    offset: time offset
+    color: curve color
+    rescaled: rescale timeseries by the initial value at time=0
+    reader_type: read the original raw data or averaged data [nemo, post]
+    cost_type: choose the type of cost function [norm, diff, rdiff, abs, rel, var, rvar] 
+    subregion: consider a subregion of the water column [mixed-layer, pycnocline, abyss]
+    
+    """
     
     # reading data
     if reader_type == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
-    elif reader_type == "averaged":
-        data = postreader_averaged(expname, startyear, endyear, var, 'series')
+    elif reader_type == "post":
+        data = postreader_averaged(expname, startyear, endyear, varname, 'timeseries')
         tvec = data['time'].values.flatten()
 
     # fix time-axis
@@ -52,8 +65,8 @@ def timeseries(expname,
     # y-axis
     vec = data[var].values.flatten()
     if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec = movave(spacemean(data, var, ndim, subregion),12)
+        ndim = vardict('nemo')[varname]
+        vec = movave(spacemean(data, varname, ndim, subregion),12)
     vec_cutted = vec[6:-6]
 
     # apply cost function
@@ -70,7 +83,7 @@ def timeseries(expname,
 
     pp = plt.plot(tvec_offset, vec_cost, **plot_kwargs)
     plt.xlabel(data['time'].long_name)
-    plt.ylabel(data[var].long_name)
+    plt.ylabel(data[varname].long_name)
 
     return pp
 

@@ -26,7 +26,14 @@ from osprey.actions.rebuilder import rebuilder
 # Reader of multiple restarts (rebuilt or not)
 
 def reader_restart(expname, startyear, endyear):
-    """ Reader of NEMO restart files in a range of legs """
+    """ 
+    Reader of NEMO restart files in a range of legs 
+    
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+
+    """
 
     startleg = get_leg(startyear)
     endleg = get_leg(endyear)
@@ -50,7 +57,7 @@ def reader_restart(expname, startyear, endyear):
 
 def reader_averaged(expname, startyear, endyear, varname, diagname):
     """ 
-    Post-reader of averaged data 
+    Reader of averaged data 
     
     Args:
     expname: experiment name
@@ -70,7 +77,17 @@ def reader_averaged(expname, startyear, endyear, varname, diagname):
 
 # MAIN FUNCTION
 def postreader_averaged(expname, startyear, endyear, varname, diagname):
-    """ Post-reader container of averaged data """
+    """ 
+    Post-reader Main 
+    
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+    varname: variable name
+    diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
+          with prefixes [a: for anomaly]
+    
+    """
 
     dirs = folders(expname)
     df = elements(expname)
@@ -103,7 +120,17 @@ def postreader_averaged(expname, startyear, endyear, varname, diagname):
 
 
 def averaging(expname, data, varname, diagname):
-    """ Perform different flavours of averaging """
+    """ 
+    Averaging: Perform different flavours of averaging 
+    
+    Args:
+    expname: experiment name
+    data: dataset
+    varname: variable name
+    diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
+          with prefixes [a: for anomaly]
+    
+    """
 
     df = elements(expname)
     ndim = vardict('nemo')[varname]

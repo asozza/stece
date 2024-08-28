@@ -9,6 +9,7 @@ Date: Oct 2023
 """
 
 import os
+import re
 import glob
 import shutil
 import yaml
@@ -25,7 +26,7 @@ def rollbacker(expname, leg):
     dirs = folders(expname)
 
     # cleaning
-    # create list of files to be remove in the run folder
+    # create list of files to be removed in the run folder
     browser = ['rstas.nc', 'rstos.nc',  'srf000*.????', 'restart*.nc', 'rcf']
     for file in browser:
         filelist = sorted(glob.glob(os.path.join(dirs['exp'], file)))
@@ -33,6 +34,26 @@ def rollbacker(expname, leg):
             if os.path.isfile(file):
                 print('Removing' + file)
                 os.remove(file)
+
+    # remove also rebuilt restart in the restart/$leg folder
+    filelist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), 'restart*.nc'))
+    for file in filelist:
+        if os.path.isfile(file):
+            print('Removing' + file)
+            os.remove(file)
+
+    # remove folders with leg > $leg
+    folder_pattern = re.compile(r'^\d{3}$')
+    # Iterate over all items in the directory
+    for folder_name in os.listdir(dirs['restart']):
+        folder_path = os.path.join(dirs['restart'], folder_name)
+        # Check if it's a folder and if its name matches the three-digit pattern
+        if os.path.isdir(folder_path) and folder_pattern.match(folder_name):
+            folder_number = int(folder_name)
+            # Delete the folder if its number is greater than the threshold
+            if folder_number > leg:
+                print(f"Deleting folder: {folder_name}")
+                shutil.rmtree(folder_path)
 
     # update time.step
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
