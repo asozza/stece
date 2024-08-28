@@ -144,26 +144,26 @@ def subregions(idx, orca):
 def cost(var, varref, idx):
     """ multiple cost functions """
 
-    # normalized
+    # normalized [1]
     if idx == 'norm':
         x = var/varref
-    # difference (with sign)
+    # difference (with sign) [0]
     if idx == 'diff':
         x = (var-varref)
-    # relative difference
+    # relative difference [0]
     if idx == 'rdiff':
         x = (var-varref)/varref    
-    # absolute error
+    # absolute error [0]
     if idx == 'abs':
-        x = np.abs(var-varref)
-    # relative error
+        x = np.abs(var-varref) 
+    # relative error [0]
     if idx == 'rel':
-        x = np.abs(var-varref)/varref
-    # variance
+        x = np.abs((var-varref)/varref)
+    # variance [0]
     if idx == 'var':
         x = np.power(var-varref,2)
-    # normalized/relative variance
-    if idx == 'rvar':
+    # normalized/relative variance [0]
+    if idx == 'rvar': 
         x = np.power(var-varref,2)/np.power(varref,2)
     # other cost functions: exp? or atan?
 
