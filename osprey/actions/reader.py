@@ -182,6 +182,7 @@ def reader_rebuilt(expname, startleg, endleg):
         pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
+    logging.info(' File to be loaded %s', filelist)
     data = xr.open_mfdataset(filelist, use_cftime=True)
 
     return data

@@ -253,11 +253,12 @@ def forecaster_EOF_restart(expname,
     window = endyear - startyear + 1
 
     # forecast year
-    foreyear = get_forecast_year(endyear, yearleap)
-    xf = _forecast_xarray(foreyear)
+    #foreyear = get_forecast_year(endyear, yearleap)
+    #xf = _forecast_xarray(foreyear)
 
     # read rebuilt    
     rdata = reader_rebuilt(expname, endleg, endleg)
+    #xf = rdata['time_counter'] + yearleap
 
     # merge and change time axis
     run_cdo.merge_rebuilt(expname, startleg, endleg)
@@ -269,31 +270,37 @@ def forecaster_EOF_restart(expname,
         run_cdo.detrend(expname, var, endleg)
         run_cdo.get_EOF(expname, var, endleg, window)
         
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_00000.nc")
+        timeseries = xr.open_mfdataset(filename)
+        xf = timeseries['time_counter'].isel(time_counter=-1)+yearleap
+
         # project or reconstruct
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
-        pattern = xr.open_mfdataset(filename, use_cftime=True)
+        pattern = xr.open_mfdataset(filename)
         field = pattern.isel(time_counter=0)*0        
-        for i in range(window):
+        for i in range(window-1):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")            
-            timeseries = xr.open_mfdataset(filename, use_cftime=True)
+            timeseries = xr.open_mfdataset(filename)
+            #timeseries = timeseries.squeeze({'zaxis_Reduced', 'lat', 'lon'})
+            timeseries = timeseries.isel(lon=0,lat=0,zaxis_Reduced=0)
+            timeseries = timeseries.drop_vars({'lon', 'lat', 'zaxis_Reduced'})
             if (reco == False):
                 p = timeseries.polyfit(dim='time_counter', deg=1, skipna = True)
                 theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
             else:
-                theta = timeseries[var].isel(time_counter=-1,lat=0,lon=0,zaxis_Reduced=0)
+                theta = timeseries[var].isel(time_counter=-1)
             basis = pattern.isel(time_counter=i)
             field = field + theta*basis
         
+        #field = field.squeeze({'zaxis_Reduced', 'lat', 'lon'})
         # add mean to the field
-        field = field.isel(time=0,zaxis_Reduced=0,lat=0,lon=0)
-        #field = field.drop_vars({'time', 'lon', 'lat', 'zaxis_Reduced'})        
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
         xdata = xr.open_mfdataset(filename, use_cftime=True)
         ave = xdata[var].mean(dim=['time_counter'])
         total = field + ave
 
         # final adjustments
-        total = total.expand_dims({'time_counter': 1})
+        total = total.expand_dims({'time_counter': 1})  
         total['time_counter'] = rdata['time_counter']
         rdata[var] = total[var]
 
