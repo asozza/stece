@@ -18,7 +18,7 @@ import xarray as xr
 
 from osprey.utils.folders import folders
 from osprey.actions.rebuilder import rebuilder
-from osprey.actions.forecaster import forecaster_EOF_re
+from osprey.actions.forecaster import forecaster_EOF_restart
 from osprey.actions.writer import writer_restart
 from osprey.actions.replacer import replacer
 from osprey.utils.time import get_startleg
@@ -61,7 +61,7 @@ if __name__ == "__main__":
             rebuilder(expname, leg)
     
     # forecast based on local temperature fit
-    rdata = forecaster_EOF_re(expname, endleg, yearspan, yearleap)
+    rdata = forecaster_EOF_restart(expname, endleg, yearspan, yearleap)
     writer_restart(expname, rdata, endleg)
 
     # replace nemo restart files

@@ -118,7 +118,6 @@ def merge_rebuilt(expname, startleg, endleg):
     dirs = folders(expname)
 
     varlist=['tn', 'tb']
-
     for leg in range(startleg, endleg+1):
         filename = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
         year = get_year(leg)
@@ -137,7 +136,7 @@ def merge_rebuilt(expname, startleg, endleg):
             matching_files = glob.glob(pattern)
             filelist.extend(matching_files)
     
-        merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_nt.nc")
+        merged_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
         remove_existing_file(merged_file)
         run_bash_command(f"cdo cat {' '.join(filelist)} {merged_file}")
 

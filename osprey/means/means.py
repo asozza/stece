@@ -47,10 +47,10 @@ def cumave(ydata):
 # space_mean:   space average
 #
 
-def timemean(data, var):
+def timemean(data, varname):
     """ Time average of a field """
 
-    ave = data[var].mean(dim=['time'])
+    ave = data[varname].mean(dim=['time'])
 
     return ave
 

@@ -21,6 +21,9 @@ from osprey.actions.reader import reader_nemo, reader_rebuilt
 from osprey.actions.reader import elements
 from osprey.actions.rebuilder import rebuilder
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 ##########################################################################################
 # Reader of multiple restarts (rebuilt or not)
@@ -76,7 +79,7 @@ def reader_averaged(expname, startyear, endyear, varname, diagname):
     return data
 
 # MAIN FUNCTION
-def postreader_averaged(expname, startyear, endyear, varname, diagname):
+def postreader_averaged(expname, startyear, endyear, varname, diagname, replace=False):
     """ 
     Post-reader Main 
     
@@ -85,8 +88,9 @@ def postreader_averaged(expname, startyear, endyear, varname, diagname):
     startyear,endyear: time window
     varname: variable name
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
-          with prefixes [a: for anomaly]
-    
+              with prefixes [a: for anomaly]
+    replace: replace existing averaged file [False or True]
+          
     """
 
     dirs = folders(expname)

@@ -228,8 +228,23 @@ def forecaster_EOF_winter(expname,
     return rdata
 
 
-def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
-    """ Function to forecast temperature field using EOF / restart version """
+def forecaster_EOF_restart(expname, 
+                           endleg, 
+                           yearspan, 
+                           yearleap, 
+                           reco=False):
+    """ 
+    Function to forecast temperature fields of restart files using EOF 
+    
+    Args:
+    expname: experiment name
+    varname: variable name
+    endleg: leg 
+    yearspan: years backward from endleg used by EOFs
+    yearleap: years forward from endleg to forecast
+    reco: reconstruction of present time
+    
+    """
 
     dirs = folders(expname)
     startleg = get_startleg(endleg, yearspan)
@@ -240,43 +255,44 @@ def forecaster_EOF_re(expname, endleg, yearspan, yearleap):
     # forecast year
     foreyear = get_forecast_year(endyear, yearleap)
     xf = _forecast_xarray(foreyear)
-    tdata = _time_xarray(startyear, endyear)
 
-    # read rebuilt
+    # read rebuilt    
     rdata = reader_rebuilt(expname, endleg, endleg)
-    rdata['time_counter'] = tdata
 
     # merge and change time axis
     run_cdo.merge_rebuilt(expname, startleg, endleg)
-    change_timeaxis(expname, var, startyear, endyear)
 
     varlist=['tn', 'tb']
     for var in varlist:
 
+        # compute EOF
         run_cdo.detrend(expname, var, endleg)
         run_cdo.get_EOF(expname, var, endleg, window)
         
+        # project or reconstruct
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
         pattern = xr.open_mfdataset(filename, use_cftime=True)
         field = pattern.isel(time_counter=0)*0        
         for i in range(window):
-            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")
-            print(filename)
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_0000{i}.nc")            
             timeseries = xr.open_mfdataset(filename, use_cftime=True)
-            p = timeseries.polyfit(dim='time_counter', deg=1, skipna = True)
-            # theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
-            theta = timeseries[var].isel(time_counter=-1,lat=0,lon=0,zaxis_Reduced=0)
+            if (reco == False):
+                p = timeseries.polyfit(dim='time_counter', deg=1, skipna = True)
+                theta = xr.polyval(xf, p[f"{var}_polyfit_coefficients"])
+            else:
+                theta = timeseries[var].isel(time_counter=-1,lat=0,lon=0,zaxis_Reduced=0)
             basis = pattern.isel(time_counter=i)
             field = field + theta*basis
         
-        # add mean
-        field = field.drop_vars({'time_counter', 'lon', 'lat', 'zaxis_Reduced'})
+        # add mean to the field
+        field = field.isel(time=0,zaxis_Reduced=0,lat=0,lon=0)
+        #field = field.drop_vars({'time', 'lon', 'lat', 'zaxis_Reduced'})        
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
         xdata = xr.open_mfdataset(filename, use_cftime=True)
-        xdata = xdata.rename({'time_counter': 'time'})
-        ave = timemean(xdata, var)
+        ave = xdata[var].mean(dim=['time_counter'])
         total = field + ave
-        #
+
+        # final adjustments
         total = total.expand_dims({'time_counter': 1})
         total['time_counter'] = rdata['time_counter']
         rdata[var] = total[var]
