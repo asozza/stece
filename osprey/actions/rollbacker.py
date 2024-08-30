@@ -15,15 +15,16 @@ import shutil
 import yaml
 from dateutil.relativedelta import relativedelta
 
-from osprey.actions.reader import folders
+from osprey.utils.folders import folders
 from osprey.utils.utils import get_nemo_timestep
-
+from osprey.utils.time import get_year
 
 def rollbacker(expname, leg):
     """ Function to rollback ECE4 run to a previous leg """
 
     # define directories
     dirs = folders(expname)
+    year = get_year(leg)
 
     # cleaning
     # create list of files to be removed in the run folder
@@ -43,17 +44,35 @@ def rollbacker(expname, leg):
             os.remove(file)
 
     # remove folders with leg > $leg
-    folder_pattern = re.compile(r'^\d{3}$')
-    # Iterate over all items in the directory
-    for folder_name in os.listdir(dirs['restart']):
-        folder_path = os.path.join(dirs['restart'], folder_name)
-        # Check if it's a folder and if its name matches the three-digit pattern
-        if os.path.isdir(folder_path) and folder_pattern.match(folder_name):
-            folder_number = int(folder_name)
-            # Delete the folder if its number is greater than the threshold
-            if folder_number > leg:
-                print(f"Deleting folder: {folder_name}")
-                shutil.rmtree(folder_path)
+    folderlist = ['restart', 'log']
+    for folder in folderlist:
+        folder_pattern = re.compile(r'^\d{3}$')
+        # Iterate over all items in the directory
+        for folder_name in os.listdir(dirs[folder]):
+            folder_path = os.path.join(dirs[folder], folder_name)
+            # Check if it's a folder and if its name matches the three-digit pattern
+            if os.path.isdir(folder_path) and folder_pattern.match(folder_name):
+                folder_number = int(folder_name)
+                # Delete the folder if its number is greater than the threshold
+                if folder_number > leg:
+                    print(f"Deleting folder: {folder_name}")
+                    shutil.rmtree(folder_path)
+
+    # remove output in nemo & oifs
+    file_pattern = re.compile(r'_(\d{4})-(\d{4})\.nc$')
+    clist = ['nemo', 'oifs']
+    for cname in clist:
+        # Iterate over all files in the directory
+        for filename in os.listdir(dirs[cname]):
+            file_path = os.path.join(dirs[cname], filename)
+            # Check if the file matches the year-year.nc pattern
+            match = file_pattern.search(filename)
+            if match:
+                start_year, end_year = int(match.group(1)), int(match.group(2))
+                # Delete the file if the end year is greater than the threshold
+                if end_year > year:
+                    print(f"Deleting file: {filename}")
+                    os.remove(file_path)
 
     # update time.step
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
@@ -80,7 +99,7 @@ def rollbacker(expname, leg):
         leginfo['base.context']['experiment']['schedule']['leg']['start'] = newdate
         leginfo['base.context']['experiment']['schedule']['leg']['num'] = int(leg)
         
-        print("Updating the leginfo to leg number " + leg)
+        print("Updating the leginfo to leg number " + str(leg))
         with open(legfile, 'w', encoding='utf8') as outfile:
             yaml.dump(leginfo, outfile, default_flow_style=False)
 

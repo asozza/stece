@@ -15,6 +15,10 @@ import xarray as xr
 
 from osprey.utils.folders import folders
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 ##########################################################################################
 # Readers of NEMO output
 
@@ -106,11 +110,27 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
     dict = _nemodict(grid, freq)
 
     filelist = []
-    for year in range(startyear, endyear+1):
+    available_years = []
+    for year in range(startyear, endyear + 1):
         pattern = os.path.join(dirs['nemo'], f"{expname}_{dict[grid]['format']}_{year}-{year}.nc")
         matching_files = glob.glob(pattern)
-        filelist.extend(matching_files)
-    logging.info(' Files to be loaded %s', filelist)
+        if matching_files:
+            filelist.extend(matching_files)
+            available_years.append(year)
+
+    if not filelist:
+        raise FileNotFoundError(f"No data files found for the specified range {startyear}-{endyear}.")
+
+    # Log a warning if some years are missing
+    if available_years:
+        actual_startyear = min(available_years)
+        actual_endyear = max(available_years)
+        if actual_startyear > startyear or actual_endyear < endyear:
+            logging.warning(f"Data available only in the range {actual_startyear}-{actual_endyear}.")
+    else:
+        raise FileNotFoundError("No data files found within the specified range.")
+
+    logging.info('Files to be loaded %s', filelist)
     data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
 
     return data
