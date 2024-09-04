@@ -8,3 +8,4 @@ SRCDIR=$ECEDIR/scripts
 platform=ecmwf-hpc2020-intel+openmpi
 
 se user-config.yml ${expname}.yml $SRCDIR/platforms/$platform.yml scriptlib/main.yml --loglevel debug
+

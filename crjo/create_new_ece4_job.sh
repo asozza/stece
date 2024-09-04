@@ -13,6 +13,8 @@ machine=ecmwf-hpc2020-intel+openmpi
 #ecedir=$HPCPERM/src/ecearth4-epochal
 #ecedir=$HPCPERM/src/gitlab/ecearth4-fork
 ecedir=$HPCPERM/ecearth4/revisions/main
+#ecedir=$HPCPERM/src/gitlab/ecearth4-fork
+#ecedir=$HPCPERM/ecearth4/revisions/main
 #ecedir=$HPCPERM/ecearth4/revisions/epochal
 
 # please define where the jobs are
@@ -23,6 +25,7 @@ default=$ecedir/scripts/runtime
 rundir=$SCRATCH/ece4
 
 # hard-coded to use Ale new updated files
+inidir=/ec/res4/hpcperm/ccpd/ECE4-DATA
 inidir=/ec/res4/hpcperm/itas/data/ECE4-DATA
 
 
@@ -51,3 +54,4 @@ sed -i "s@INIDIR@${inidir}@g" $expdir/$jobname/user-config.yml
 cp launch.sh $expdir/$jobname
 sed -i "s@TEST@${jobname}@g" $expdir/$jobname/launch.sh
 sed -i "s@BASEDIR@${ecedir}@g" $expdir/$jobname/launch.sh
+

@@ -1,15 +1,12 @@
 # STECE 
-Scripts & tools for ece4
+Scripts & tools for EC-Earth4
 
-- CRJO: Create new job for ece4
-        
-- LOBS: Load balancing scripts for ece4
-        
-- GOAT: Global Ocean Analysis & Trends
-        (for plots and post-processing of nemo fields)
-
-- MARTINI: tools for spinup acceleration
-
-- EPOCHAL: scripts for paleoclimate
-           tools for the generation of new oifs and nemo grids
+- [ ] CRJO: Create new job for EC-Earth4
+- [ ] LOBSTER: Load balancing scripts for EC-Earth4
+- [ ] OSPREY: Ocean spin-up accelerator for Earth climatology (MARTINI Project)
+     * reading NEMO outputs and restarts
+     * forecasting procedures
+     * tools for graphics
+- [ ] EPOCHAL: scripts for paleoclimate.
+     * tools for the generation of new oifs and nemo grids
 
