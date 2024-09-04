@@ -12,14 +12,14 @@ machine=ecmwf-hpc2020-intel+openmpi
 # please define where the source code is
 #ecedir=$HPCPERM/src/ecearth4-epochal
 #ecedir=$HPCPERM/src/gitlab/ecearth4-fork
-#ecedir=$HPCPERM/ecearth4/revisions/main
-ecedir=$HPCPERM/ecearth4/revisions/epochal
+ecedir=$HPCPERM/ecearth4/revisions/main
+#ecedir=$HPCPERM/ecearth4/revisions/epochal
 
 # please define where the jobs are
 expdir=$HPCPERM/ecearth4/jobs
 
 
-default=$ecedir/runtime/se
+default=$ecedir/scripts/runtime
 rundir=$SCRATCH/ece4
 
 # hard-coded to use Ale new updated files
