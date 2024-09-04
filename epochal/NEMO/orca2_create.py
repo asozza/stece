@@ -9,20 +9,8 @@ Alessandro Sozza (CNR-ISAC, Apr 2024)
 """
 
 import argparse
-import os
 import xarray as xr
 
-
-mesh_file = 'mesh_mask.nc'
-#domain_file = 'ORCA_R2_zps_domcfg.nc'
-domain_file = 'domain_cfg.nc'
-
-#default_sette_dir = '/perm/itas/nemo/sette/ORCA2_ICE_v4.2.0'
-#default_mesh_dir = '/perm/itas/nemo/ORCA2'
-#default_tgt_dir = '/lus/h2resw01/hpcperm/ccpd/ECE4-DATA/nemo'
-default_sette_dir = '/lus/h2resw01/hpcperm/ccpd/ecearth4/revisions/main/sources/nemo-4.2/cfgs/ECEARTH/EXP00'
-default_mesh_dir = '/lus/h2resw01/hpcperm/ccpd/ecearth4/revisions/main/sources/nemo-4.2/cfgs/ECEARTH/EXP00'
-default_tgt_dir = '/lus/h2resw01/hpcperm/ccpd/ECE4-DATA/paleORCA'
 
 def domain_cfg(sette_dir, mesh_dir, tgt_dir):
     """
@@ -38,8 +26,8 @@ def domain_cfg(sette_dir, mesh_dir, tgt_dir):
     """
 
     # load the xarray files
-    mesh = xr.open_dataset(f'{mesh_dir}/{mesh_file}')
-    domain = xr.open_dataset(f'{sette_dir}/{domain_file}')
+    mesh = xr.open_dataset(f'{mesh_dir}/mesh_mask.nc')
+    domain = xr.open_dataset(f'{sette_dir}/ORCA_R2_zps_domcfg.nc')
 
     # rename and reset the vertical dimension
     mesh = mesh.rename_dims({'nav_lev': 'z'})
@@ -47,8 +35,7 @@ def domain_cfg(sette_dir, mesh_dir, tgt_dir):
 
     # select and merge
     levels = domain[['bottom_level', 'top_level']]
-    if 't' in levels.dims:
-        levels = levels.rename_dims({'t': 'time_counter'})
+    levels = levels.rename_dims({'t': 'time_counter'})
     merged = xr.merge([mesh, levels])
 
     # drop some variables
@@ -62,7 +49,6 @@ def domain_cfg(sette_dir, mesh_dir, tgt_dir):
     encoding = {**encoding_var, **encoding_coord}
 
     # write the file
-    os.makedirs(tgt_dir, exist_ok=True)
     merged.to_netcdf(f'{tgt_dir}/domain_cfg.nc', encoding=encoding, unlimited_dims=['time_counter'])
 
 def maskutil(mesh_dir, tgt_dir):
@@ -80,14 +66,15 @@ def maskutil(mesh_dir, tgt_dir):
     masks = mesh[['tmaskutil','umaskutil','vmaskutil']]
     masks = masks.rename_dims({'time_counter': 't'}).drop_vars('time_counter')
     masks.attrs = {'Conventions': "CF-1.1"}
-    os.makedirs(tgt_dir, exist_ok=True)
     masks.to_netcdf(f'{tgt_dir}/maskutil.nc', unlimited_dims=['t'])
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A tool to modify domain_cfg ORCA2 file')
 
-
+    default_sette_dir = '/perm/itas/nemo/sette/ORCA2_ICE_v4.2.0'
+    default_mesh_dir = '/perm/itas/nemo/ORCA2'
+    default_tgt_dir = '/lus/h2resw01/hpcperm/ccpd/ECE4-DATA/nemo'
 
     parser.add_argument('--sette_dir', type=str, default=default_sette_dir, 
                         help='Path to SETTE domain directory')
