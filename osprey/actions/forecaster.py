@@ -217,8 +217,8 @@ def forecaster_EOF_winter(expname,
 
     # read forecast and change restart
     rdata = reader_rebuilt(expname, endleg, endleg)
-    if reco == False:
-        total = total.expand_dims({'time': 1})
+    #if reco == False:
+    #    total = total.expand_dims({'time': 1})
     total = postproc_var_3D(total)
     total['time_counter'] = rdata['time_counter']
     varlist=['tn', 'tb']
@@ -305,4 +305,3 @@ def forecaster_EOF_restart(expname,
         rdata[var] = total[var]
 
     return rdata
-

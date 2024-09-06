@@ -20,10 +20,12 @@ from osprey.means.means import spacemean, timemean
 from osprey.actions.reader import reader_nemo, reader_rebuilt
 from osprey.actions.reader import elements
 from osprey.actions.rebuilder import rebuilder
+from osprey.utils.utils import remove_existing_file
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 ##########################################################################################
 # Reader of multiple restarts (rebuilt or not)
@@ -58,40 +60,46 @@ def reader_restart(expname, startyear, endyear):
 ##########################################################################################
 # Reader for averaged data
 
-def reader_averaged(expname, startyear, endyear, varname, diagname):
+def reader_averaged(expname, startyear, endyear, varlabel, diagname):
     """ 
     Reader of averaged data 
     
     Args:
     expname: experiment name
     startyear,endyear: time window
-    varname: variable name
+    varlabel: variable label (varname + subregion)
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
           with prefixes [a: for anomaly]
     
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['perm'], f"{diagname}_{varname}_{startyear}-{endyear}.nc")
-    logging.info(' File to be loaded %s', filename)
+    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{startyear}-{endyear}.nc")
+    logger.info('File to be loaded %s', filename)
     data = xr.open_dataset(filename, use_cftime=True)
 
     return data
 
 # MAIN FUNCTION
-def postreader_averaged(expname, startyear, endyear, varname, diagname, replace=False):
+def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace=False):
     """ 
     Post-reader Main 
     
     Args:
     expname: experiment name
     startyear,endyear: time window
-    varname: variable name
+    varlabel: variable label (varname + subregion)
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
               with prefixes [a: for anomaly]
     replace: replace existing averaged file [False or True]
           
     """
+
+    if '-' in varlabel:
+        varname, subregion = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        subregion=None
 
     dirs = folders(expname)
     df = elements(expname)
@@ -99,42 +107,50 @@ def postreader_averaged(expname, startyear, endyear, varname, diagname, replace=
 
     # try to read averaged data
     try:
-        data = reader_averaged(expname, startyear, endyear, varname, diagname)
-        logging.info(' Averaged data found ')
-        print(" Averaged data found ")
-        return data
+        if replace == False:
+            data = reader_averaged(expname, startyear, endyear, varlabel, diagname)
+            logger.info('Averaged data found.')        
+            return data
     except FileNotFoundError:
-        logging.info('Averaged data not found. Creating new file ...')
+        logger.info('Averaged data not found. Creating new file ...')
 
     # If averaged data not existing, read original data
     data = reader_nemo(expname, startyear, endyear)
 
-    ds = averaging(expname, data, varname, diagname)
+    ds = averaging(expname, data, varlabel, diagname)
 
     # Write averaged data on file
     os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['perm'], f"{diagname}_{varname}_{startyear}-{endyear}.nc")
-    logging.info(' File to be saved at %s', filename)
+    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{startyear}-{endyear}.nc")
+    if replace == True:
+        remove_existing_file(filename)
+    logger.info('File to be saved at %s', filename)
     ds.to_netcdf(filename)
 
     # Now you can read
-    data = reader_averaged(expname, startyear, endyear, varname, diagname)
+    data = reader_averaged(expname, startyear, endyear, varlabel, diagname)
 
     return data
 
 
-def averaging(expname, data, varname, diagname):
+def averaging(expname, data, varlabel, diagname):
     """ 
     Averaging: Perform different flavours of averaging 
     
     Args:
     expname: experiment name
     data: dataset
-    varname: variable name
+    varlabel: variable label
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
           with prefixes [a: for anomaly]
     
     """
+
+    if '-' in varlabel:
+        varname, subregion = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        subregion=None
 
     df = elements(expname)
     ndim = vardict('nemo')[varname]
@@ -142,11 +158,11 @@ def averaging(expname, data, varname, diagname):
     # timeseries (why not saving in cftime?)
     if diagname  == 'timeseries':
         tvec = get_decimal_year(data['time'].values)
-        vec = spacemean(data, varname, ndim)
+        vec = spacemean(data, varname, ndim, subregion)
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
                             attrs = {'units' : 'years', 'long_name' : 'years'}), 
-            varname : xr.DataArray(data = vec, dims = ['time'], coords = {'time': tvec}, 
+            varlabel : xr.DataArray(data = vec, dims = ['time'], coords = {'time': tvec}, 
                             attrs  = {'units' : data[varname].units, 'long_name' : data[varname].long_name})},
             attrs = {'description': 'ECE4/NEMO averaged timeseries data'})
 
@@ -170,7 +186,7 @@ def averaging(expname, data, varname, diagname):
                         attrs = {'units' : 'years', 'long_name' : 'years'}), 
             'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
                         attrs = {'units' : 'm', 'long_name' : 'depth'}), 
-            varname : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': data['z']},
+            varlabel : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': data['z']},
                         attrs  = {'units' : data[varname].units, 'long_name' : data[varname].long_name})}, 
             attrs = {'description': 'ECE4/NEMO averaged hovmoller diagram'})
 
@@ -185,7 +201,7 @@ def averaging(expname, data, varname, diagname):
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
             'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
-            varname : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
+            varlabel : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : data[varname].units, 'long_name' : data[varname].long_name})}, 
             attrs = {'description': 'ECE4/NEMO averaged map'})
 
@@ -199,7 +215,7 @@ def averaging(expname, data, varname, diagname):
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
             'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']},
                         attrs = {'units' : 'm', 'long_name' : 'depth'}),                             
-            varname : xr.DataArray(data = vec, dims = ['z', 'y', 'x'], coords = {'z': data['z'], 'y': data['y'], 'x': data['x']},
+            varlabel : xr.DataArray(data = vec, dims = ['z', 'y', 'x'], coords = {'z': data['z'], 'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : data[varname].units, 'long_name' : data[varname].long_name})}, 
             attrs = {'description': 'ECE4/NEMO time-averaged field'})
 
@@ -210,7 +226,7 @@ def averaging(expname, data, varname, diagname):
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
             'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
-            varname : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
+            varlabel : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : data[varname].units, 'long_name' : data[varname].long_name})}, 
             attrs = {'description': 'ECE4/NEMO time-averaged field'})
 

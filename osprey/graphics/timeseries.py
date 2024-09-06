@@ -24,38 +24,42 @@ from osprey.actions.post_reader import postreader_averaged
 
 def timeseries(expname, 
                startyear, endyear, 
-               varname, 
+               varlabel, 
                cost_value=1, 
                offset=0, 
                color=None, 
                rescaled=False, 
                reader_type="nemo", 
                cost_type="norm", 
-               average_type="moving", 
-               subregion=None): 
+               average_type="moving"): 
     """ 
     Graphics of timeseries 
     
     Args:
     expname: experiment name
     startyear,endyear: time window
-    varname: variable name
+    varlabel: variable label (varname + subregion)
     cost_value: ?
     offset: time offset
     color: curve color
     rescaled: rescale timeseries by the initial value at time=0
     reader_type: read the original raw data or averaged data [nemo, post]
     cost_type: choose the type of cost function [norm, diff, rdiff, abs, rel, var, rvar] 
-    subregion: consider a subregion of the water column [mixed-layer, pycnocline, abyss]
     
     """
     
+    if '-' in varlabel:
+        varname, subregion = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        subregion=None
+
     # reading data
     if reader_type == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
     elif reader_type == "post":
-        data = postreader_averaged(expname, startyear, endyear, varname, 'timeseries')
+        data = postreader_averaged(expname, startyear, endyear, varlabel, 'timeseries')
         tvec = data['time'].values.flatten()
 
     # fix time-axis
@@ -63,10 +67,13 @@ def timeseries(expname,
     tvec_offset = [tvec_cutted[i]+offset for i in range(len(tvec_cutted))]
 
     # y-axis
-    vec = data[var].values.flatten()
+    vec = data[varlabel].values.flatten()
     if average_type == 'moving':
-        ndim = vardict('nemo')[varname]
-        vec = movave(spacemean(data, varname, ndim, subregion),12)
+        if reader_type == 'nemo':
+            ndim = vardict('nemo')[varname]
+            vec = movave(spacemean(data, varname, ndim, subregion),12)
+        elif reader_type == 'post':
+            vec = movave(data[varlabel],12)
     vec_cutted = vec[6:-6]
 
     # apply cost function
@@ -83,31 +90,49 @@ def timeseries(expname,
 
     pp = plt.plot(tvec_offset, vec_cost, **plot_kwargs)
     plt.xlabel(data['time'].long_name)
-    plt.ylabel(data[varname].long_name)
+    plt.ylabel(data[varlabel].long_name)
 
     return pp
 
 
 def timeseries_diff(expname1, expname2, 
                     startyear, endyear, 
-                    var, 
+                    varlabel, 
                     offset=0, 
                     color=None,
                     rescaled=False,
                     reader_type="nemo",
                     cost_type="norm", 
-                    average_type="moving", 
-                    subregion=None): 
-    """ Graphics of two-field difference timeseries """
+                    average_type="moving"): 
+    """ 
+    Graphics of two-field difference timeseries 
     
+    Args:
+    expname1,2: experiment name
+    startyear,endyear: time window
+    varlabel: variable label (varname + subregion)    
+    offset: time offset
+    color: curve color
+    rescaled: rescale timeseries by the initial value at time=0
+    reader_type: read the original raw data or averaged data [nemo, post]
+    cost_type: choose the type of cost function [norm, diff, rdiff, abs, rel, var, rvar]
+    
+    """
+    
+    if '-' in varlabel:
+        varname, subregion = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        subregion=None
+
     # reading data
     if reader_type == 'nemo':
         data1 = reader_nemo(expname1, startyear, endyear)
         data2 = reader_nemo(expname2, startyear, endyear)
         tvec = get_decimal_year(data1['time'].values)
     elif reader_type == 'averaged':
-        data1 = postreader_averaged(expname1, startyear, endyear, var, 'series')
-        data2 = postreader_averaged(expname2, startyear, endyear, var, 'series')        
+        data1 = postreader_averaged(expname1, startyear, endyear, varlabel, 'series')
+        data2 = postreader_averaged(expname2, startyear, endyear, varlabel, 'series')        
         tvec = data1['time'].values.flatten()
 
     # fix time axis
@@ -115,12 +140,16 @@ def timeseries_diff(expname1, expname2,
     tvec_offset = [tvec_cutted[i]+offset for i in range(len(tvec_cutted))]
 
     # fix y-axis
-    vec1 = data1[var].values.flatten()
-    vec2 = data1[var].values.flatten()
+    vec1 = data1[varname].values.flatten()
+    vec2 = data1[varname].values.flatten()
     if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec1 = movave(spacemean(data1, var, ndim, subregion),12)
-        vec2 = movave(spacemean(data2, var, ndim, subregion),12)
+        if reader_type == 'nemo':
+            ndim = vardict('nemo')[varname]
+            vec1 = movave(spacemean(data1, varname, ndim, subregion),12)
+            vec2 = movave(spacemean(data2, varname, ndim, subregion),12)
+        elif reader_type == 'post':
+            vec1 = movave(data1[varlabel],12)
+            vec2 = movave(data2[varlabel],12)            
     vec1_cutted = vec1[6:-6]
     vec2_cutted = vec2[6:-6]
     vec_cost = cost(vec1_cutted, vec2_cutted, cost_type)
@@ -136,34 +165,56 @@ def timeseries_diff(expname1, expname2,
     
     pp = plt.plot(tvec_offset, vec_cost, **plot_kwargs)
     plt.xlabel(data1['time'].long_name)
-    plt.ylabel(data1[var].long_name)
+    plt.ylabel(data1[varlabel].long_name)
 
     return pp
 
 
-def timeseries_diff_mf(expname1, startyear1, endyear1, 
-                       expname2, startyear2, endyear2, 
-                       var, 
+def timeseries_diff_mf(expname1, 
+                       startyear1, endyear1, 
+                       expname2, 
+                       startyear2, endyear2, 
+                       varlabel, 
                        offset=0, 
-                       color=None, rescaled=False, 
-                       reader_type="nemo", cost_type="norm", 
-                       average_type="moving", subregion=None): 
-    """ Graphics of mean-field difference timeseries """
+                       color=None, 
+                       rescaled=False, 
+                       reader_type="nemo", 
+                       cost_type="norm", 
+                       average_type="moving"):
+    """ 
+    Graphics of mean-field difference timeseries 
+        
+    Args:
+    expname 1,2: experiment name
+    startyear,endyear 1,2: time window
+    varlabel: variable label (varname + subregion)    
+    offset: time offset
+    color: curve color
+    rescaled: rescale timeseries by the initial value at time=0
+    reader_type: read the original raw data or averaged data [nemo, post]
+    cost_type: choose the type of cost function [norm, diff, rdiff, abs, rel, var, rvar]
     
-    # procedure: expname2 is time-averaged to obtain a spatial-only meanfield
+    """
+
+
+    if '-' in varlabel:
+        varname, subregion = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        subregion=None
 
     # reading data
     if reader_type == 'nemo':
         data1 = reader_nemo(expname1, startyear1, endyear1)
         data2 = reader_nemo(expname2, startyear2, endyear2)
         tvec = get_decimal_year(data1['time'].values)
+        meanfld = timemean(data2, varname)
+            
     elif reader_type == 'averaged':
-        data1 = postreader_averaged(expname1, startyear1, endyear1, var, 'series')
-        data2 = postreader_averaged(expname2, startyear2, endyear2, var, 'series')        
+        data1 = postreader_averaged(expname1, startyear1, endyear1, varlabel, 'timeseries')
+        meanfld = postreader_averaged(expname2, startyear2, endyear2, varlabel, 'field')        
         tvec = data1['time'].values.flatten()
 
-    # time mean of expname2
-    meanfld = timemean(data2, var)
     fdata = cost(data1, meanfld, cost_type)
     fdata.attrs['name'] = data1.attrs['name']
 
@@ -171,11 +222,18 @@ def timeseries_diff_mf(expname1, startyear1, endyear1,
     tvec_cutted = tvec[6:-6]
     tvec_offset = [tvec_cutted[i]+offset for i in range(len(tvec_cutted))]
 
-    # select y-axis
-    vec_cost = fdata[var].values.flatten()    
+    # select y-axis    
     if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec_cost = movave(spacemean(fdata, var, ndim, subregion),12)
+        
+        if reader_type == 'nemo':
+            ndim = vardict('nemo')[varname]
+            vec_cost = movave(spacemean(fdata, varname, ndim, subregion),12)
+        
+        elif reader_type == 'post':
+            vec_cost = movave(fdata[varlabel],12)
+    
+    elif average_type == 'standard':
+        vec_cost = fdata[varname].values.flatten()  
 
     # apply rescaling
     if rescaled == True:
@@ -191,6 +249,6 @@ def timeseries_diff_mf(expname1, startyear1, endyear1,
     
     pp = plt.plot(tvec_offset, vec_cutted, **plot_kwargs)
     plt.xlabel(data1['time'].long_name)
-    plt.ylabel(data1[var].long_name)
+    plt.ylabel(data1[varlabel].long_name)
 
     return pp

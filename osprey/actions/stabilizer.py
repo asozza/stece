@@ -17,7 +17,6 @@ import yaml
 import xarray as xr
 import dask
 import cftime
-import nc_time_axis
 
 def _eos(T, S, z):
     """ seawater equation of state """

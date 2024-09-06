@@ -55,44 +55,44 @@ def timemean(data, varname):
     return ave
 
 
-def globalmean(data, var, ndim, subreg = None):
+def globalmean(data, varname, ndim, subregion=None):
     """ Global average of a field """
 
     expname = get_expname(data)
     df = elements(expname)
     if ndim == '3D':
-        ave = data[var].weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
-        if subreg != None:
-            z1,z2 = subregions(subreg,'ORCA2')
+        ave = data[varname].weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
+        if subregion != None:
+            z1,z2 = subregions(subregion,'ORCA2')
             subvol = df['V'].isel(z=slice(z1,z2))
-            subvar = data[var].isel(z=slice(z1,z2))
+            subvar = data[varname].isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x'])
     elif ndim == '2D':
-        ave = data[var].weighted(df['S']).mean(dim=['time', 'y', 'x'])
+        ave = data[varname].weighted(df['S']).mean(dim=['time', 'y', 'x'])
     elif ndim == '1D':
-        ave = data[var].weighted(df['z']).mean(dim=['time', 'z'])
+        ave = data[varname].weighted(df['z']).mean(dim=['time', 'z'])
     else:
         raise ValueError(" Invalid dimensions ")
 
     return ave
 
 
-def spacemean(data, var, ndim, subregion=None, orca = 'ORCA2'):
+def spacemean(data, varname, ndim, subregion=None, orca='ORCA2'):
     """ Spatial average of a field """
 
     expname = get_expname(data)
     df = elements(expname) 
     if ndim == '3D':
-        ave = data[var].weighted(df['V']).mean(dim=['z', 'y', 'x'])
+        ave = data[varname].weighted(df['V']).mean(dim=['z', 'y', 'x'])
         if subregion != None:
             z1,z2 = subregions(subregion, orca)
             subvol = df['V'].isel(z=slice(z1,z2))
-            subvar = data[var].isel(z=slice(z1,z2))
+            subvar = data[varname].isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x'])
     elif ndim == '2D':
-        ave = data[var].weighted(df['S']).mean(dim=['y', 'x'])
+        ave = data[varname].weighted(df['S']).mean(dim=['y', 'x'])
     elif ndim == '1D':
-        ave = data[var].weighted(df['z']).mean(dim=['z'])
+        ave = data[varname].weighted(df['z']).mean(dim=['z'])
     else:
         raise ValueError(" Invalid dimensions ")
 
@@ -105,7 +105,7 @@ def spacemean(data, var, ndim, subregion=None, orca = 'ORCA2'):
 def subregions(idx, orca):
     """     
     Definition of vertical subregions for ORCAs 
-    mixed layer (0-100 m), pycnocline (100-1000 m), abyss (1000-5000 m)
+    MIX: mixed layer (0-100 m), PYC: pycnocline (100-1000 m), ABY: abyss (1000-5000 m)
     levels in ORCA2: [0,9] [10,20] [21,30]
     levels in eORCA1: [0,23] [24,45] [46,74]
 
@@ -116,20 +116,20 @@ def subregions(idx, orca):
     """
 
     if orca == 'ORCA2':
-        if idx == 'mixed-layer':
+        if idx == 'mix':
             z1 = 0; z2 = 9
-        elif idx == 'pycnocline':
+        elif idx == 'pyc':
             z1 = 10; z2 = 20
-        elif idx == 'abyss':
+        elif idx == 'aby':
             z1 = 21; z2 = 30
         else:
             raise ValueError(" Invalid subrange ")
     elif orca == 'eORCA1':
-        if idx == 'mixed-layer':
+        if idx == 'mix':
             z1 = 0; z2 = 23
-        elif idx == 'pycnocline':
+        elif idx == 'pyc':
             z1 = 24; z2 = 45
-        elif idx == 'abyss':
+        elif idx == 'aby':
             z1 = 46; z2 = 74
         else:
             raise ValueError(" Invalid subrange ")

@@ -13,9 +13,13 @@ import glob
 import logging
 
 from osprey.utils.folders import folders
-from osprey.utils.utils import run_bash_command, remove_existing_file, remove_existing_filelist
+from osprey.utils.utils import run_bash_command
+from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
 from osprey.utils.time import get_leg, get_year
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def merge(expname, startyear, endyear):
     """ CDO command to merge files """
@@ -38,6 +42,7 @@ def merge(expname, startyear, endyear):
 
     return None
 
+
 def selname(expname, var, leg, interval):
     """ CDO command to select variable """
 
@@ -55,6 +60,7 @@ def selname(expname, var, leg, interval):
 
     return None
 
+
 def detrend(expname, var, leg):
     """ CDO command to detrend, subtracting time average """
 
@@ -67,7 +73,32 @@ def detrend(expname, var, leg):
 
     return None
 
+
 def get_EOF(expname, var, leg, window):
+    """ CDO command to compute EOF """
+
+    dirs = folders(expname)
+
+    flda = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{var}_anomaly.nc")   
+    #window = run_bash_command(f"cdo ntime {flda} | head -n 1")
+    print(' Time window ', window)
+
+    # compute the basis (pattern + covariance matrix)
+    fldcov = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_variance.nc")
+    fldpat = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_pattern.nc")
+    remove_existing_file(fldcov)
+    remove_existing_file(fldpat)
+    run_bash_command(f"cdo eof3d,{window} {flda} {fldcov} {fldpat}")
+
+    # compute timeseries (eigeinvalues?)
+    timeseries = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{var}_series_")
+    remove_existing_filelist(timeseries)
+    run_bash_command(f"cdo eofcoeff3d {fldpat} {flda} {timeseries}")
+
+    return None
+
+@error_handling_decorator
+def get_EOF_new(expname, var, leg, window):
     """ CDO command to compute EOF """
 
     dirs = folders(expname)
