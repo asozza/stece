@@ -24,14 +24,13 @@ from osprey.actions.post_reader import postreader_averaged
 
 def timeseries(expname, 
                startyear, endyear, 
-               varlabel, 
-               cost_value=1, 
-               offset=0, 
+               varlabel,
+               timeoff=0, 
                color=None, 
                rescaled=False, 
-               reader_type="nemo", 
-               cost_type="norm", 
-               average_type="moving"): 
+               reader="nemo", 
+               metrics="norm",
+               avetype="moving"): 
     """ 
     Graphics of timeseries 
     
@@ -55,33 +54,33 @@ def timeseries(expname,
         subregion=None
 
     # reading data
-    if reader_type == "nemo":
+    if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
-    elif reader_type == "post":
-        data = postreader_averaged(expname, startyear, endyear, varlabel, 'timeseries')
+    elif reader == "post":
+        data = postreader_averaged(expname, startyear, endyear, varlabel, 'timeseries', metrics)
         tvec = data['time'].values.flatten()
 
     # fix time-axis
     tvec_cutted = tvec[6:-6]
-    tvec_offset = [tvec_cutted[i]+offset for i in range(len(tvec_cutted))]
+    tvec_offset = [tvec_cutted[i]+timeoff for i in range(len(tvec_cutted))]
 
     # y-axis
     vec = data[varlabel].values.flatten()
-    if average_type == 'moving':
-        if reader_type == 'nemo':
+    if avetype == 'moving':
+        if reader == 'nemo':
             ndim = vardict('nemo')[varname]
             vec = movave(spacemean(data, varname, ndim, subregion),12)
-        elif reader_type == 'post':
+        elif reader == 'post':
             vec = movave(data[varlabel],12)
     vec_cutted = vec[6:-6]
 
     # apply cost function
-    vec_cost = cost(vec_cutted, cost_value, cost_type) 
+    #vec_cost = cost(vec_cutted, cost_value, cost_type) 
 
     # apply rescaling
     if rescaled == True:
-        vec_cost = vec_cost/vec_cost[0]
+        vec_cost = vec_cutted/vec_cost[0]
 
     # plot
     plot_kwargs = {}

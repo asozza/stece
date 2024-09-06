@@ -9,6 +9,7 @@ Date: June 2024
 """
 
 import os
+import yaml
 import logging
 import numpy as np
 import xarray as xr
@@ -21,46 +22,18 @@ from osprey.actions.reader import reader_nemo, reader_rebuilt
 from osprey.actions.reader import elements
 from osprey.actions.rebuilder import rebuilder
 from osprey.utils.utils import remove_existing_file
+from osprey.means.means import cost
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-##########################################################################################
-# Reader of multiple restarts (rebuilt or not)
-
-def reader_restart(expname, startyear, endyear):
-    """ 
-    Reader of NEMO restart files in a range of legs 
-    
-    Args:
-    expname: experiment name
-    startyear,endyear: time window
-
-    """
-
-    startleg = get_leg(startyear)
-    endleg = get_leg(endyear)
-
-    try:
-        data = reader_rebuilt(expname, startleg, endleg)
-        return data
-    except FileNotFoundError:
-        print(" Restart file not found. Rebuilding ... ")
-
-    # rebuild files
-    for leg in range(startleg,endleg+1):
-        rebuilder(expname, leg)
-
-    data = reader_rebuilt(expname, startleg, endleg)
-
-    return data
 
 ##########################################################################################
 # Reader for averaged data
 
-def reader_averaged(expname, startyear, endyear, varlabel, diagname):
+def reader_averaged(expname, startyear, endyear, varlabel, diagname, metrics):
     """ 
     Reader of averaged data 
     
@@ -69,19 +42,19 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname):
     startyear,endyear: time window
     varlabel: variable label (varname + subregion)
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
-          with prefixes [a: for anomaly]
+    metrics: tag indicating the type of cost function [base, diff, var, rel ...]
     
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{metrics}_{startyear}-{endyear}.nc")
     logger.info('File to be loaded %s', filename)
     data = xr.open_dataset(filename, use_cftime=True)
 
     return data
 
 # MAIN FUNCTION
-def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace=False):
+def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace=False, metrics='base'):
     """ 
     Post-reader Main 
     
@@ -90,9 +63,11 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     startyear,endyear: time window
     varlabel: variable label (varname + subregion)
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
-              with prefixes [a: for anomaly]
+                            or [ts, prof, hovm, map, fld, pdf]?
     replace: replace existing averaged file [False or True]
-          
+    metrics: compute distance with respect to a reference field using a metrics (cost function)
+             all details should be provided in the meanfield.yaml file
+    
     """
 
     if '-' in varlabel:
@@ -115,20 +90,34 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
         logger.info('Averaged data not found. Creating new file ...')
 
     # If averaged data not existing, read original data
-    data = reader_nemo(expname, startyear, endyear)
+    xdata = reader_nemo(expname, startyear, endyear)
 
-    ds = averaging(expname, data, varlabel, diagname)
+    # If anomaly is True
+    if metrics != 'base':
+        # read from yaml file
+        with open('meanfield.yaml') as filename:
+            config = yaml.load(filename, Loader=yaml.FullLoader)    
+        if 'meanfield' in config:
+            meanfield = config['meanfield']
+        for line in meanfield:
+            mexpname = line.get('expname', '')
+            mstartyear = line.get('startyear', '')
+            mendyear = line.get('endyear', '')
+        mdata = reader_averaged(mexpname, mstartyear, mendyear, varlabel, 'field')
+        xdata = cost(xdata, mdata, metrics)
+
+    ds = averaging(expname, xdata, varlabel, diagname)
 
     # Write averaged data on file
     os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{metrics}_{startyear}-{endyear}.nc")
     if replace == True:
         remove_existing_file(filename)
     logger.info('File to be saved at %s', filename)
     ds.to_netcdf(filename)
 
     # Now you can read
-    data = reader_averaged(expname, startyear, endyear, varlabel, diagname)
+    data = reader_averaged(expname, startyear, endyear, varlabel, diagname, metrics)
 
     return data
 
@@ -142,7 +131,6 @@ def averaging(expname, data, varlabel, diagname):
     data: dataset
     varlabel: variable label
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
-          with prefixes [a: for anomaly]
     
     """
 
@@ -234,3 +222,30 @@ def averaging(expname, data, varlabel, diagname):
 
 ##########################################################################################
 
+# Reader of multiple restarts (rebuilt or not)
+def reader_restart(expname, startyear, endyear):
+    """ 
+    Reader of NEMO restart files in a range of legs 
+    
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+
+    """
+
+    startleg = get_leg(startyear)
+    endleg = get_leg(endyear)
+
+    try:
+        data = reader_rebuilt(expname, startleg, endleg)
+        return data
+    except FileNotFoundError:
+        print(" Restart file not found. Rebuilding ... ")
+
+    # rebuild files
+    for leg in range(startleg,endleg+1):
+        rebuilder(expname, leg)
+
+    data = reader_rebuilt(expname, startleg, endleg)
+
+    return data
