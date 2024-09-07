@@ -83,7 +83,7 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     # try to read averaged data
     try:
         if replace == False:
-            data = reader_averaged(expname, startyear, endyear, varlabel, diagname)
+            data = reader_averaged(expname, startyear, endyear, varlabel, diagname, metrics)
             logger.info('Averaged data found.')        
             return data
     except FileNotFoundError:
@@ -95,15 +95,15 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     # If anomaly is True
     if metrics != 'base':
         # read from yaml file
-        with open('meanfield.yaml') as filename:
-            config = yaml.load(filename, Loader=yaml.FullLoader)    
+        filename = os.path.join(dirs['osprey'], 'meanfield.yaml')
+        with open(filename) as yamlfile:
+            config = yaml.load(yamlfile, Loader=yaml.FullLoader)    
         if 'meanfield' in config:
             meanfield = config['meanfield']
-        for line in meanfield:
-            mexpname = line.get('expname', '')
-            mstartyear = line.get('startyear', '')
-            mendyear = line.get('endyear', '')
-        mdata = reader_averaged(mexpname, mstartyear, mendyear, varlabel, 'field')
+            exp0 = meanfield[0]['expname']
+            y0 = meanfield[1]['startyear']
+            y1 = meanfield[2]['endyear']
+        mdata = reader_averaged(expname=exp0, startyear=y0, endyear=y1, varlabel=varlabel, diagname='field', metrics='base')
         xdata = cost(xdata, mdata, metrics)
 
     ds = averaging(expname, xdata, varlabel, diagname)
