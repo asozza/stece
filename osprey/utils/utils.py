@@ -37,7 +37,6 @@ def run_bash_command(command):
         
         raise
 
-
 def remove_existing_file(filename):
 
     try:

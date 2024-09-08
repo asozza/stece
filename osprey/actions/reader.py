@@ -13,7 +13,7 @@ import glob
 import logging
 import xarray as xr
 
-from osprey.utils.folders import folders
+from osprey.utils.folders import folders, paths
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -146,21 +146,21 @@ def preproc_nemo_domain(data):
 
     return data
 
-def read_domain(expname):
+def read_domain(orca):
     """ Read NEMO domain configuration file """
 
-    dirs = folders(expname)
-    filename = os.path.join(dirs['exp'], 'domain_cfg.nc')
+    dirs = paths()
+    filename = os.path.join(dirs['domain'], orca, 'domain_cfg.nc')
     domain = xr.open_mfdataset(filename, preprocess=preproc_nemo_domain)
     domain = domain.isel(time=0)
 
     return domain
 
-def elements(expname):
+def elements(orca):
     """ Define differential forms for integrals """
 
     df = {}
-    domain = read_domain(expname)
+    domain = read_domain(orca)
     df['V'] = domain['e1t']*domain['e2t']*domain['e3t_0']
     df['S'] = domain['e1t']*domain['e2t']
     df['x'] = domain['e1t']

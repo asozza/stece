@@ -14,57 +14,153 @@ def vardict(component):
     if component == 'nemo':
         list = {
             # T grid
-            'e3t': '3D', # T-cell thickness
-            'thetao' : '3D', # temperature
-            'so': '3D', # salinity
-            'tos': '2D', # sea-surface temperature
-            'sos': '2D', # sea-surface salinity
-            'zos': '2D', # sea-surface height
-            'sstdcy': '2D', # sea-surface temperature diurnal cycle
-            'mldkz5': '2D', # turbocline depth (Kz=5e-4)
-            'mldr10_1': '2D', # mixed layer depth (dsigma=0.01 wrt 10m)
-            'mldr10_1dcy': '2D', # amplitude of mldr10_1 diurnal cycle
-            'sbt': '2D', # sea bottom temperature
-            'heatc': '2D', # heat content
-            'saltc': '2D', # salt content
-            'wfo': '2D', # net upward water flux
-            'qsr_oce': '2D', # solar heat flux at ocean surface
-            'qns_oce': '2D', # non-solar heat flux at ocean surface (including E-P)
-            'qt_oce': '2D', # total flux at ocean surface
-            'sfx': '2D', # downward salt flux
-            'taum': '2D', # surface downward wind stress
-            'windsp': '2D', # wind speed
-            'precip': '2D', # precipitation flux
-            'snowpre': '2D', # snowfall flux
+            'e3t': {'dim': '3D', 
+                    'units': 'm', 
+                    'long_name': 'T-cell thickness'},
+            'thetao' : {'dim': '3D', 
+                        'units': 'degC', 
+                        'long_name': 'Temperature'},
+            'so': {'dim': '3D', 
+                   'units': 'PSU', 
+                   'long_name': 'Salinity'},
+            'tos': {'dim': '2D', 
+                    'units': 'degC', 
+                    'long_name': 'Sea-surface temperature'},
+            'sos': {'dim': '2D', 
+                    'units': 'PSU', 
+                    'long_name': 'Sea-surface salinity'},
+            'zos': {'dim': '2D', 
+                    'units': 'm', 
+                    'long_name': 'Sea surface height'},
+            'sstdcy': {'dim': '2D', 
+                       'units': 'degC', 
+                       'long_name': 'Sea-surface temperature diurnal cycle'},
+            'mldkz5': {'dim': '2D', 
+                       'units': 'm', 
+                       'long_name': 'Turbocline depth'}, # (Kz=5e-4)
+            'mldr10_1': {'dim': '2D', 
+                         'units': 'm', 
+                         'long_name': 'Mixed layer depth'}, # (dsigma=0.01 wrt 10m)
+            'mldr10_1dcy': {'dim': '2D', 
+                            'units': 'm', 
+                            'long_name': 'Amplitude of mldr10_1 diurnal cycle'},
+            'sbt': {'dim': '2D', 
+                    'units': 'degC', 
+                    'long_name': 'Sea bottom temperature'},
+            'heatc': {'dim': '2D', 
+                      'units': 'J/m^2', 
+                      'long_name': 'Heat content vertically integrated'},
+            'saltc': {'dim': '2D', 
+                      'units': 'PSU*kg/m^2', 
+                      'long_name': 'Salt content vertically integrated'},
+            'wfo': {'dim': '2D', 
+                    'units': 'kg/m^2/s', 
+                    'long_name': 'Net upward water flux'},
+            'qsr_oce': {'dim': '2D', 
+                        'units': 'W/m^2', 
+                        'long_name': 'Solar heat flux at ocean surface'},
+            'qns_oce': {'dim': '2D', 
+                        'units': 'W/m^2', 
+                        'long_name': 'Non-solar heat flux at ocean surface (including E-P)'},
+            'qt_oce': {'dim': '2D', 
+                       'units': 'W/m^2', 
+                       'long_name': 'Total flux at ocean surface'},
+            'sfx': {'dim': '2D', 
+                    'units': 'g/m2/s', 
+                    'long_name': 'Downward salt flux'},
+            'taum': {'dim': '2D', 
+                     'units': 'N/m^2', 
+                     'long_name': 'Surface downward wind stress'},
+            'windsp': {'dim': '2D', 
+                       'units': 'm/s', 
+                       'long_name': 'Wind speed'},
+            'precip': {'dim': '2D', 
+                       'units': 'kg/m2/s', 
+                       'long_name': 'Precipitation flux'},
+            'snowpre': {'dim': '2D', 
+                        'units': 'kg/m2/s', 
+                        'long_name': 'Snowfall flux'},
             # U-grid
-            'e3u': '3D', # U-cell thickness
-            'uo': '3D', # ocean current along i-axis
-            'uos': '2D', # ocean surface current along i-axis
-            'tauuo': '2D', # wind stress along i-axis
-            'uocetr_eff': '3D', # effective ocean volume transport along i-axis
-            'vozomatr': '3D', # ocean mass transport along i-axis
-            'sozohetr': '2D', # heat transport along i-axis
-            'sozosatr': '2D', # salt transport along i-axis
+            'e3u': {'dim': '3D', 
+                    'units': 'm', 
+                    'long_name': 'U-cell thickness'},
+            'uo': {'dim': '3D', 
+                    'units': 'm/s', 
+                    'long_name': 'Ocean current along i-axis'},
+            'uos': {'dim': '2D', 
+                    'units': 'm/s', 
+                    'long_name': 'Ocean surface current along i-axis'},
+            'tauuo': {'dim': '2D', 
+                      'units': 'N/m^2', 
+                      'long_name': 'Wind stress along i-axis'},
+            'uocetr_eff': {'dim': '3D', 
+                           'units': 'm^3/s', 
+                           'long_name': 'Effective ocean transport along i-axis'},
+            'vozomatr': {'dim': '3D', 
+                         'units': 'kg/s', 
+                         'long_name': 'Ocean mass transport along i-axis'},
+            'sozohetr': {'dim': '2D', 
+                         'units': 'W', 
+                         'long_name': 'Heat transport along i-axis'},
+            'sozosatr': {'dim': '2D', 
+                         'units': '1e-3*kg/s', 
+                         'long_name': 'Salt transport along i-axis'},
             # V-grid
-            'e3v': '3D', # V-cell thickness
-            'vo': '3D', # ocean current along j-axis
-            'vos': '2D', # ocean surface current along j-axis
-            'tauvo': '2D', # wind stress along j-axis
-            'vocetr_eff': '3D', # effective ocean volume transport along j-axis
-            'vomematr': '3D', # ocean mass transport along j-axis
-            'somehetr': '2D', # heat transport along j-axis
-            'somesatr': '2D', # salt transport along j-axis
+            'e3v': {'dim': '3D', 
+                    'units': 'm', 
+                    'long_name': 'V-cell thickness'},
+            'vo': {'dim': '3D', 
+                    'units': 'm/s', 
+                    'long_name': 'Ocean current along j-axis'},
+            'vos': {'dim': '2D', 
+                    'units': 'm/s', 
+                    'long_name': 'Ocean surface current along j-axis'},
+            'tauvo': {'dim': '2D', 
+                      'units': 'N/m^2', 
+                      'long_name': 'Wind stress along j-axis'},
+            'vocetr_eff': {'dim': '3D', 
+                           'units': 'm^3/s', 
+                           'long_name': 'Effective ocean transport along j-axis'},
+            'vomematr': {'dim': '3D', 
+                         'units': 'kg/s', 
+                         'long_name': 'Ocean mass transport along j-axis'},
+            'somehetr': {'dim': '2D', 
+                         'units': 'W', 
+                         'long_name': 'Heat transport along j-axis'},
+            'somesatr': {'dim': '2D', 
+                         'units': '1e-3*kg/s', 
+                         'long_name': 'Salt transport along j-axis'},
             # W-grid
-            'e3w': '3D', # W-cell thickness
-            'wo': '3D', # ocean vertical velocity (upward)
-            'difvho': '3D', # vertical eddy diffusivity            
-            #'vomematr': '3D', # vertical mass transport
-            'av_wave': '3D', # internal wave-induced vertical diffusivity
-            'bn2': '3D', # squared Brunt-Vaisala frequency
-            'bflx_iwm': '3D', # internal wave-induced buoyancy flux
-            'pcmap_iwm': '2D', # power consumption by wave-driven mixing
-            'emix_iwm': '3D', # power density available for mixing
-            'av_ratio ': '3D', # S over T diffusivity ratio
+            'e3w': {'dim': '3D', 
+                    'units': 'm', 
+                    'long_name': 'W-cell thickness'},
+            'wo': {'dim': '3D', 
+                    'units': 'm/s', 
+                    'long_name': 'Ocean vertical velocity'},
+            'difvho': {'dim': '3D', 
+                       'units': 'm^2/s', 
+                       'long_name': 'Vertical eddy diffusivity'},         
+            'vovematr': {'dim': '3D', 
+                         'units': 'kg/s', 
+                         'long_name': 'Vertical mass transport'},
+            'av_wave': {'dim': '3D', 
+                         'units': 'm^2/s', 
+                         'long_name': 'Internal wave-induced vertical diffusivity'},
+            'bn2': {'dim': '3D', 
+                    'units': '1/s^2', 
+                    'long_name': 'Squared Brunt-Vaisala frequency'},
+            'bflx_iwm': {'dim': '3D', 
+                         'units': 'W/kg', 
+                         'long_name': 'Internal wave-induced buoyancy flux'},
+            'pcmap_iwm': {'dim': '2D', 
+                          'units': 'W/m^2', 
+                          'long_name': 'Power consumption by wave-driven mixing'},
+            'emix_iwm': {'dim': '3D', 
+                         'units': 'W/kg', 
+                         'long_name': 'Power density available for mixing'},
+            'av_ratio ': {'dim': '3D', 
+                          'units': '-', 
+                          'long_name': 'S over T diffusivity ratio'}
             # ice
         }
 

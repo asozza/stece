@@ -29,7 +29,7 @@ def timeseries(expname,
                color=None, 
                rescaled=False, 
                reader="nemo", 
-               metrics="norm",
+               metric="base",
                avetype="moving"): 
     """ 
     Graphics of timeseries 
@@ -37,28 +37,30 @@ def timeseries(expname,
     Args:
     expname: experiment name
     startyear,endyear: time window
-    varlabel: variable label (varname + subregion)
-    cost_value: ?
-    offset: time offset
+    varlabel: variable label (varname + ztag)
+    timeoff: time offset
     color: curve color
     rescaled: rescale timeseries by the initial value at time=0
-    reader_type: read the original raw data or averaged data [nemo, post]
-    cost_type: choose the type of cost function [norm, diff, rdiff, abs, rel, var, rvar] 
+    reader: read the original raw data or averaged data ['nemo', 'post']
+    metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    avetype: choose the type of avereage ['moving' or 'standard']
     
     """
     
     if '-' in varlabel:
-        varname, subregion = varlabel.split('-', 1)
+        varname, ztag = varlabel.split('-', 1)
     else:
         varname=varlabel
-        subregion=None
+        ztag=None
+
+    info = vardict('nemo')[varname]
 
     # reading data
     if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
     elif reader == "post":
-        data = postreader_averaged(expname, startyear, endyear, varlabel, 'timeseries', metrics)
+        data = postreader_averaged(expname, startyear, endyear, varlabel, 'timeseries', metric)
         tvec = data['time'].values.flatten()
 
     # fix time-axis
@@ -66,21 +68,20 @@ def timeseries(expname,
     tvec_offset = [tvec_cutted[i]+timeoff for i in range(len(tvec_cutted))]
 
     # y-axis
-    vec = data[varlabel].values.flatten()
+    
     if avetype == 'moving':
         if reader == 'nemo':
             ndim = vardict('nemo')[varname]
-            vec = movave(spacemean(data, varname, ndim, subregion),12)
+            vec = movave(spacemean(data, varname, info['dim'], ztag),12)
         elif reader == 'post':
             vec = movave(data[varlabel],12)
+    elif avetype == 'standard':
+        vec = data[varlabel].values.flatten()
     vec_cutted = vec[6:-6]
-
-    # apply cost function
-    #vec_cost = cost(vec_cutted, cost_value, cost_type) 
 
     # apply rescaling
     if rescaled == True:
-        vec_cost = vec_cutted/vec_cost[0]
+        vec_cost = vec_cutted/vec_cutted[0]
 
     # plot
     plot_kwargs = {}
@@ -88,8 +89,8 @@ def timeseries(expname,
         plot_kwargs['color'] = color
 
     pp = plt.plot(tvec_offset, vec_cost, **plot_kwargs)
-    plt.xlabel(data['time'].long_name)
-    plt.ylabel(data[varlabel].long_name)
+    plt.xlabel('time')
+    plt.ylabel(info['long_name'])
 
     return pp
 

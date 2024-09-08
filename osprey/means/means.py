@@ -55,15 +55,15 @@ def timemean(data, varname):
     return ave
 
 
-def globalmean(data, varname, ndim, subregion=None):
+def globalmean(data, varname, ndim, ztag=None, orca='ORCA2'):
     """ Global average of a field """
 
-    expname = get_expname(data)
-    df = elements(expname)
+    #expname = get_expname(data)
+    df = elements(orca)
     if ndim == '3D':
         ave = data[varname].weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
-        if subregion != None:
-            z1,z2 = subregions(subregion,'ORCA2')
+        if ztag != None:
+            z1,z2 = zlayer(ztag, orca)
             subvol = df['V'].isel(z=slice(z1,z2))
             subvar = data[varname].isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x'])
@@ -77,15 +77,15 @@ def globalmean(data, varname, ndim, subregion=None):
     return ave
 
 
-def spacemean(data, varname, ndim, subregion=None, orca='ORCA2'):
+def spacemean(data, varname, ndim, ztag=None, orca='ORCA2'):
     """ Spatial average of a field """
 
-    expname = get_expname(data)
-    df = elements(expname) 
+    #expname = get_expname(data)
+    df = elements(orca) 
     if ndim == '3D':
         ave = data[varname].weighted(df['V']).mean(dim=['z', 'y', 'x'])
-        if subregion != None:
-            z1,z2 = subregions(subregion, orca)
+        if ztag != None:
+            z1,z2 = zlayer(ztag, orca)
             subvol = df['V'].isel(z=slice(z1,z2))
             subvar = data[varname].isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x'])
@@ -100,36 +100,36 @@ def spacemean(data, varname, ndim, subregion=None, orca='ORCA2'):
 
 
 #################################################################################
-# SUBREGIONS
+# OCEAN LAYERS
 
-def subregions(idx, orca):
+def zlayer(ztag, orca):
     """     
-    Definition of vertical subregions for ORCAs 
+    Definition of vertical ocean layers for ORCAs 
     MIX: mixed layer (0-100 m), PYC: pycnocline (100-1000 m), ABY: abyss (1000-5000 m)
     levels in ORCA2: [0,9] [10,20] [21,30]
     levels in eORCA1: [0,23] [24,45] [46,74]
 
     Args:
-        idx (string): mix, pyc, aby
+        ztag (string): mix, pyc, aby
         orca (string): ORCA2,eORCA1
             
     """
 
     if orca == 'ORCA2':
-        if idx == 'mix':
+        if ztag == 'mix':
             z1 = 0; z2 = 9
-        elif idx == 'pyc':
+        elif ztag == 'pyc':
             z1 = 10; z2 = 20
-        elif idx == 'aby':
+        elif ztag == 'aby':
             z1 = 21; z2 = 30
         else:
             raise ValueError(" Invalid subrange ")
     elif orca == 'eORCA1':
-        if idx == 'mix':
+        if ztag == 'mix':
             z1 = 0; z2 = 23
-        elif idx == 'pyc':
+        elif ztag == 'pyc':
             z1 = 24; z2 = 45
-        elif idx == 'aby':
+        elif ztag == 'aby':
             z1 = 46; z2 = 74
         else:
             raise ValueError(" Invalid subrange ")
@@ -141,62 +141,44 @@ def subregions(idx, orca):
 #################################################################################
 # TOOLS FOR THE FORECAST (COST FUNCTIONS AND FORECAST ERROR)
 
-def cost(var, varref, idx):
-    """ multiple cost functions """
+def cost(x, x0, metric):
+    """
+    Calculate various cost functions based on the given metric.
 
-    # normalized [1]
-    if idx == 'norm':
-        x = var/varref
-    # difference (with sign) [0]
-    if idx == 'diff':
-        x = (var-varref)
-    # relative difference [0]
-    if idx == 'rdiff':
-        x = (var-varref)/varref    
-    # absolute error [0]
-    if idx == 'abs':
-        x = np.abs(var-varref) 
-    # relative error [0]
-    if idx == 'rel':
-        x = np.abs((var-varref)/varref)
-    # variance [0]
-    if idx == 'var':
-        x = np.power(var-varref,2)
-    # normalized/relative variance [0]
-    if idx == 'rvar': 
-        x = np.power(var-varref,2)/np.power(varref,2)
-    # other cost functions: exp? or atan?
+    Args:
+        x: The current value or array-like.
+        x0: The reference value or array-like.
+        metric: The metric used to compute the cost. Options include:
+            - 'base': Original value
+            - 'norm': Normalized value [x / x0]
+            - 'diff': Difference [x - x0]
+            - 'reldiff': Relative difference [(x - x0) / x0)]
+            - 'abserr': Absolute error [|x - x0|]
+            - 'relerr': Relative error [|x - x0| / x0]
+            - 'sqerr': Squared error [(x - x0)^2]
+            - 'relsqerr': Relative squared error [(x - x0)^2 / x0^2]
 
-    return x
-
-
-# # mean state
-# def mean_state(expname, startyear, endyear):
-
-#     df = elements(expname=expname)
-#     data = read_T(expname=expname, startyear=startyear, endyear=endyear)
-#     field = data.mean(dim=['time'])
-#     field = field.drop_dims({'axis_nbounds'})
-
-#     return field
-
-
-# def anomaly_local(expname, year, field, idx):
+    Returns:
+        The result of the chosen cost function (float or array-like)
+    """
     
-#     data = read_T(expname=expname, year=year)
-#     delta = cost(data, field, idx)
+    if metric == 'base':
+        return x    
+    elif metric == 'norm':
+        return np.divide(x, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+    elif metric == 'diff':
+        return x - x0
+    elif metric == 'rdiff':
+        return np.divide(x - x0, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+    elif metric == 'abs':
+        return np.abs(x - x0)
+    elif metric == 'rel':
+        return np.divide(np.abs(x - x0), x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+    elif metric == 'var':
+        return np.power(x - x0, 2)
+    elif metric == 'rvar': 
+        return np.divide(np.power(x - x0, 2), np.power(x0, 2), out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+    else:
+        raise ValueError(f"Unknown metric: {metric}")
 
-#     return delta
 
-
-def mean_forecast_error(expname, year, var, xfield):
-     """ function to compute mean forecast error """
-
-     df = elements(expname=expname)
-     data = read_T(expname=expname, year=year)
-     mdata = data[var].mean('time')
-     xdata = xr.where(mdata!=0.0, xfield, 0.0)
-     delta = xr.where(mdata!=0.0, mdata.values-xdata.values, 0.0)
-     dd = delta.weighted(df['vol']).mean(dim=['z', 'y', 'x']).values
-
-     return dd
