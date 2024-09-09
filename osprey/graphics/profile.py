@@ -25,73 +25,113 @@ from osprey.utils.vardict import vardict
 
 def profile(expname, 
             startyear, endyear, 
-            var, 
-            cost_value=1, 
+            varlabel, 
             color=None, 
-            reader_type="output", 
-            cost_type="norm", 
-            average_type="moving"): 
-    """ Graphics of vertical profile """
+            rescaled=False, 
+            reader='nemo',
+            replace=False,
+            metric='base'): 
+    """ 
+    Graphics of averaged vertical profile 
     
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+    varlabel: variable label (varname + ztag)
+    color: curve color
+    rescaled: rescale timeseries by the initial value at time=0
+    reader: read the original raw data or averaged data ['nemo', 'post']
+    replace: replace existing file
+    metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    avetype: choose the type of avereage ['moving' or 'standard']
+
+    """
+
+    if '-' in varlabel:
+        varname, ztag = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        ztag=None
+
+    info = vardict('nemo')[varname]
+
     # reading data
-    if reader_type == 'output':
-        data = reader_nemo(expname, startyear, endyear)
-    elif reader_type == 'averaged':
-        data = postreader_averaged(expname, startyear, endyear, var, 'profile')
-    
+    if reader == 'nemo':
+        data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
+        vec = globalmean(data, varname, '2D')
+    elif reader == 'post':
+        data = postreader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='profile', replace=replace, metric=metric)
+        vec=data[varname].values.flatten()
+
     # fixing depth y-axis
     zvec = data['z'].values.flatten()
 
-    # fixing variable x-axis
-    vec = data[var].values.flatten()
-    if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec = globalmean(data, var, '2D')
-    vec_cost = cost(vec, cost_value, cost_type)
-
     # plot
     plot_kwargs = {}
     if color is not None:
         plot_kwargs['color'] = color
 
-    pp = plt.plot(vec_cost, -zvec, **plot_kwargs)
-    plt.xlabel(data[var].long_name)
-    plt.ylabel(data['z'].long_name)
+    pp = plt.plot(vec, -zvec, **plot_kwargs)
+    plt.xlabel(info['long_name'])
+    plt.ylabel('depth')
 
     return pp
 
+def profile_two(expname1, expname2, 
+                startyear1, endyear1, 
+                startyear2, endyear2,             
+                varlabel, 
+                color=None, 
+                rescaled=False,
+                reader='nemo',
+                replace=False,
+                metric='base',
+                avetype='moving'): 
+    """ 
+    Graphics of two-experiment vertical profile distance based on metric 
+    
+    Args:
+    expname_1,2: experiment names
+    startyear,endyear_1,2: time windows
+    varlabel: variable label (varname + ztag)
+    color: curve color
+    rescaled: rescale timeseries by the initial value at time=0
+    reader: read the original raw data or averaged data ['nemo', 'post']
+    replace: replace existing file
+    metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    avetype: choose the type of avereage ['moving' or 'standard']
+    
+    """
+    
+    if '-' in varlabel:
+        varname, ztag = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        ztag=None
 
-def profile_diff(expname1, expname2, 
-            startyear, endyear, 
-            var, 
-            cost_value=1, 
-            color=None, 
-            reader_type="output", 
-            cost_type="norm", 
-            average_type="moving"): 
-    """ Graphics of two-field difference vertical profile """
+    info = vardict('nemo')[varname]
     
     # reading data
-    if reader_type == 'output':
-        data1 = reader_nemo(expname1, startyear, endyear)
-        data2 = reader_nemo(expname2, startyear, endyear)
-    elif reader_type == 'averaged':
-        data1 = postreader_averaged(expname1, startyear, endyear, var, 'profile')
-        data2 = postreader_averaged(expname2, startyear, endyear, var, 'profile')
+    if reader == 'nemo':
+        data1 = reader_nemo(expname=expname1, startyear=startyear1, endyear=endyear1)
+        data2 = reader_nemo(expname=expname2, startyear=startyear2, endyear=endyear2)
+    elif reader == 'post':
+        data1 = postreader_averaged(expname=expname1, startyear=startyear1, endyear=endyear1, varlabel=varlabel, diagname='profile', replace=replace, metric=metric)
+        data2 = postreader_averaged(expname=expname2, startyear=startyear2, endyear=endyear2, varlabel=varlabel, diagname='profile', replace=replace, metric=metric)
 
     # depth y-axis 
     zvec = data1['z'].values.flatten()
 
     # variable x-axis
-    vec1 = data1[var].values.flatten()
-    vec2 = data2[var].values.flatten()
-    if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec1 = globalmean(data1, var, '2D')
-        vec2 = globalmean(data2, var, '2D')
+    if avetype == 'moving':
+        vec1 = globalmean(data1, varname, '2D')
+        vec2 = globalmean(data2, varname, '2D')
+    elif avetype == 'standard':
+        vec1 = data1[varname].values.flatten()
+        vec2 = data2[varname].values.flatten()
 
     # apply cost function
-    vec_cost = cost(vec1, vec2, cost_type)
+    vec_cost = cost(vec1, vec2, metric)
 
     # plot
     plot_kwargs = {}
@@ -99,50 +139,7 @@ def profile_diff(expname1, expname2,
         plot_kwargs['color'] = color
 
     pp = plt.plot(vec_cost, -zvec, **plot_kwargs)
-    plt.xlabel(data1[var].long_name)
-    plt.ylabel(data1['z'].long_name)
-
-    return pp
-
-def profile_diff_two(expname1, expname2, 
-            startyear1, endyear1, startyear2, endyear2,
-            var, 
-            cost_value=1, 
-            color=None, 
-            reader_type="output", 
-            cost_type="norm", 
-            average_type="moving"): 
-    """ Graphics of two-field difference vertical profile """
-    
-    # reading data
-    if reader_type == 'output':
-        data1 = reader_nemo(expname1, startyear1, endyear1)
-        data2 = reader_nemo(expname2, startyear2, endyear2)
-    elif reader_type == 'averaged':
-        data1 = postreader_averaged(expname1, startyear1, endyear1, var, 'profile')
-        data2 = postreader_averaged(expname2, startyear2, endyear2, var, 'profile')
-
-    # depth y-axis 
-    zvec = data1['z'].values.flatten()
-
-    # variable x-axis
-    vec1 = data1[var].values.flatten()
-    vec2 = data2[var].values.flatten()
-    if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec1 = globalmean(data1, var, '2D')
-        vec2 = globalmean(data2, var, '2D')
-
-    # apply cost function
-    vec_cost = cost(vec1, vec2, cost_type)
-
-    # plot
-    plot_kwargs = {}
-    if color is not None:
-        plot_kwargs['color'] = color
-
-    pp = plt.plot(vec_cost, -zvec, **plot_kwargs)
-    plt.xlabel(data1[var].long_name)
-    plt.ylabel(data1['z'].long_name)
+    plt.xlabel(info['long_name'])
+    plt.ylabel('depth')
 
     return pp

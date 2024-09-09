@@ -17,7 +17,7 @@ import xarray as xr
 from osprey.utils.vardict import vardict
 from osprey.utils.folders import folders, paths
 from osprey.utils.time import get_leg, get_decimal_year
-from osprey.means.means import spacemean, timemean
+from osprey.means.means import globalmean, spacemean, timemean
 from osprey.actions.reader import reader_nemo, reader_rebuilt
 from osprey.actions.reader import elements
 from osprey.actions.rebuilder import rebuilder
@@ -81,14 +81,14 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     # try to read averaged data
     try:
         if replace == False:
-            data = reader_averaged(expname, startyear, endyear, varlabel, diagname, metric)
+            data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, metric=metric)
             logger.info('Averaged data found.')        
             return data
     except FileNotFoundError:
         logger.info('Averaged data not found. Creating new file ...')
 
     # If averaged data not existing, read original data
-    xdata = reader_nemo(expname, startyear, endyear)
+    xdata = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
 
     # If anomaly is True
     if metric != 'base':
@@ -105,7 +105,7 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
         mdata = reader_averaged(expname=exp0, startyear=y0, endyear=y1, varlabel=varlabel, diagname='field', metric='base')
         xdata = cost(xdata, mdata, metric)
 
-    ds = averaging(expname, xdata, varlabel, diagname)
+    ds = averaging(data=xdata, varlabel=varlabel, diagname=diagname, orca=orca)
 
     # Write averaged data on file
     os.makedirs(dirs['perm'], exist_ok=True)
@@ -116,12 +116,12 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     ds.to_netcdf(filename)
 
     # Now you can read
-    data = reader_averaged(expname, startyear, endyear, varlabel, diagname, metric)
+    data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, metric=metric)
 
     return data
 
 
-def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
+def averaging(data, varlabel, diagname, orca='ORCA2'):
     """ 
     Averaging: Perform different flavours of averaging 
     
@@ -146,7 +146,7 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
     # timeseries (why not saving in cftime?)
     if diagname  == 'timeseries':
         tvec = get_decimal_year(data['time'].values)
-        vec = spacemean(data, varname, info['dim'], ztag)
+        vec = spacemean(data=data, varname=varname, ndim=info['dim'], ztag=ztag, orca=orca)
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
                             attrs = {'units' : 'years', 'long_name' : 'time'}), 
@@ -154,10 +154,11 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
                             attrs  = {'units' : info['units'], 'long_name' : info['long_name']})},
             attrs = {'description': 'ECE4/NEMO averaged timeseries'})
 
-    # vertical profile
+    # vertical profile (ztag not considered)
     if diagname == 'profile' and info['dim'] == '3D':
         zvec = data['z'].values.flatten()
-        vec = data[varname].weighted(df['area']).mean(dim=['time', 'y', 'x']).values.flatten()
+        #vec = data[varname].weighted(df['S']).mean(dim=['time', 'y', 'x']).values.flatten()
+        vec = globalmean(data, varname, '2D', orca)
         ds = xr.Dataset({
             'z': xr.DataArray(data = zvec, dims = ['z'], coords = {'z': zvec}, 
                                  attrs = {'units' : 'm', 'long_name' : 'depth'}), 
