@@ -43,7 +43,6 @@ def profile(expname,
     reader: read the original raw data or averaged data ['nemo', 'post']
     replace: replace existing file
     metric: choose the type of cost function ['base', 'norm', 'diff' ...]
-    avetype: choose the type of avereage ['moving' or 'standard']
 
     """
 
@@ -85,8 +84,7 @@ def profile_two(expname1, expname2,
                 rescaled=False,
                 reader='nemo',
                 replace=False,
-                metric='base',
-                avetype='moving'): 
+                metric='base'): 
     """ 
     Graphics of two-experiment vertical profile distance based on metric 
     
@@ -99,7 +97,6 @@ def profile_two(expname1, expname2,
     reader: read the original raw data or averaged data ['nemo', 'post']
     replace: replace existing file
     metric: choose the type of cost function ['base', 'norm', 'diff' ...]
-    avetype: choose the type of avereage ['moving' or 'standard']
     
     """
     
@@ -115,20 +112,16 @@ def profile_two(expname1, expname2,
     if reader == 'nemo':
         data1 = reader_nemo(expname=expname1, startyear=startyear1, endyear=endyear1)
         data2 = reader_nemo(expname=expname2, startyear=startyear2, endyear=endyear2)
+        vec1 = globalmean(data1, varname, '2D')
+        vec2 = globalmean(data2, varname, '2D')
     elif reader == 'post':
         data1 = postreader_averaged(expname=expname1, startyear=startyear1, endyear=endyear1, varlabel=varlabel, diagname='profile', replace=replace, metric=metric)
         data2 = postreader_averaged(expname=expname2, startyear=startyear2, endyear=endyear2, varlabel=varlabel, diagname='profile', replace=replace, metric=metric)
+        vec1 = data1[varname].values.flatten()
+        vec2 = data2[varname].values.flatten()
 
     # depth y-axis 
     zvec = data1['z'].values.flatten()
-
-    # variable x-axis
-    if avetype == 'moving':
-        vec1 = globalmean(data1, varname, '2D')
-        vec2 = globalmean(data2, varname, '2D')
-    elif avetype == 'standard':
-        vec1 = data1[varname].values.flatten()
-        vec2 = data2[varname].values.flatten()
 
     # apply cost function
     vec_cost = cost(vec1, vec2, metric)

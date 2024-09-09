@@ -103,7 +103,8 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
             y0 = meanfield[1]['startyear']
             y1 = meanfield[2]['endyear']
         mdata = reader_averaged(expname=exp0, startyear=y0, endyear=y1, varlabel=varlabel, diagname='field', metric='base')
-        xdata = cost(xdata, mdata, metric)
+        xdata[varlabel] = cost(xdata[varlabel], mdata[varlabel], metric)
+
 
     ds = averaging(data=xdata, varlabel=varlabel, diagname=diagname, orca=orca)
 

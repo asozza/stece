@@ -178,7 +178,8 @@ def cost(x, x0, metric):
     elif metric == 'diff':
         return x - x0
     elif metric == 'rdiff':
-        return np.divide(x - x0, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+        #return np.divide(x - x0, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+        return xr.where(x0 != 0, (x - x0) / x0, 0) 
     elif metric == 'abs':
         return np.abs(x - x0)
     elif metric == 'rel':

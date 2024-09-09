@@ -13,7 +13,6 @@ import numpy as np
 import xarray as xr
 import dask
 import cftime
-import nc_time_axis
 import matplotlib.pyplot as plt
 
 from osprey.actions.reader import reader_nemo
@@ -27,52 +26,63 @@ from osprey.utils.vardict import vardict
 
 def gregory_plot(expname, 
                 startyear, endyear, 
-                var_x='thetao', 
-                var_y='qt_oce',  
-                cost_value=1, 
-                offset=0, 
+                varname1, 
+                varname2,
                 color=None,
-                rescaled=False,
-                reader_type="nemo", 
-                cost_type="norm", 
-                average_type="moving"):               
-    """ Function for drawing Gregory plots """
+                reader='nemo',
+                replace=False, 
+                metric='base', 
+                avetype='moving'):               
+    """ 
+    Gregory Plot
     
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+    varname_{1,2}: variable names
+    color: curve color
+    reader: read the original raw data or averaged data ['nemo', 'post']
+    replace: substitute existing files
+    metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    avetype: choose the type of avereage ['moving' or 'standard']
+         
+    """
+
+    info1 = vardict('nemo')[varname1]
+    info2 = vardict('nemo')[varname2]
+
     # reading data
-    if reader_type == "nemo":
+    if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
-    elif reader_type == "averaged":
-        data = postreader_averaged(expname, startyear, endyear, var, 'series')
-        tvec = data['time'].values.flatten()
-
-    # fix time-axis
+    elif reader == "post":
+        data1 = postreader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname1, diagname='timeseries', replace=replace, metric=metric)
+        data2 = postreader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname2, diagname='timeseries', replace=replace, metric=metric)
+        tvec = data1['time'].values.flatten()
     tvec_cutted = tvec[6:-6]
-    tvec_offset = [tvec_cutted[i]+offset for i in range(len(tvec_cutted))]
 
-    # y-axis
-    vec = data[var].values.flatten()
-    if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec_x = movave(spacemean(data, var_x, ndim),12)
-        vec_y = movave(spacemean(data, var_y, ndim),12)    
-    vec_cutted = vec[6:-6]
+    # y-axis    
+    if avetype == 'moving':
+        if reader == 'nemo':
+            vec1 = movave(spacemean(data, varname1, info1['dim']),12)
+            vec2 = movave(spacemean(data, varname2, info2['dim']),12)
+        elif reader == 'post':
+            vec1 = movave(data1[varname1],12)
+            vec2 = movave(data2[varname2],12)
+    elif avetype == 'standard':
+        vec1 = data[varname1].values.flatten()
+        vec2 = data[varname1].values.flatten()
+    vec1_cutted = vec1[6:-6]
+    vec2_cutted = vec2[6:-6]
 
-    # apply cost function
-    vec_cost = cost(vec_cutted, cost_value, cost_type) 
-
-    # apply rescaling
-    if rescaled == True:
-        vec_cost = vec_cost/vec_cost[0]
-
-    # plot
+    # plot (add palette according to time?)
     plot_kwargs = {}
     if color is not None:
         plot_kwargs['color'] = color
 
-    pp = plt.plot(tvec_offset, vec_cost, **plot_kwargs)
-    plt.xlabel(data['time'].long_name)
-    plt.ylabel(data[var].long_name)
+    pp = plt.plot(vec1_cutted, vec2_cutted, **plot_kwargs)
+    plt.xlabel(info1['long_name'])
+    plt.ylabel(info2['long_name'])
 
     return pp
 
