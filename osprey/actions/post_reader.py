@@ -128,9 +128,10 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
     Args:
     expname: experiment name
     data: dataset
-    varlabel: variable label
-    diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
-    
+    varlabel: variable label (varname + ztag)
+    diagname: diagnostics name <timeseries, profile, hovmoller, map, field>. to be added pdf
+    orca: ORCA configuration <ORCA2, eORCA1>
+
     """
 
     if '-' in varlabel:
@@ -148,10 +149,10 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
         vec = spacemean(data, varname, info['dim'], ztag)
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
-                            attrs = {'units' : 'years', 'long_name' : 'years'}), 
+                            attrs = {'units' : 'years', 'long_name' : 'time'}), 
             varlabel : xr.DataArray(data = vec, dims = ['time'], coords = {'time': tvec}, 
                             attrs  = {'units' : info['units'], 'long_name' : info['long_name']})},
-            attrs = {'description': 'ECE4/NEMO averaged timeseries data'})
+            attrs = {'description': 'ECE4/NEMO averaged timeseries'})
 
     # vertical profile
     if diagname == 'profile' and info['dim'] == '3D':
@@ -162,7 +163,7 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
                                  attrs = {'units' : 'm', 'long_name' : 'depth'}), 
             varname : xr.DataArray(data = vec, dims = ['z'], coords = {'z': zvec}, 
                                    attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO averaged profiles'})
+            attrs = {'description': 'ECE4/NEMO averaged profile'})
 
     # hovmoller diagram
     if diagname == 'hovmoller' and info['dim'] == '3D':
@@ -170,7 +171,7 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
         vec = spacemean(data, varname, '2D')
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
-                        attrs = {'units' : 'years', 'long_name' : 'years'}), 
+                        attrs = {'units' : 'years', 'long_name' : 'time'}), 
             'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
                         attrs = {'units' : 'm', 'long_name' : 'depth'}), 
             varlabel : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': data['z']},
@@ -192,7 +193,7 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO averaged map'})
 
-    # field
+    # 3D field
     if diagname == 'field' and info['dim'] == '3D':
         vec = timemean(data, varname)
         ds = xr.Dataset({
@@ -206,6 +207,7 @@ def averaging(expname, data, varlabel, diagname, orca='ORCA2'):
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO time-averaged field'})
 
+    # 2D field
     if diagname == 'field' and info['dim'] == '2D':
         vec = timemean(data, varname)
         ds = xr.Dataset({

@@ -24,30 +24,36 @@ from osprey.means.means import spacemean
 from osprey.utils.vardict import vardict
 
 
-def hovmoller_plot(expname, 
-            startyear, endyear, 
-            var, 
-            cost_value=1, 
-            color=None, 
-            reader_type="output", 
-            cost_type="norm", 
-            average_type="moving"): 
-    """ Function for drawing Hövmoller diagrams """
+def hovmoller(expname, 
+              startyear, endyear, 
+              varlabel, 
+              color=None, 
+              reader="nemo", 
+              metric="base", 
+              avetype="moving"): 
+    """ Function for plotting Hövmoller diagrams """
     
+    if '-' in varlabel:
+        varname, ztag = varlabel.split('-', 1)
+    else:
+        varname=varlabel
+        ztag=None
+
+    info = vardict('nemo')[varname]
+
     # reading data
-    if reader_type == "nemo":
+    if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
-    elif reader_type == "averaged":
-        data = postreader_averaged(expname, startyear, endyear, var, 'series')
-        tvec = data['time'].values.flatten()
+    elif reader == "post":
+        data = postreader_averaged(expname, startyear, endyear, varlabel, 'timeseries', metric)
+        tvec = data['time'].values.flatten()       
     zvec = data['z'].values.flatten()
 
     # fixing variable x-axis
-    vec = data[var].values.flatten()
-    if average_type == 'moving':
-        ndim = vardict('nemo')[var]
-        vec = spacemean(data, var, '2D')
+    vec = data[varname].values.flatten()
+    if avetype == 'moving':
+        vec = spacemean(data, varname, '2D', ztag)
     vec_cost = cost(vec, cost_value, cost_type)
 
     delta = (data[var] - data[var].isel(time=0))
