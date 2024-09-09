@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Means module
+Mathematical Means module
 
 Author: Alessandro Sozza (CNR-ISAC)
 Date: Mar 2024
@@ -15,6 +15,15 @@ import cftime
 from osprey.utils.utils import get_expname
 from osprey.actions.reader import elements
 
+
+def flatten_to_triad(m, nj, ni):
+    """ Recover triad indexes from flatten array length """
+
+    k = m // (ni * nj)
+    j = (m - k * ni * nj) // ni
+    i = m - k * ni * nj - j * ni
+
+    return k, j, i
 
 #################################################################################
 # TYPES OF AVERAGING

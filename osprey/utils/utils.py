@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 def run_bash_command(command):
     """Run a bash command using subprocess"""
 
@@ -36,6 +37,9 @@ def run_bash_command(command):
         logger.error(f"Error output: {e.stderr.decode('utf-8').strip()}")
         
         raise
+
+########################################################################################
+# error handling functions
 
 def remove_existing_file(filename):
 
@@ -79,6 +83,8 @@ def error_handling_decorator(func):
     
     return wrapper
 
+##################################################################
+
 def get_expname(data):
     """" Get expname from a NEMO dataset & output file path """
 
@@ -89,4 +95,6 @@ def get_nemo_timestep(filename):
     """ Get timestep from a NEMO restart file """
 
     return os.path.basename(filename).split('_')[1]
+
+####################################################################
 
