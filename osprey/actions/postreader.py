@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Post-Reader module
+Postreader module
 
 Author: Alessandro Sozza, Paolo Davini (CNR-ISAC)
 Date: June 2024
@@ -55,9 +55,9 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, metric):
     return data
 
 # MAIN FUNCTION
-def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace=False, metric='base', orca='ORCA2'):
+def postreader_nemo(expname, startyear, endyear, varlabel, diagname, replace=False, metric='base', orca='ORCA2'):
     """ 
-    Post-reader Main 
+    Postreader Main 
     
     Args:
     expname: experiment name
@@ -92,7 +92,7 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
 
     if metric != 'base':
-        mean_data = reader_meanfield(varname=varname, orca=orca)        
+        mean_data = reader_meanfield(varname=varname)        
         data = cost(data, mean_data, metric)
 
     ds = averaging(data=data, varlabel=varlabel, diagname=diagname, orca=orca)
@@ -241,7 +241,7 @@ def averaging(data, varlabel, diagname, orca):
     return ds
 
 
-def reader_meanfield(varname, orca='ORCA2'):
+def reader_meanfield(varname):
     """
     Read or compute the mean field and save it.
     
@@ -249,8 +249,6 @@ def reader_meanfield(varname, orca='ORCA2'):
     varname: variable name
     orca: domain information
     """
-    
-    logger.info("Computing mean field...")
 
     # load paths
     local_paths = paths()
@@ -258,13 +256,12 @@ def reader_meanfield(varname, orca='ORCA2'):
     # read info about meanfield from yaml file
     filename = os.path.join(local_paths['osprey'], 'meanfield.yaml')
     with open(filename) as yamlfile:
-        config = yaml.load(yamlfile, Loader=yaml.FullLoader)    
-    if 'meanfield' in config:
-        meanfield = config['meanfield']
-        expname = meanfield[0]['expname']
-        startyear = meanfield[1]['startyear']
-        endyear = meanfield[2]['endyear']
-    
+        info = yaml.load(yamlfile, Loader=yaml.FullLoader)
+    keys = ['expname', 'startyear', 'endyear', 'orca', 'replace']
+    expname, startyear, endyear, orca, replace = [info[key] for key in keys]
+
+    logger.info(f"Loading mean field for expname={expname}, startyear={startyear}, endyear={endyear}")
+
     # try to read averaged data
     dirs = folders(expname)
     try:
@@ -286,8 +283,6 @@ def reader_meanfield(varname, orca='ORCA2'):
 
     # Now you can read
     data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='field', metric='base')
-        
-    logger.info("Mean field computation complete.")
     
     return data
 
@@ -322,3 +317,4 @@ def reader_restart(expname, startyear, endyear):
 
     return data
 
+##########################################################################################

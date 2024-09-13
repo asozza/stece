@@ -131,7 +131,7 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
         raise FileNotFoundError("No data files found within the specified range.")
 
     logging.info('Files to be loaded %s', filelist)
-    data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True, parallel=True)
+    data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
 
     return data
 
@@ -151,7 +151,7 @@ def read_domain(orca):
 
     dirs = paths()
     filename = os.path.join(dirs['domain'], orca, 'domain_cfg.nc')
-    domain = xr.open_mfdataset(filename, preprocess=preproc_nemo_domain, parallel=True)
+    domain = xr.open_mfdataset(filename, preprocess=preproc_nemo_domain)
     domain = domain.isel(time=0)
 
     return domain
@@ -183,7 +183,7 @@ def reader_rebuilt(expname, startleg, endleg):
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     logging.info(' File to be loaded %s', filelist)
-    data = xr.open_mfdataset(filelist, use_cftime=True, parallel=True)
+    data = xr.open_mfdataset(filelist, use_cftime=True)
 
     return data
 

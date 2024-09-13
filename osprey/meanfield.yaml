@@ -1,6 +1,6 @@
 ---
-meanfield:
-  - expname: 'lfr0'
-  - startyear: 2390
-  - endyear: 2400
-  - orca: 'ORCA2'
+expname: 'lfr0'
+startyear: 2390
+endyear: 2400
+orca: 'ORCA2'
+replace: False
