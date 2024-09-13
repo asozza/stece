@@ -132,7 +132,7 @@ def zlayer(ztag, orca):
         elif ztag == 'aby':
             z1 = 21; z2 = 30
         else:
-            raise ValueError(" Invalid subrange ")
+            raise ValueError(" Invalid z-tag ")
     elif orca == 'eORCA1':
         if ztag == 'mix':
             z1 = 0; z2 = 23
@@ -141,7 +141,7 @@ def zlayer(ztag, orca):
         elif ztag == 'aby':
             z1 = 46; z2 = 74
         else:
-            raise ValueError(" Invalid subrange ")
+            raise ValueError(" Invalid z-tag ")
     else:
         raise ValueError(" Invalid ORCA grid ")
     
@@ -179,7 +179,18 @@ def cost(x, x0, metric):
         return x - x0
     elif metric == 'rdiff':
         #return np.divide(x - x0, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
-        return xr.where(x0 != 0, (x - x0) / x0, 0) 
+        #epsilon=1e-10 # Small tolerance to avoid division by very small numbers
+        #x0 = x0.fillna(0.0)  # Replace NaNs with zero before the calculation
+        # Align data0 with data1 by adding a new 'time' dimension to data0
+        #x0_ext = x0.expand_dims(dim='time', axis=0)
+        # Now, data0_expanded has the shape (time, x, y, z), which matches data1
+        # Perform the relative difference calculation
+        #x = xr.where(x0_ext != 0.0, (x - x0_ext) / x0_ext, 0.0)    
+        # Broadcast data0 to match the time dimension of data1
+        x0_broad, x_broad = xr.broadcast(x0, x)
+        # Perform the relative difference calculation
+        x = xr.where(x0_broad != 0.0, (x_broad - x0_broad) / x0_broad, 0.0)
+        return x
     elif metric == 'abs':
         return np.abs(x - x0)
     elif metric == 'rel':

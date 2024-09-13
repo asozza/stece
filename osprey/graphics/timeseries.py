@@ -8,30 +8,35 @@ Author: Alessandro Sozza, Paolo Davini (CNR-ISAC)
 Date: Mar 2024
 """
 
+import os
 import numpy as np
 import xarray as xr
 import dask
+import yaml
 import cftime
 #import nc_time_axis
 import matplotlib.pyplot as plt
 
+from osprey.utils.folders import paths
 from osprey.utils.time import get_decimal_year
 from osprey.utils.vardict import vardict
 from osprey.means.means import cost, movave
-from osprey.means.means import spacemean, timemean
+from osprey.means.means import spacemean
 from osprey.actions.reader import reader_nemo
-from osprey.actions.post_reader import postreader_averaged
+from osprey.actions.post_reader import postreader_averaged, reader_averaged, reader_meanfield
 
 def timeseries(expname, 
                startyear, endyear, 
-               varlabel,
-               timeoff=0, 
-               color=None, 
-               rescaled=False, 
-               reader="nemo",
+               varlabel, 
+               reader="post", 
                replace=False, 
                metric="base",
-               avetype="moving"): 
+               orca='ORCA2', 
+               timeoff=0, 
+               rescaled=False, 
+               avetype="moving",
+               color=None, 
+               figname=None): 
     """ 
     Graphics of timeseries 
     
@@ -39,13 +44,15 @@ def timeseries(expname,
     expname: experiment name
     startyear,endyear: time window
     varlabel: variable label (varname + ztag)
-    timeoff: time offset
-    color: curve color
-    rescaled: rescale timeseries by the initial value at time=0
     reader: read the original raw data or averaged data ['nemo', 'post']
+    replace: replace existing files [False or True]
     metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    timeoff: time offset
+    rescaled: rescale timeseries by the initial value at time=0
     avetype: choose the type of avereage ['moving' or 'standard']
-    
+    color: curve color
+    figname: save plot to file
+
     """
     
     if '-' in varlabel:
@@ -56,10 +63,15 @@ def timeseries(expname,
 
     info = vardict('nemo')[varname]
 
-    # reading data
+    # reading data from raw output
     if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
+        if metric != 'base':
+            mean_data = reader_meanfield(varname=varname, replace=replace, orca=orca)
+            data = cost(data, mean_data, metric)
+
+    # reading post-processed data
     elif reader == "post":
         data = postreader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='timeseries', replace=replace, metric=metric)
         tvec = data['time'].values.flatten()
@@ -90,6 +102,11 @@ def timeseries(expname,
     pp = plt.plot(tvec_offset, vec_cutted, **plot_kwargs)
     plt.xlabel('time')
     plt.ylabel(info['long_name'])
+
+    # Save figure
+    dirs = paths()
+    if figname is not None:
+        plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp
 
@@ -169,3 +186,4 @@ def timeseries_two(expname1, expname2,
     plt.ylabel(info['long_name'])
 
     return pp
+ 

@@ -25,63 +25,63 @@ from osprey.utils.vardict import vardict
 
 def hovmoller(expname, 
               startyear, endyear, 
-              varlabel, 
-              timeoff=0,
+              varname,
               rescaled=False, 
               reader='nemo',
               replace=False, 
-              metric='base', 
-              avetype='moving'): 
+              metric='base'): 
     """ 
     Plot of Hovmöller diagram 
     
     Args:
     expname: experiment name
     startyear,endyear: time window
-    varlabel: variable label (varname + ztag)
-    timeoff: time offset
-    color: curve color
+    varname: variable name
     rescaled: rescale field by the initial value at time=0
     reader: read the original raw data or averaged data ['nemo', 'post']
     metric: choose the type of cost function ['base', 'norm', 'diff' ...]
-    avetype: choose the type of avereage ['moving' or 'standard']
     
     """
     
-
-    if '-' in varlabel:
-        varname, ztag = varlabel.split('-', 1)
-    else:
-        varname=varlabel
-        ztag=None
-
     info = vardict('nemo')[varname]
 
     # reading data
     if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
-        tvec = get_decimal_year(data['time'].values)
+        vec = spacemean(data, varname, '2D')
     elif reader == "post":
-        data = postreader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='hovmoller', replace=replace, metric=metric)
-        tvec = data['time'].values.flatten()
-    zvec = data['z'].values.flatten()
+        data = postreader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='hovmoller', replace=replace, metric=metric)
+        vec = data[varname]
 
-    # fixing variable x-axis
-    if avetype == 'moving':
-        if reader == 'nemo':
-            vec = movave(spacemean(data, varname, '2D', ztag),12)
-        elif reader == 'post':
-            vec = movave(data[varlabel],12)
-    elif avetype == 'standard':
-        vec = data[varname].values.flatten()
-    
+    if reader == 'nemo':
+        if metric != 'base':
+        # read from yaml file
+        local_paths = paths()
+        filename = os.path.join(local_paths['osprey'], 'meanfield.yaml')
+        with open(filename) as yamlfile:
+            config = yaml.load(yamlfile, Loader=yaml.FullLoader)    
+        if 'meanfield' in config:
+            meanfield = config['meanfield']
+            exp0 = meanfield[0]['expname']
+            y0 = meanfield[1]['startyear']
+            y1 = meanfield[2]['endyear']
+        mdata = reader_averaged(expname=exp0, startyear=y0, endyear=y1, varlabel=varlabel, diagname='field', metric='base')
+        ydata = cost(xdata, mdata, metric)
+    elif reader == 'post':
+        #
+        data = 1.0
+
     if rescaled == True:
-        hovm = (data[varname] - data[varname].isel(time=0))
+        hovm = (vec -vec.isel(time=0))
+    else:
+        hovm = vec
     
     # plot
     pp = hovm.plot(x='time', y='z', cmap=plt.cm.coolwarm)
     plt.xlabel('time')
     plt.ylabel('depth')
+    plt.ylim(0,5000)
+    plt.gca().invert_yaxis() # invert y-axis
 
     return pp
 

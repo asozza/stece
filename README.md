@@ -9,5 +9,3 @@ Scripts & tools for EC-Earth4
      * reading NEMO outputs and restarts
      * forecasting procedures
      * tools for graphics
-
-

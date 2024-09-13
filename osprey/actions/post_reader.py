@@ -13,13 +13,14 @@ import yaml
 import logging
 import numpy as np
 import xarray as xr
+import dask
 
 from osprey.utils.vardict import vardict
 from osprey.utils.folders import folders, paths
 from osprey.utils.time import get_leg, get_decimal_year
+from osprey.utils.utils import error_handling_decorator
 from osprey.means.means import globalmean, spacemean, timemean
 from osprey.actions.reader import reader_nemo, reader_rebuilt
-from osprey.actions.reader import elements
 from osprey.actions.rebuilder import rebuilder
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import cost
@@ -50,7 +51,7 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, metric):
     filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{metric}_{startyear}-{endyear}.nc")
     logger.info('File to be loaded %s', filename)
     data = xr.open_dataset(filename, use_cftime=True)
-
+    
     return data
 
 # MAIN FUNCTION
@@ -63,10 +64,10 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     startyear,endyear: time window
     varlabel: variable label (varname + ztag)
     diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf?]
-                            or [ts, prof, hovm, map, fld, pdf]?
     replace: replace existing averaged file [False or True]
-    metric: compute distance with respect to a reference field using a metric (cost function)
-             all details should be provided in the meanfield.yaml file
+    metric: compute distance with respect to a reference field using a cost function
+             all details provided in meanfield.yaml
+    orca: ORCA configuration [ORCA2, eORCA1]
     
     """
 
@@ -82,31 +83,19 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     try:
         if replace == False:
             data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, metric=metric)
-            logger.info('Averaged data found.')        
+            logger.info('Averaged data found.')
             return data
     except FileNotFoundError:
         logger.info('Averaged data not found. Creating new file ...')
 
     # If averaged data not existing, read original data
-    xdata = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
+    data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
 
-    # If anomaly is True
     if metric != 'base':
-        # read from yaml file
-        local_paths = paths()
-        filename = os.path.join(local_paths['osprey'], 'meanfield.yaml')
-        with open(filename) as yamlfile:
-            config = yaml.load(yamlfile, Loader=yaml.FullLoader)    
-        if 'meanfield' in config:
-            meanfield = config['meanfield']
-            exp0 = meanfield[0]['expname']
-            y0 = meanfield[1]['startyear']
-            y1 = meanfield[2]['endyear']
-        mdata = reader_averaged(expname=exp0, startyear=y0, endyear=y1, varlabel=varlabel, diagname='field', metric='base')
-        xdata[varlabel] = cost(xdata[varlabel], mdata[varlabel], metric)
+        mean_data = reader_meanfield(varname=varname, orca=orca)        
+        data = cost(data, mean_data, metric)
 
-
-    ds = averaging(data=xdata, varlabel=varlabel, diagname=diagname, orca=orca)
+    ds = averaging(data=data, varlabel=varlabel, diagname=diagname, orca=orca)
 
     # Write averaged data on file
     os.makedirs(dirs['perm'], exist_ok=True)
@@ -122,15 +111,14 @@ def postreader_averaged(expname, startyear, endyear, varlabel, diagname, replace
     return data
 
 
-def averaging(data, varlabel, diagname, orca='ORCA2'):
+def averaging(data, varlabel, diagname, orca):
     """ 
     Averaging: Perform different flavours of averaging 
     
     Args:
-    expname: experiment name
     data: dataset
     varlabel: variable label (varname + ztag)
-    diagname: diagnostics name <timeseries, profile, hovmoller, map, field>. to be added pdf
+    diagname: diagnostics name <timeseries, profile, hovmoller, map, field, pdf>
     orca: ORCA configuration <ORCA2, eORCA1>
 
     """
@@ -141,10 +129,9 @@ def averaging(data, varlabel, diagname, orca='ORCA2'):
         varname=varlabel
         ztag=None
 
-    df = elements(orca)
     info = vardict('nemo')[varname]
 
-    # timeseries (why not saving in cftime?)
+    # timeseries
     if diagname  == 'timeseries':
         tvec = get_decimal_year(data['time'].values)
         vec = spacemean(data=data, varname=varname, ndim=info['dim'], ztag=ztag, orca=orca)
@@ -158,8 +145,7 @@ def averaging(data, varlabel, diagname, orca='ORCA2'):
     # vertical profile (ztag not considered)
     if diagname == 'profile' and info['dim'] == '3D':
         zvec = data['z'].values.flatten()
-        #vec = data[varname].weighted(df['S']).mean(dim=['time', 'y', 'x']).values.flatten()
-        vec = globalmean(data, varname, '2D', orca)
+        vec = globalmean(data=data, varname=varname, ndim='2D')
         ds = xr.Dataset({
             'z': xr.DataArray(data = zvec, dims = ['z'], coords = {'z': zvec}, 
                                  attrs = {'units' : 'm', 'long_name' : 'depth'}), 
@@ -167,25 +153,26 @@ def averaging(data, varlabel, diagname, orca='ORCA2'):
                                    attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO averaged profile'})
 
-    # hovmoller diagram
+    # hovmoller diagram (ztag here?)
     if diagname == 'hovmoller' and info['dim'] == '3D':
         tvec = get_decimal_year(data['time'].values)
-        vec = spacemean(data, varname, '2D')
+        zvec = data['z'].values.flatten()
+        vec = spacemean(data=data, varname=varname, ndim='2D')
         ds = xr.Dataset({
             'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
                         attrs = {'units' : 'years', 'long_name' : 'time'}), 
-            'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
+            'z': xr.DataArray(data = zvec, dims = ['z'], coords = {'z': zvec}, 
                         attrs = {'units' : 'm', 'long_name' : 'depth'}), 
-            varlabel : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': data['z']},
+            varname : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': zvec},
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO averaged hovmoller diagram'})
+            attrs = {'description': 'ECE4/NEMO Hovmoller diagram'})
 
-    # map
+    # map (technically also here, ztag?)
     if diagname == 'map':
         if info['dim'] == '2D':
-            vec = timemean(data, varname)
+            vec = timemean(data=data, varname=varname)
         if info['dim'] == '3D':
-            vec  = spacemean(data, varname, info['dim'])
+            vec  = spacemean(data=data, varname=varname, ndim=info['dim'])
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
@@ -193,11 +180,11 @@ def averaging(data, varlabel, diagname, orca='ORCA2'):
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
             varlabel : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO averaged map'})
+            attrs = {'description': 'ECE4/NEMO Averaged map'})
 
-    # 3D field
+    # 3D field (with seasonal variability?)
     if diagname == 'field' and info['dim'] == '3D':
-        vec = timemean(data, varname)
+        vec = timemean(data=data, varname=varname)
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
@@ -207,11 +194,11 @@ def averaging(data, varlabel, diagname, orca='ORCA2'):
                         attrs = {'units' : 'm', 'long_name' : 'depth'}),                             
             varlabel : xr.DataArray(data = vec, dims = ['z', 'y', 'x'], coords = {'z': data['z'], 'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO time-averaged field'})
+            attrs = {'description': 'ECE4/NEMO Time-averaged field'})
 
     # 2D field
     if diagname == 'field' and info['dim'] == '2D':
-        vec = timemean(data, varname)
+        vec = timemean(data=data, varname=varname)
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
@@ -219,9 +206,91 @@ def averaging(data, varlabel, diagname, orca='ORCA2'):
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
             varlabel : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO time-averaged field'})
+            attrs = {'description': 'ECE4/NEMO Time-averaged field'})
+        
+    # field with monthly variability
+    if diagname == 'monthly_field' and info['dim'] == '3D':
+        vec = timemean(data=data, varname=varname)
+        ds = xr.Dataset({
+            'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
+                                 attrs = {'units' : 'years', 'long_name' : 'time'}),
+            'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                                attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
+            'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                                attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
+            'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
+                              attrs = {'units' : 'm', 'long_name' : 'depth'}),                             
+            varlabel : xr.DataArray(data = vec, dims = ['time', 'z', 'y', 'x'], 
+                                    coords = {'time': data['time'], 'z': data['z'], 'y': data['y'], 'x': data['x']}, 
+                                    attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
+            attrs = {'description': 'ECE4/NEMO Yearly-averaged monthly field'})
+
+    if diagname == 'monthly_field' and info['dim'] == '2D':
+        vec = timemean(data=data, varname=varname)
+        ds = xr.Dataset({
+            'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
+                        attrs = {'units' : 'years', 'long_name' : 'time'}),
+            'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                        attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
+            'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
+                        attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                                 
+            varlabel : xr.DataArray(data = vec, dims = ['z', 'y', 'x'], coords = {'z': data['z'], 'y': data['y'], 'x': data['x']},
+                        attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
+            attrs = {'description': 'ECE4/NEMO Yearly-averaged monthly field'})
 
     return ds
+
+
+def reader_meanfield(varname, orca='ORCA2'):
+    """
+    Read or compute the mean field and save it.
+    
+    Args:
+    varname: variable name
+    orca: domain information
+    """
+    
+    logger.info("Computing mean field...")
+
+    # load paths
+    local_paths = paths()
+    
+    # read info about meanfield from yaml file
+    filename = os.path.join(local_paths['osprey'], 'meanfield.yaml')
+    with open(filename) as yamlfile:
+        config = yaml.load(yamlfile, Loader=yaml.FullLoader)    
+    if 'meanfield' in config:
+        meanfield = config['meanfield']
+        expname = meanfield[0]['expname']
+        startyear = meanfield[1]['startyear']
+        endyear = meanfield[2]['endyear']
+    
+    # try to read averaged data
+    dirs = folders(expname)
+    try:
+        data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='field', metric='base')
+        logger.info('Mean field found.')
+        return data
+    except FileNotFoundError:
+        logger.info('Mean field not found. Creating new file ...')
+
+    # If averaged data not existing, read original data and perform averaging
+    data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
+    ds = averaging(data=data, varlabel=varname, diagname='field', orca=orca)
+
+    # Write averaged data on file
+    os.makedirs(dirs['perm'], exist_ok=True)
+    filename = os.path.join(dirs['perm'], f"field_{varname}_base_{startyear}-{endyear}.nc")
+    logger.info('File to be saved at %s', filename)
+    ds.to_netcdf(filename)
+
+    # Now you can read
+    data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='field', metric='base')
+        
+    logger.info("Mean field computation complete.")
+    
+    return data
+
 
 ##########################################################################################
 
@@ -252,3 +321,4 @@ def reader_restart(expname, startyear, endyear):
     data = reader_rebuilt(expname, startleg, endleg)
 
     return data
+
