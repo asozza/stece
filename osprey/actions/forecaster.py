@@ -17,11 +17,11 @@ import xarray as xr
 from osprey.utils.folders import folders
 from osprey.utils.time import get_year, get_startleg, get_startyear, get_forecast_year
 from osprey.actions.reader import reader_nemo, reader_rebuilt 
-from osprey.actions.post_reader import reader_restart
+from osprey.actions.postreader import reader_restart
 from osprey.means.eof import change_timeaxis, postproc_var_3D
 from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D
 from osprey.means.means import timemean
-from osprey.utils import run_cdo
+from osprey.utils import run_cdo_old
 from osprey.utils.utils import remove_existing_file, run_bash_command
 
 
@@ -122,10 +122,10 @@ def forecaster_EOF(expname, var, endleg, yearspan, yearleap):
     xf = _forecast_xarray(foreyear)
 
     # create EOF
-    run_cdo.merge(expname, startyear, endyear)
-    run_cdo.selname(expname, var, endleg, 'year')
-    run_cdo.detrend(expname, var, endleg)
-    run_cdo.get_EOF(expname, var, endleg, window)
+    run_cdo_old.merge(expname, startyear, endyear)
+    run_cdo_old.selname(expname, var, endleg, 'year')
+    run_cdo_old.detrend(expname, var, endleg)
+    run_cdo_old.get_EOF(expname, var, endleg, window)
     
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_pattern.nc")
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
@@ -188,9 +188,9 @@ def forecaster_EOF_winter(expname,
     xf = _forecast_xarray(foreyear)
 
     # create EOF
-    run_cdo.merge_winter(expname, varname, startyear, endyear)    
-    run_cdo.detrend(expname, varname, endleg)
-    run_cdo.get_EOF(expname, varname, endleg, window)
+    run_cdo_old.merge_winter(expname, varname, startyear, endyear)    
+    run_cdo_old.detrend(expname, varname, endleg)
+    run_cdo_old.get_EOF(expname, varname, endleg, window)
     
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
@@ -261,14 +261,14 @@ def forecaster_EOF_restart(expname,
     #xf = rdata['time_counter'] + yearleap
 
     # merge and change time axis
-    run_cdo.merge_rebuilt(expname, startleg, endleg)
+    run_cdo_old.merge_rebuilt(expname, startleg, endleg)
 
     varlist=['tn', 'tb']
     for var in varlist:
 
         # compute EOF
-        run_cdo.detrend(expname, var, endleg)
-        run_cdo.get_EOF(expname, var, endleg, window)
+        run_cdo_old.detrend(expname, var, endleg)
+        run_cdo_old.get_EOF(expname, var, endleg, window)
         
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}_series_00000.nc")
         timeseries = xr.open_mfdataset(filename)

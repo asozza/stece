@@ -16,7 +16,7 @@ import cftime
 
 from osprey.utils.folders import folders
 from osprey.utils.time import get_leg
-from osprey.utils import run_cdo
+from osprey.utils import run_cdo_old
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import globalmean
 
@@ -119,10 +119,10 @@ def retrend_3D(expname, startyear, endyear, var):
 def create_EOF(expname, startyear, endyear, var, ndim):
     """ Create EOF """
 
-    run_cdo.merge(expname, startyear, endyear)
-    run_cdo.selname(expname, startyear, endyear, var)
-    run_cdo.detrend(expname, startyear, endyear, var)
-    run_cdo.get_EOF(expname, startyear, endyear, var, ndim)
+    run_cdo_old.merge(expname, startyear, endyear)
+    run_cdo_old.selname(expname, startyear, endyear, var)
+    run_cdo_old.detrend(expname, startyear, endyear, var)
+    run_cdo_old.get_EOF(expname, startyear, endyear, var, ndim)
 
     return None
 

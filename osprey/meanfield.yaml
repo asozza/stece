@@ -3,4 +3,6 @@ expname: 'lfr0'
 startyear: 2390
 endyear: 2400
 orca: 'ORCA2'
+grid: 'T'
+freq: '1m'
 replace: False

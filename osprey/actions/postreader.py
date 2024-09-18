@@ -20,15 +20,19 @@ from osprey.utils.folders import folders, paths
 from osprey.utils.time import get_leg, get_decimal_year
 from osprey.utils.utils import error_handling_decorator
 from osprey.means.means import globalmean, spacemean, timemean
-from osprey.actions.reader import reader_nemo, reader_rebuilt
+from osprey.actions.reader import reader_nemo, reader_rebuilt, reader_meanfield
 from osprey.actions.rebuilder import rebuilder
 from osprey.utils.utils import remove_existing_file
-from osprey.means.means import cost
+from osprey.means.means import apply_cost_function
+
+# dask optimization of blocksizes
+dask.config.set({'array.optimize_blockwise': True})
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 
 ##########################################################################################
@@ -92,8 +96,9 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, replace=Fal
     data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
 
     if metric != 'base':
-        mean_data = reader_meanfield(varname=varname)        
-        data = cost(data, mean_data, metric)
+        mean_data = reader_meanfield()
+        mean_data = mean_data.isel(time=0)
+        data = apply_cost_function(data, mean_data, metric)
 
     ds = averaging(data=data, varlabel=varlabel, diagname=diagname, orca=orca)
 
@@ -241,9 +246,9 @@ def averaging(data, varlabel, diagname, orca):
     return ds
 
 
-def reader_meanfield(varname):
+def reader_meanfield_var(varname):
     """
-    Read or compute the mean field and save it.
+    Read/compute the mean field
     
     Args:
     varname: variable name
@@ -277,7 +282,7 @@ def reader_meanfield(varname):
 
     # Write averaged data on file
     os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['perm'], f"field_{varname}_base_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['perm'], f"meanfield_{startyear}-{endyear}.nc")
     logger.info('File to be saved at %s', filename)
     ds.to_netcdf(filename)
 
@@ -285,7 +290,6 @@ def reader_meanfield(varname):
     data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='field', metric='base')
     
     return data
-
 
 ##########################################################################################
 

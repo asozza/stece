@@ -37,7 +37,7 @@ def _rescaled(vec):
 def timeseries(expname, startyear, endyear, varlabel, 
                reader="post", metric="base", replace=False, 
                rescale=False, avetype="moving", timeoff=0, 
-               color=None, figname=None):
+               color=None, linestyle='-', marker=None, label=None, figname=None):
     """ 
     Graphics of timeseries 
     
@@ -106,8 +106,17 @@ def timeseries(expname, startyear, endyear, varlabel,
     if rescale:
         vec = _rescaled(vec)
 
+    plot_kwargs = {}
+    if color:
+        plot_kwargs['color'] = color
+    if linestyle:
+        plot_kwargs['linestyle'] = linestyle
+    if marker:
+        plot_kwargs['marker'] = marker
+    if label:
+        plot_kwargs['label'] = label
+
     # plot timeseries
-    plot_kwargs = {'color': color} if color else {}
     pp = plt.plot(tvec, vec, **plot_kwargs)
     plt.xlabel('time')
     plt.ylabel(info['long_name'])

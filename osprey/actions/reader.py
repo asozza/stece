@@ -10,14 +10,21 @@ Date: June 2024
 
 import os
 import glob
+import yaml
 import logging
 import xarray as xr
+import dask
 
 from osprey.utils.folders import folders, paths
+from osprey.utils.run_cdo import merge
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# dask optimization
+dask.config.set({'array.optimize_blockwise': True})
 
 ##########################################################################################
 # Readers of NEMO output
@@ -134,6 +141,35 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
     data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
 
     return data
+
+
+def reader_meanfield():
+    """ Read/compute mean field using cdo """
+
+    # read info about meanfield from yaml file
+    local_paths = paths()
+    filename = os.path.join(local_paths['osprey'], 'meanfield.yaml')
+    with open(filename) as yamlfile:
+        info = yaml.load(yamlfile, Loader=yaml.FullLoader)
+    keys = ['expname', 'startyear', 'endyear', 'orca', 'grid', 'freq', 'replace']
+    expname, startyear, endyear, orca, grid, freq, replace = [info[key] for key in keys]
+
+    logger.info(f"Loading mean field for expname={expname}, startyear={startyear}, endyear={endyear}")
+
+    dirs = folders(expname)
+    dict = _nemodict(grid, freq)
+    filename = os.path.join(dirs['nemo'], f"{expname}_{grid}_{startyear}-{endyear}.nc")
+
+    if not filename:
+        raise FileNotFoundError(f"No data file found.")
+        # create file
+        merge(expname, startyear, endyear)
+
+    logging.info('Files to be loaded %s', filename)
+    data = xr.open_mfdataset(filename, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
+    
+    return data
+
 
 
 ##########################################################################################

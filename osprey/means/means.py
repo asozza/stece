@@ -11,10 +11,12 @@ Date: Mar 2024
 import numpy as np
 import xarray as xr
 import cftime
+import dask
 
 from osprey.utils.utils import get_expname
 from osprey.actions.reader import elements
 
+dask.config.set({'array.optimize_blockwise': True})
 
 def flatten_to_triad(m, nj, ni):
     """ Recover triad indexes from flatten array length """
@@ -150,14 +152,16 @@ def zlayer(ztag, orca):
 #################################################################################
 # TOOLS FOR THE FORECAST (COST FUNCTIONS AND FORECAST ERROR)
 
+
 def cost(x, x0, metric):
     """
     Calculate various cost functions based on the given metric.
 
     Args:
-        x: The current value or array-like.
-        x0: The reference value or array-like.
-        metric: The metric used to compute the cost. Options include:
+        x (xarray.DataArray): The current value.
+        x0 (xarray.DataArray): The reference value.
+        metric (str): The metric used to compute the cost.
+        Options include:
             - 'base': Original value
             - 'norm': Normalized value [x / x0]
             - 'diff': Difference [x - x0]
@@ -168,38 +172,72 @@ def cost(x, x0, metric):
             - 'relsqerr': Relative squared error [(x - x0)^2 / x0^2]
 
     Returns:
-        The result of the chosen cost function (float or array-like)
+        xarray.DataArray: The result of the chosen cost function.
     """
-    
     if metric == 'base':
         return x    
     elif metric == 'norm':
-        return np.divide(x, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+        return xr.where(x0 != 0.0, x / x0, 0.0)  # Prevent division by zero
     elif metric == 'diff':
         return x - x0
-    elif metric == 'rdiff':
-        #return np.divide(x - x0, x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
-        #epsilon=1e-10 # Small tolerance to avoid division by very small numbers
-        #x0 = x0.fillna(0.0)  # Replace NaNs with zero before the calculation
-        # Align data0 with data1 by adding a new 'time' dimension to data0
-        #x0_ext = x0.expand_dims(dim='time', axis=0)
-        # Now, data0_expanded has the shape (time, x, y, z), which matches data1
-        # Perform the relative difference calculation
-        #x = xr.where(x0_ext != 0.0, (x - x0_ext) / x0_ext, 0.0)    
-        # Broadcast data0 to match the time dimension of data1
-        x0_broad, x_broad = xr.broadcast(x0, x)
-        # Perform the relative difference calculation
-        x = xr.where(x0_broad != 0.0, (x_broad - x0_broad) / x0_broad, 0.0)
-        return x
+    elif metric == 'reldiff':
+        #return x/x0-1.0
+        return xr.where(x0 != 0.0, x / x0 - 1.0, 0.0)
+        #return xr.where(x0 != 0.0, x/x0-1.0, 0.0) # Prevent division by zero
     elif metric == 'abs':
         return np.abs(x - x0)
-    elif metric == 'rel':
-        return np.divide(np.abs(x - x0), x0, out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
-    elif metric == 'var':
-        return np.power(x - x0, 2)
-    elif metric == 'rvar': 
-        return np.divide(np.power(x - x0, 2), np.power(x0, 2), out=np.zeros_like(x), where=x0 != 0)  # Prevent division by zero
+    elif metric == 'relabs':
+        #return np.abs(x/x0-1.0)
+        return xr.where(x0 != 0.0, np.abs(x / x0 - 1.0), 0.0)
+        #return xr.where(x0 != 0.0, xr.abs(x/x0 - 1.0), 0.0)  # Prevent division by zero
+    elif metric == 'sqerr':
+        return np.pow(x - x0, 2)
+    elif metric == 'relsqerr':
+        return xr.where(x0 != 0.0, np.pow(x/x0, 2) - 2.0*(x/x0) + 1.0, 0.0)
+        #return xr.where(x0 != 0.0, xr.pow(x/x0, 2) - 2.0*(x/x0) + 1.0, 0.0)  # (x-x0)^2/x0^2 Prevent division by zero
     else:
         raise ValueError(f"Unknown metric: {metric}")
 
 
+def apply_cost_function(data, meandata, metric):
+    """
+    Apply a cost function to each variable in the dataset.
+
+    Args:
+        data (xarray.Dataset): The current dataset with data variables.
+        meanfield (xarray.Dataset): The reference dataset with meanfield values.
+        metric (str): The metric used to compute the cost.
+
+    Returns:
+        xarray.Dataset: A dataset containing the computed cost metrics.
+    """
+    # Initialize an empty dataset to store the cost results
+    cost_ds = xr.Dataset()
+
+    data_chunked = data.chunk({'time': 100, 'z': 31, 'y': 148, 'x': 180})
+    meandata_chunked = meandata.chunk({'z': 31, 'y': 148, 'x': 180})
+
+    # Loop through each variable in the dataset
+    for var_name in data_chunked.data_vars:
+        var_x = data_chunked[var_name]
+        
+        if var_name in meandata_chunked.data_vars:
+            var_x0 = meandata_chunked[var_name]
+            
+            #var_x0_expanded = var_x0.expand_dims(dim='time', axis=0).broadcast_like(var_x)
+
+            # Apply the cost function
+            cost_result = cost(var_x, var_x0, metric)
+            
+            # Add the result to the new dataset
+            cost_ds[var_name] = cost_result
+
+    # Copy coordinates from the original dataset (lat, lon, etc.) to the new dataset
+    cost_ds = cost_ds.assign_coords({
+        'lat': data['lat'],
+        'lon': data['lon'],
+        'z': data['z'],
+        'time': data['time']
+    })
+
+    return cost_ds
