@@ -55,7 +55,7 @@ def timeseries(expname, startyear, endyear, varlabel,
     - rescale: rescale by initial value
     - avetype: choose the type of average ['moving' or 'standard']
     - timeoff: time offset    
-    - color: curve color
+    - color, linestyle, marker, label: plot attributes
     - figname: save plot to file
 
     """
