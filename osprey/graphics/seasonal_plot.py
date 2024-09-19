@@ -4,8 +4,8 @@
 """
 Graphics for Seasonal plots
 
-Author: Alessandro Sozza, Paolo Davini (CNR-ISAC) 
-Date: Mar 2024
+Author: Alessandro Sozza (CNR-ISAC) 
+Date: Sept 2024
 """
 
 import os
@@ -17,7 +17,7 @@ import cftime
 import matplotlib.pyplot as plt
 
 from osprey.actions.reader import reader_nemo
-from osprey.actions.post_reader import postreader_averaged
+from osprey.actions.postreader import postreader_nemo
 from osprey.utils.time import get_decimal_year
 from osprey.means.means import movave
 from osprey.means.means import cost
@@ -35,14 +35,15 @@ def seasonal_plot(expname,
                 reader_type="nemo", 
                 cost_type="norm", 
                 average_type="moving"):               
-    """ Function for drawing seasonal plot """
+    """ Function for seasonal plots """
     
     # reading data
     if reader_type == "nemo":
         data = reader_nemo(expname, startyear, endyear)
         tvec = get_decimal_year(data['time'].values)
+
     elif reader_type == "averaged":
-        data = postreader_averaged(expname, startyear, endyear, var, 'series')
+        data = postreader_nemo(expname, startyear, endyear, var, 'series')
         tvec = data['time'].values.flatten()
 
     # fix time-axis

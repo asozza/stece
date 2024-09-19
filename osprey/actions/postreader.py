@@ -147,7 +147,7 @@ def averaging(data, varlabel, diagname, orca):
                             attrs  = {'units' : info['units'], 'long_name' : info['long_name']})},
             attrs = {'description': 'ECE4/NEMO averaged timeseries'})
 
-    # vertical profile (ztag not considered)
+    # vertical profile
     if diagname == 'profile' and info['dim'] == '3D':
         zvec = data['z'].values.flatten()
         vec = globalmean(data=data, varname=varname, ndim='2D')
@@ -158,7 +158,7 @@ def averaging(data, varlabel, diagname, orca):
                                    attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO averaged profile'})
 
-    # hovmoller diagram (ztag here?)
+    # hovmoller diagram
     if diagname == 'hovmoller' and info['dim'] == '3D':
         tvec = get_decimal_year(data['time'].values)
         zvec = data['z'].values.flatten()
@@ -172,12 +172,12 @@ def averaging(data, varlabel, diagname, orca):
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO Hovmoller diagram'})
 
-    # map (technically also here, ztag?)
+    # map 
     if diagname == 'map':
         if info['dim'] == '2D':
             vec = timemean(data=data, varname=varname)
         if info['dim'] == '3D':
-            vec  = spacemean(data=data, varname=varname, ndim=info['dim'])
+            vec  = globalmean(data=data, varname=varname, ndim='1D')
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),

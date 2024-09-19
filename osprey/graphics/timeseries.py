@@ -4,7 +4,7 @@
 """
 Graphics for timeseries
 
-Author: Alessandro Sozza, Paolo Davini (CNR-ISAC) 
+Author: Alessandro Sozza (CNR-ISAC) 
 Date: Mar 2024
 """
 
@@ -106,6 +106,7 @@ def timeseries(expname, startyear, endyear, varlabel,
     if rescale:
         vec = _rescaled(vec)
 
+    # load plot features
     plot_kwargs = {}
     if color:
         plot_kwargs['color'] = color

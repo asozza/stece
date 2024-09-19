@@ -4,7 +4,7 @@
 """
 Graphics for profiles
 
-Author: Alessandro Sozza, Paolo Davini (CNR-ISAC) 
+Author: Alessandro Sozza (CNR-ISAC) 
 Date: Mar 2024
 """
 
@@ -16,6 +16,7 @@ import cftime
 #import nc_time_axis
 import matplotlib.pyplot as plt
 
+from osprey.utils.folders import paths
 from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
 from osprey.means.means import cost
@@ -70,7 +71,7 @@ def profile(expname, startyear, endyear, varlabel,
     # fixing depth y-axis
     zvec = data['z'].values.flatten()
 
-    # plot
+    # load plot features
     plot_kwargs = {}
     if color:
         plot_kwargs['color'] = color
@@ -81,9 +82,15 @@ def profile(expname, startyear, endyear, varlabel,
     if label:
         plot_kwargs['label'] = label
 
+    # plot profile
     pp = plt.plot(vec, -zvec, **plot_kwargs)
     plt.xlabel(info['long_name'])
     plt.ylabel('depth')
+
+    # Save figure
+    if figname:
+        dirs = paths()
+        plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp
 
@@ -138,7 +145,7 @@ def profile_two(expname1, startyear1, endyear1,
     # apply cost function
     vec_cost = cost(vec1, vec2, metric)
 
-    # plot
+    # load plot features
     plot_kwargs = {}
     if color:
         plot_kwargs['color'] = color
@@ -149,8 +156,13 @@ def profile_two(expname1, startyear1, endyear1,
     if label:
         plot_kwargs['label'] = label
 
+    # plot profile
     pp = plt.plot(vec_cost, -zvec, **plot_kwargs)
     plt.xlabel(info['long_name'])
     plt.ylabel('depth')
+
+    if figname:
+        dirs = paths()
+        plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Graphics for Hovmöller diagrams 
+Graphics for horizontal maps
 
 Author: Alessandro Sozza (CNR-ISAC) 
 Date: Mar 2024
@@ -19,15 +19,11 @@ from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
 from osprey.utils.time import get_decimal_year
 from osprey.means.means import cost, movave
-from osprey.means.means import spacemean
+from osprey.means.means import globalmean, spacemean, timemean
 from osprey.utils.vardict import vardict
 
-def _rescaled(vec):
-    """ rescale by the initial value """
-    return vec/vec.isel(time=0)
 
-def hovmoller(expname, startyear, endyear, varname, 
-              reader="post", metric="base", replace=False, rescale=False, figname=None):
+def map(expname, startyear, endyear, varname, reader="post", metric="base", replace=False, figname=None):
     """ 
     Plot of Hovmöller diagram 
     
@@ -42,7 +38,6 @@ def hovmoller(expname, startyear, endyear, varname,
     - replace: replace existing files [False or True]
     
     Optional Args for figure settings:
-    - rescale: rescale by initial value
     - figname: save plot to file
     
     """
@@ -52,16 +47,15 @@ def hovmoller(expname, startyear, endyear, varname,
     # Read data from raw NEMO output
     if reader == "nemo":
         data = reader_nemo(expname, startyear, endyear)
-        vec = spacemean(data, varname, '2D')
-
+        if info['dim'] == '2D':
+            vec = timemean(data, varname)
+        elif info['dim'] == '3D':
+            vec = globalmean(data, varname, '1D')
+        
     # Read post-processed data
     elif reader == "post":
-        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='hovmoller', replace=replace, metric=metric)
+        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='map', replace=replace, metric=metric)
         vec = data[varname]
-
-    # apply rescaling
-    if rescale:
-        vec = _rescaled(vec)
     
     # plot
     pp = vec.plot(x='time', y='z', cmap=plt.cm.coolwarm)

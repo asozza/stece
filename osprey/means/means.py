@@ -176,25 +176,28 @@ def cost(x, x0, metric):
     """
     if metric == 'base':
         return x    
+
     elif metric == 'norm':
         return xr.where(x0 != 0.0, x / x0, 0.0)  # Prevent division by zero
+
     elif metric == 'diff':
         return x - x0
+
     elif metric == 'reldiff':
-        #return x/x0-1.0
         return xr.where(x0 != 0.0, x / x0 - 1.0, 0.0)
-        #return xr.where(x0 != 0.0, x/x0-1.0, 0.0) # Prevent division by zero
+
     elif metric == 'abs':
         return np.abs(x - x0)
-    elif metric == 'relabs':
-        #return np.abs(x/x0-1.0)
+
+    elif metric == 'relabs':        
         return xr.where(x0 != 0.0, np.abs(x / x0 - 1.0), 0.0)
-        #return xr.where(x0 != 0.0, xr.abs(x/x0 - 1.0), 0.0)  # Prevent division by zero
+
     elif metric == 'sqerr':
         return np.pow(x - x0, 2)
+
     elif metric == 'relsqerr':
         return xr.where(x0 != 0.0, np.pow(x/x0, 2) - 2.0*(x/x0) + 1.0, 0.0)
-        #return xr.where(x0 != 0.0, xr.pow(x/x0, 2) - 2.0*(x/x0) + 1.0, 0.0)  # (x-x0)^2/x0^2 Prevent division by zero
+
     else:
         raise ValueError(f"Unknown metric: {metric}")
 
@@ -223,8 +226,6 @@ def apply_cost_function(data, meandata, metric):
         
         if var_name in meandata_chunked.data_vars:
             var_x0 = meandata_chunked[var_name]
-            
-            #var_x0_expanded = var_x0.expand_dims(dim='time', axis=0).broadcast_like(var_x)
 
             # Apply the cost function
             cost_result = cost(var_x, var_x0, metric)
