@@ -37,7 +37,7 @@ def _rescaled(vec):
 def timeseries(expname, startyear, endyear, varlabel, 
                reader="post", metric="base", replace=False, 
                rescale=False, avetype="moving", timeoff=0, 
-               color=None, linestyle='-', marker=None, label=None, figname=None):
+               color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
     """ 
     Graphics of timeseries 
     
@@ -56,6 +56,7 @@ def timeseries(expname, startyear, endyear, varlabel,
     - avetype: choose the type of average ['moving' or 'standard']
     - timeoff: time offset    
     - color, linestyle, marker, label: plot attributes
+    - ax: plot axes
     - figname: save plot to file
 
     """
@@ -117,10 +118,15 @@ def timeseries(expname, startyear, endyear, varlabel,
     if label:
         plot_kwargs['label'] = label
 
-    # plot timeseries
-    pp = plt.plot(tvec, vec, **plot_kwargs)
-    plt.xlabel('time')
-    plt.ylabel(info['long_name'])
+    # If an axis is provided, plot on it; otherwise, plot on the default plt object
+    if ax is not None:
+        pp = ax.plot(tvec, vec, **plot_kwargs)
+        ax.set_xlabel('time')
+        ax.set_ylabel(info['long_name'])  # Use a generic label or info from your dataset
+    else:
+        pp = plt.plot(tvec, vec, **plot_kwargs)
+        plt.xlabel('time')
+        plt.ylabel(info['long_name'])
 
     # Save figure
     if figname:
