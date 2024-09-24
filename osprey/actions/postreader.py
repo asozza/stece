@@ -34,7 +34,6 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 
-
 ##########################################################################################
 # Reader for averaged data
 
@@ -52,7 +51,7 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, metric):
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{metric}_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['post'], f"{diagname}_{varlabel}_{metric}_{startyear}-{endyear}.nc")
     logger.info('File to be loaded %s', filename)
     data = xr.open_dataset(filename, use_cftime=True)
     
@@ -103,8 +102,8 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, replace=Fal
     ds = averaging(data=data, varlabel=varlabel, diagname=diagname, orca=orca)
 
     # Write averaged data on file
-    os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['perm'], f"{diagname}_{varlabel}_{metric}_{startyear}-{endyear}.nc")
+    os.makedirs(dirs['post'], exist_ok=True)
+    filename = os.path.join(dirs['post'], f"{diagname}_{varlabel}_{metric}_{startyear}-{endyear}.nc")
     if replace == True:
         remove_existing_file(filename)
     logger.info('File to be saved at %s', filename)
@@ -281,8 +280,8 @@ def reader_meanfield_var(varname):
     ds = averaging(data=data, varlabel=varname, diagname='field', orca=orca)
 
     # Write averaged data on file
-    os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['perm'], f"meanfield_{startyear}-{endyear}.nc")
+    os.makedirs(dirs['post'], exist_ok=True)
+    filename = os.path.join(dirs['post'], f"meanfield_{startyear}-{endyear}.nc")
     logger.info('File to be saved at %s', filename)
     ds.to_netcdf(filename)
 

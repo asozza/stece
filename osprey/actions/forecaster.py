@@ -305,3 +305,77 @@ def forecaster_EOF_restart(expname,
         rdata[var] = total[var]
 
     return rdata
+
+def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap, reco=False):
+    """ 
+    Function to forecast winter temperature field using EOF 
+    
+    Args:
+    expname: experiment name
+    varname: variable name
+    endleg: leg 
+    yearspan: years backward from endleg used by EOFs
+    yearleap: years forward from endleg to forecast
+    reco: reconstruction of present time
+    
+    """
+
+    dirs = folders(expname)
+    startleg = get_startleg(endleg, yearspan)
+    startyear = get_year(startleg)
+    endyear = get_year(endleg)
+    window = endyear - startyear + 1
+
+    # forecast year
+    foreyear = get_forecast_year(endyear, yearleap)
+    xf = _forecast_xarray(foreyear)
+
+    # create EOF
+    for varname in varnames:
+        run_cdo_old.merge_winter(expname, varname, startyear, endyear)    
+        run_cdo_old.detrend(expname, varname, endleg)
+        run_cdo_old.get_EOF(expname, varname, endleg, window)
+    
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
+        pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+        field = pattern.isel(time=0)*0
+        for i in range(window):
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
+            if reco == False:
+                p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+                theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
+            else:
+                theta = timeseries[varname].isel(time=-1)
+            basis = pattern.isel(time=i)
+            field = field + theta*basis
+
+        if reco ==  False:   
+            field = field.drop_vars({'time'})
+
+        # retrend
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+        ave = timemean(xdata, varname)
+        total = field + ave
+
+    # read forecast and change restart
+    rdata = reader_rebuilt(expname, endleg, endleg)
+    #if reco == False:
+    #    total = total.expand_dims({'time': 1})
+    total = postproc_var_3D(total)
+    total['time_counter'] = rdata['time_counter']
+    
+    # Define the varlists for each variable
+    varlists = {
+        'thetao': ['tn', 'tb'],
+        'so': ['sn', 'sb']
+    }
+
+    # Loop over the varnames and their corresponding varlists
+    for varname in varnames:
+        varlist = varlists.get(varname, []) # Get the corresponding varlist, default to an empty list if not found
+        for vars in varlist:
+            rdata[vars] = xr.where(rdata[vars] != 0.0, total[varname], 0.0)
+
+    return rdata

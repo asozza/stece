@@ -10,8 +10,11 @@ Date: June 2024
 
 import os
 import glob
+import numpy as np
 import logging
+import xarray as xr
 from cdo import Cdo
+from sklearn.decomposition import PCA
 
 from osprey.utils.folders import folders
 from osprey.utils.utils import run_bash_command
@@ -42,7 +45,7 @@ def merge(expname, startyear, endyear):
         filelist.extend(matching_files)
 
     os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['nemo'], f"{expname}_1m_T_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['post'], f"{expname}_1m_T_{startyear}-{endyear}.nc")
     logger.info('File to be saved at %s', filename)
     remove_existing_file(filename)
 
@@ -53,8 +56,8 @@ def merge(expname, startyear, endyear):
         logger.error(f"No files found to merge.")
 
     # timemean
-    infile  = os.path.join(dirs['nemo'], f"{expname}_1m_T_{startyear}-{endyear}.nc")
-    outfile = os.path.join(dirs['nemo'], f"{expname}_T_{startyear}-{endyear}.nc")
+    infile  = os.path.join(dirs['post'], f"{expname}_1m_T_{startyear}-{endyear}.nc")
+    outfile = os.path.join(dirs['post'], f"{expname}_T_{startyear}-{endyear}.nc")
     logger.info('time mean to be saved at %s', outfile)
     cdo.timmean(input=infile, output=outfile)
 
@@ -239,7 +242,7 @@ def merge_winter(expname, varname, startyear, endyear):
 
     return None
 
-def merge_winter_only(expname, startyear, endyear, varname, dirs):
+def merge_winter_only(expname, startyear, endyear):
     """
     Process NEMO output files to focus on winter months (December and January),
     calculate a moving average, and merge the results using xarray and CDO.
@@ -287,3 +290,5 @@ def merge_winter_only(expname, startyear, endyear, varname, dirs):
     os.remove(temp_file)
 
     return final_file
+
+

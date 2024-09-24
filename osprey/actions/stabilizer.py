@@ -8,72 +8,71 @@ Author: Alessandro Sozza, Paolo Davini (CNR-ISAC)
 Date: Jun 2024
 """
 
-import subprocess
 import numpy as np
-import os
-import glob
-import shutil
-import yaml
 import xarray as xr
 import dask
-import cftime
+import gsw
 
-def _eos(T, S, z):
-    """ seawater equation of state """
 
-    a0 = 1.6650e-1
-    b0 = 7.6554e-1
-    l1 = 5.9520e-2
-    l2 = 5.4914e-4
-    nu = 2.4341e-3
-    m1 = 1.4970e-4
-    m2 = 1.1090e-5
-    R0 = 1026.0
-
-    R = (-a0*(1.0+0.5*l1*(T-10.)+m1*z)*(T-10.)+b0*(1.0-0.5*l2*(S-35.)-m2*z)*(S-35.)-nu*(T-10.)*(S-35.))/R0
-
-    return R
-
-def stabilizer(nc_file):
-    """ stabilizer of temperature and salinity profiles  """    
-
-    # Open the NetCDF file
-    ds = xr.open_dataset(nc_file)
+def stabilizer(data):
+    """ stabilizer of potential density field  """    
     
     # Extract temperature and salinity fields
-    temperature = ds['temperature']
-    salinity = ds['salinity']
+    z = data['z']
+    lat = data['lat']
+    pressure = gsw.p_from_z(-z, lat)
+    temperature = data['thetao']
+    salinity = data['so']
     
-    # create density field using the state equation: alpha*T+beta*S?
-    rho = temperature + salinity
+    # create density field using the state equation
+    rho = gsw.density.rho(salinity, temperature, pressure)
 
-    # Calculate the vertical derivative of temperature and salinity
-    dTdz = temperature.diff('depth') / temperature['depth'].diff('depth')
-    dSdz = salinity.diff('depth') / salinity['depth'].diff('depth')
+    # Compute density gradient (dz is the vertical difference in depth)
+    dz = data['z'].diff(dim='z')
+    grad_rho = rho.diff(dim='z') / dz
     
-    # Define a threshold for instability (this is an example, you may need to adjust it)
-    instability_threshold = 0  # Example threshold, needs to be defined appropriately
+    # Find unstable zones (density should increase with depth)
+    unstable_zones = grad_rho.where(grad_rho < 0, drop=True)
     
-    # Identify unstable zones
-    unstable_zones = (dTdz > instability_threshold)
+    # If unstable zones exist, homogenize
+    if not unstable_zones.isnull().all():
+        for idx in unstable_zones.z:
+            idx_next = idx + 1
+            # Homogenize salinity and temperature between unstable layers
+            salinity.loc[dict(z=slice(idx, idx_next))] = salinity.sel(z=slice(idx, idx_next)).mean(dim='z')
+            temperature.loc[dict(z=slice(idx, idx_next))] = temperature.sel(z=slice(idx, idx_next)).mean(dim='z')
+    
+    data['thetao'] = temperature
+    data['so'] = salinity
+    
+    return data
 
-    # Correct unstable zones by homogenizing temperature
-    for i in range(temperature.shape[0] - 1):
-        unstable_layer = unstable_zones.isel(depth=i)
-        if unstable_layer.any():
-            # Calculate mean temperature for the unstable layer
-            temp_mean = (temperature.isel(depth=i) + temperature.isel(depth=i + 1)) / 2
-            
-            # Apply the mean temperature to the unstable layer
-            temperature[i:i+2] = temp_mean
-    
-    # Update the dataset with the corrected temperature
-    ds['temperature'] = temperature
-    
-    # Save the modified dataset to a new NetCDF file
-    ds.to_netcdf('corrected_' + nc_file)
-    
-    # Close the dataset
-    ds.close()
 
-    return None
+def constraints(data):
+    """ 
+    Check and apply constraints to variables 
+    
+    U < 10 m/s, |ssh| < 20 m, S in [0,100] psu, T > -2.5 degC
+    """ 
+
+    # for horizontal velocity (u,v)
+    for var in ['un', 'ub', 'vn', 'vb']:
+        if var in data:
+            data[var] = xr.where(data[var] > 10, 10, data[var])  # Ensure U < 10 m/s
+    
+    # for sea surface height (ssh)
+    for var in ['sshn', 'sshb']:
+        if var in data:
+            data[var] = xr.where(np.abs(data[var]) > 20, 20 * np.sign(data[var]), data[var])  # Ensure |ssh| < 20
+    
+    # for salinity
+    for var in ['sn', 'sb']:
+        if var in data:
+            data[var] = data[var].clip(0, 100)  # Ensure S in [0, 100]
+    
+    # for temperature
+    for var in ['tn', 'tb']:
+        if var in data:
+            data[var] = xr.where(data[var] < -2.5, -2.5, data[var])  # Ensure T > -2.5
+
+    return data
