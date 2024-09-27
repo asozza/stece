@@ -10,20 +10,17 @@ kind=$2
 machine=ecmwf-hpc2020-intel+openmpi
 
 # please define where the source code is
-ecedir=<ECEDIR>
 #ecedir=$HPCPERM/src/ecearth4-epochal
-#ecedir=$HPCPERM/src/gitlab/ecearth4-fork
-#ecedir=$HPCPERM/src/gitlab/ecearth4-fork
+ecedir=$HPCPERM/src/gitlab/ecearth4-fork
 #ecedir=$HPCPERM/ecearth4/revisions/main
-#ecedir=$HPCPERM/ecearth4/revisions/epochal
 
 # please define where the jobs are
 expdir=$HPCPERM/ecearth4/jobs
-default=$ecedir/scripts/runtime
+default=$ecedir/runtime/se
 rundir=$SCRATCH/ece4
 
 # hard-coded to use Ale new updated files
-inidir=<INIDIR>
+inidir=/ec/res4/hpcperm/itas/data/ECE4-DATA
 
 
 if [ -z $jobname ] ; then
@@ -35,6 +32,7 @@ if [ -z $kind ] ; then
         echo " usage ./create_new_job.sh jobname kind ('amip' or 'cpld') "
         exit 1
 fi
+
 
 mkdir -p $expdir/$jobname
 cp -r $default/scriptlib $expdir/$jobname
