@@ -134,10 +134,12 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
         actual_endyear = max(available_years)
         if actual_startyear > startyear or actual_endyear < endyear:
             logging.warning(f"Data available only in the range {actual_startyear}-{actual_endyear}.")
+        else:
+            logging.info(f"Data available in the range {startyear}-{endyear}.")
     else:
         raise FileNotFoundError("No data files found within the specified range.")
 
-    logging.info('Files to be loaded %s', filelist)
+    #logging.info('Files to be loaded %s', filelist)
     data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True, chunks={'time_counter': 12})
 
     return data
