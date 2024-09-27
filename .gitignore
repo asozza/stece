@@ -1,9 +1,10 @@
-epochal/__pycache__
-goat/__pycache__
 *.pyc
+epochal/__pycache__
 lobster/__pycache__
 osprey/*/__pycache__
 osprey/__pycache__
-osprey/nam_*
 *.egg-info/
-figs
+osprey/figs
+osprey/nam_*
+
+
