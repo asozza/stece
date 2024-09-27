@@ -14,7 +14,6 @@ import xarray as xr
 import dask
 import yaml
 import cftime
-#import nc_time_axis
 import matplotlib.pyplot as plt
 
 from osprey.utils.folders import paths
@@ -33,10 +32,9 @@ def _rescaled(vec):
     """ rescale by the initial value """
     return vec/vec[0]
 
-
 def timeseries(expname, startyear, endyear, varlabel, 
-               reader="post", metric="base", replace=False, 
-               rescale=False, avetype="moving", timeoff=0, 
+               reader="nemo", metric="base", replace=False, 
+               rescale=False, avetype="standard", timeoff=0, 
                color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
     """ 
     Graphics of timeseries 
@@ -83,7 +81,7 @@ def timeseries(expname, startyear, endyear, varlabel,
             vec = movave(spacemean(data, varname, info['dim'], ztag),12)                
             tvec, vec = _cutted(tvec), _cutted(vec)
         else:
-            vec = data[varname].values.flatten()
+            vec = spacemean(data, varname, info['dim'], ztag)
 
     # Read post-processed data
     elif reader == "post":

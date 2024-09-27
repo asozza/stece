@@ -217,15 +217,15 @@ def apply_cost_function(data, meandata, metric):
     # Initialize an empty dataset to store the cost results
     cost_ds = xr.Dataset()
 
-    data_chunked = data.chunk({'time': 100, 'z': 31, 'y': 148, 'x': 180})
-    meandata_chunked = meandata.chunk({'z': 31, 'y': 148, 'x': 180})
+    #data = data.chunk({'time': 100, 'z': 31, 'y': 148, 'x': 180})
+    #meandata = meandata.chunk({'z': 31, 'y': 148, 'x': 180})
 
     # Loop through each variable in the dataset
-    for var_name in data_chunked.data_vars:
-        var_x = data_chunked[var_name]
+    for var_name in data.data_vars:
+        var_x = data[var_name]
         
-        if var_name in meandata_chunked.data_vars:
-            var_x0 = meandata_chunked[var_name]
+        if var_name in meandata.data_vars:
+            var_x0 = meandata[var_name]
 
             # Apply the cost function
             cost_result = cost(var_x, var_x0, metric)
