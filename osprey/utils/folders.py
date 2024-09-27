@@ -21,6 +21,7 @@ def folders(expname):
         'log': os.path.join("/ec/res4/scratch/itas/ece4", expname, "log"),        
         'tmp':  os.path.join("/ec/res4/scratch/itas/martini", expname),
         'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo",
+        'post': os.path.join("/ec/res4/scratch/itas/ece4", expname, "post"),
         'perm': os.path.join("/perm/itas/ece4", expname, "nemo")
     }
 

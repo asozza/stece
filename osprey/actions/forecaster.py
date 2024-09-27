@@ -330,6 +330,16 @@ def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap
     foreyear = get_forecast_year(endyear, yearleap)
     xf = _forecast_xarray(foreyear)
 
+    # read forecast and change restart
+    rdata = reader_rebuilt(expname, endleg, endleg)
+
+    # Define the varlists for each variable
+    varlists = {
+        'thetao': ['tn', 'tb'],
+        'so': ['sn', 'sb'],
+        'zos': ['sshn', 'sshb']
+    }
+
     # create EOF
     for varname in varnames:
         run_cdo_old.merge_winter(expname, varname, startyear, endyear)    
@@ -359,21 +369,12 @@ def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap
         ave = timemean(xdata, varname)
         total = field + ave
 
-    # read forecast and change restart
-    rdata = reader_rebuilt(expname, endleg, endleg)
-    #if reco == False:
-    #    total = total.expand_dims({'time': 1})
-    total = postproc_var_3D(total)
-    total['time_counter'] = rdata['time_counter']
-    
-    # Define the varlists for each variable
-    varlists = {
-        'thetao': ['tn', 'tb'],
-        'so': ['sn', 'sb']
-    }
+        #if reco == False:
+        #    total = total.expand_dims({'time': 1})
+        total = postproc_var_3D(total)
+        total['time_counter'] = rdata['time_counter']
 
-    # Loop over the varnames and their corresponding varlists
-    for varname in varnames:
+        # loop on the corresponding varlist    
         varlist = varlists.get(varname, []) # Get the corresponding varlist, default to an empty list if not found
         for vars in varlist:
             rdata[vars] = xr.where(rdata[vars] != 0.0, total[varname], 0.0)

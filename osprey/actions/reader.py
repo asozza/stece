@@ -138,7 +138,7 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
         raise FileNotFoundError("No data files found within the specified range.")
 
     logging.info('Files to be loaded %s', filelist)
-    data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
+    data = xr.open_mfdataset(filelist, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True, chunks={'time_counter': 12})
 
     return data
 
