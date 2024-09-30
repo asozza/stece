@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from osprey.graphics.gregory_plot import gregory_plot
+from osprey.graphics.timeseries import timeseries
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -30,28 +30,33 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    gregory_plot(expname='lfr0', startyear=1990, endyear=2399, varname1='thetao', varname2='qt_oce', reader='post', metric='base', color='gray', linestyle='--', marker='o', label='REF')
-    gregory_plot(expname='FE01', startyear=1990, endyear=2139, varname1='thetao', varname2='qt_oce', reader='post', metric='base', color='red', linestyle='-', marker='s', label='EOF-T')
-    gregory_plot(expname='FE02', startyear=1990, endyear=2089, varname1='thetao', varname2='qt_oce', reader='post', metric='base', color='blue', linestyle='-', marker='*', label='EOF-TS')
+    # global mean temperature merge from reference experiments
+    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='so', reader='post', timeoff=0, color='gray', linestyle='-', label='REF')
+
+    # comparison with EOF experiments
+    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='so', reader='post', timeoff=0, color='red', linestyle='-', label='EOF-T')
+    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='so', reader='post', timeoff=0, color='blue', linestyle='-', label='EOF-TS')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
         loc='upper right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Gregory plot')
+    plt.title('Timeseries of global mean salinity')
+
 
     # Save the combined figure
     plt.savefig(figname)
 
     return None
 
+
 if __name__ == "__main__":
     
     # Start timer
     start_time = time.time()
 
-    figname='fig7.png'
+    figname='fig9.png'
     drawing(figname)
 
     # End timer
@@ -66,4 +71,3 @@ if __name__ == "__main__":
     # Log execution time and memory load
     logging.info(f"Total execution time: {execution_time:.2f} seconds")
     logging.info(f"Memory load at the end: {memory_usage:.2f} MB")
-

@@ -21,6 +21,7 @@ import matplotlib.colors as mcolors
 from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
 from osprey.utils.time import get_decimal_year
+from osprey.utils.folders import paths
 from osprey.means.means import movave
 from osprey.means.means import cost
 from osprey.means.means import spacemean
@@ -90,23 +91,41 @@ def gregory_plot(expname, startyear, endyear, varname1, varname2,
             vec1 = data[varname1].values.flatten()
             vec2 = data[varname1].values.flatten()
 
+
+    # markers
+    years_interval = 120 # number of months x years of one chunk
+    time_indices = np.arange(0, len(tvec), years_interval)    
+    vec1_markers = vec1[time_indices]
+    vec2_markers = vec2[time_indices]
+
     # plot
     plot_kwargs = {}
     if color:
         plot_kwargs['color'] = color
     if linestyle:
         plot_kwargs['linestyle'] = linestyle
-    if marker:
-        plot_kwargs['marker'] = marker
     if label:
         plot_kwargs['label'] = label
 
-    pp = plt.plot(vec1, vec2, **plot_kwargs)
+    scatter_kwargs = {}
+    if color:
+        scatter_kwargs['color'] = color
+    if marker:
+        scatter_kwargs['marker'] = marker
+
+    fig = plt.subplot()
+
+    plt.plot(vec1, vec2, **plot_kwargs)
+    plt.scatter(vec1_markers, vec2_markers, zorder=10, edgecolor='black', label='_nolegend_', **scatter_kwargs)
 
     # Set labels, example labels here
     plt.xlabel(info1['long_name'])
     plt.ylabel(info2['long_name'])
 
-    return pp
+    # Save figure
+    if figname:
+        dirs = paths()
+        plt.savefig(os.path.join(dirs['osprey'], figname))
 
+    return fig
 

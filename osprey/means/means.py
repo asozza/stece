@@ -12,8 +12,9 @@ import numpy as np
 import xarray as xr
 import cftime
 import dask
+from scipy.interpolate import interp1d
 
-from osprey.utils.utils import get_expname
+#from osprey.utils.utils import get_expname
 from osprey.actions.reader import elements
 
 dask.config.set({'array.optimize_blockwise': True})
@@ -150,8 +151,12 @@ def zlayer(ztag, orca):
     return z1,z2
 
 #################################################################################
-# TOOLS FOR THE FORECAST (COST FUNCTIONS AND FORECAST ERROR)
-
+# TOOLS FOR THE FORECAST
+#
+# - cost function
+# - forecast error?
+# - year shifting / year gain
+#
 
 def cost(x, x0, metric):
     """
@@ -242,3 +247,40 @@ def apply_cost_function(data, meandata, metric):
     })
 
     return cost_ds
+
+
+def year_shift(x1, y1, x2, y2, shift_threshold=20.0):
+    """ 
+    Compute year shift/gain between two timeseries (relative to curve 1) 
+    
+    Args:
+    (x1,y1): coordinates of curve 1
+    (x2,y2): coordinates of curve 2 (usually REF exp.)
+    shift_threshold: maximum acceptable value of year shift
+
+    """
+
+    # Interpolate curve 2 with respect to y-values to get x2 = f(y2)
+    interp_curve2_inv = interp1d(y2, x2, kind='linear', bounds_error=False, fill_value="extrapolate")
+    
+    # List to store the horizontal shift for each point of curve 1
+    shifts = []
+    
+    # Calculate the shift for each point in curve 1
+    for i in range(len(x1)):
+        y1_point = y1[i]  # y-value of curve 1
+        x1_point = x1[i]  # x-value of curve 1
+
+        # Find the corresponding x-value on curve 2 for the same y-value
+        x2_point = interp_curve2_inv(y1_point)
+        
+        # Calculate the horizontal shift
+        shift = x2_point - x1_point
+        
+        # Add a condition for the maximum acceptable shift threshold
+        if abs(shift) > shift_threshold:
+            shift = np.nan  # Ignore shifts that are too large (set to NaN)
+        
+        shifts.append(shift)
+    
+    return np.array(shifts)
