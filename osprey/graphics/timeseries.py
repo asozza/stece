@@ -231,9 +231,9 @@ def timeseries_two(expname1, expname2, startyear, endyear, varlabel,
     return pp
  
 
-def timeseries_yearshift(expname1, expname2, startyear, endyear, varlabel, 
-                        reader="nemo", replace=False, avetype="standard", timeoff=0, 
-                        color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
+def timeseries_yearshift(expname1, startyear1, endyear1, expname2, startyear2, endyear2, varlabel, shift_threshold, 
+                         reader="nemo", replace=False, avetype="standard", timeoff=0, 
+                         color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
     """ 
     Graphics of year-shift timeseries 
     
@@ -264,8 +264,8 @@ def timeseries_yearshift(expname1, expname2, startyear, endyear, varlabel,
 
     # Read data from raw NEMO output
     if reader == "nemo":
-        data1 = reader_nemo(expname1, startyear, endyear)
-        data2 = reader_nemo(expname2, startyear, endyear)        
+        data1 = reader_nemo(expname1, startyear1, endyear1)
+        data2 = reader_nemo(expname2, startyear2, endyear2)        
 
         tvec1 = get_decimal_year(data1['time'].values)
         tvec2 = get_decimal_year(data2['time'].values)
@@ -282,12 +282,8 @@ def timeseries_yearshift(expname1, expname2, startyear, endyear, varlabel,
 
     # Read post-processed data
     elif reader == "post":
-        data1 = postreader_nemo(expname=expname1, startyear=startyear, endyear=endyear, 
-                               varlabel=varlabel, diagname='timeseries', 
-                               replace=replace, metric='base')
-        data2 = postreader_nemo(expname=expname2, startyear=startyear, endyear=endyear, 
-                               varlabel=varlabel, diagname='timeseries', 
-                               replace=replace, metric='base')
+        data1 = postreader_nemo(expname=expname1, startyear=startyear1, endyear=endyear1, varlabel=varlabel, diagname='timeseries', replace=replace, metric='base')
+        data2 = postreader_nemo(expname=expname2, startyear=startyear2, endyear=endyear2, varlabel=varlabel, diagname='timeseries', replace=replace, metric='base')
 
         tvec1 = data1['time'].values.flatten()
         tvec2 = data2['time'].values.flatten()
@@ -303,7 +299,7 @@ def timeseries_yearshift(expname1, expname2, startyear, endyear, varlabel,
             vec2 = data2[varlabel].values.flatten()
 
     # compute year-shift
-    shift = year_shift(tvec1, vec1, tvec2, vec2, shift_threshold=50.)
+    shift = year_shift(tvec1, vec1, tvec2, vec2, shift_threshold)
 
     # add time offset
     if timeoff > 0:

@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from osprey.graphics.timeseries import timeseries
+from osprey.graphics.timeseries import timeseries_yearshift
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -28,25 +28,18 @@ def get_memory_usage():
     return mem_info.rss / (1024 ** 2)  # Convert bytes to megabytes (MB)
 
 
-# main function
 def drawing(figname):
 
-    # global mean temperature merge from reference experiments
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', timeoff=0, color='lightcoral', linestyle='-', label='lfr0')
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel='thetao', reader='post', timeoff=410, color='red', linestyle='-', label='lfr1')
-    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=811, color='orange', linestyle='-', label='lfr2')
-    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1171, color='green', linestyle='-', label='lfr3')
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1531, color='darkseagreen', linestyle='-', label='lfr4')
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1891, color='cornflowerblue', linestyle='-', label='lfr5')
-    timeseries(expname='lfr6', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=2251, color='blue', linestyle='-', label='lfr6')
+    # shift between EOF and REF experiments
+    timeseries_yearshift(expname1='FE01', startyear1=1990, endyear1=2139, expname2='lfr0', startyear2=1990, endyear2=2400, shift_threshold=300, varlabel='thetao', reader='post', timeoff=0, color='red', linestyle='-', label='EOF-T')
+    timeseries_yearshift(expname1='FE02', startyear1=1990, endyear1=2089, expname2='lfr0', startyear2=1990, endyear2=2400, shift_threshold=300, varlabel='thetao', reader='post', timeoff=0, color='blue', linestyle='-', label='EOF-TS')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
         loc='upper right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Timeseries of global mean temperature \n from the reference experiments')
-
+    plt.title('Year shift of global mean temperature')
 
     # Save the combined figure
     plt.savefig(figname)
@@ -55,11 +48,11 @@ def drawing(figname):
 
 
 if __name__ == "__main__":
-
+    
     # Start timer
     start_time = time.time()
 
-    figname='fig4.png'
+    figname='fig8.png'
     drawing(figname)
 
     # End timer
@@ -74,4 +67,3 @@ if __name__ == "__main__":
     # Log execution time and memory load
     logging.info(f"Total execution time: {execution_time:.2f} seconds")
     logging.info(f"Memory load at the end: {memory_usage:.2f} MB")
-

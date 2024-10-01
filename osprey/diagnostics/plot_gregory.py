@@ -39,7 +39,7 @@ def drawing(figname):
         loc='upper right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Gregory plot')
+    plt.title('Gregory plot (thetao vs qt_oce)')
 
     # Save the combined figure
     plt.savefig(figname)
