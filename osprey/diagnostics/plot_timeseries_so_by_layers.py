@@ -58,7 +58,8 @@ def drawing(figname):
     plt.tight_layout()
 
     # Set the main title for the figure
-    plt.title('Salinity by ocean layer')
+    #fig.suptitle('Salinity by ocean layer')
+    #plt.title('Salinity by ocean layer')
 
     # Save the combined figure
     plt.savefig(figname)

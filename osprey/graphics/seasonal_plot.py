@@ -27,7 +27,7 @@ from osprey.utils.vardict import vardict
 
 def seasonal_plot(expname, 
                 startyear, endyear, 
-                var,                 
+                varlabel,                 
                 cost_value=1, 
                 offset=0, 
                 color=None,

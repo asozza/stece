@@ -40,16 +40,18 @@ def drawing(figname):
     timeseries(expname='lfr6', startyear=1990, endyear=2349, varlabel='so', reader='post', timeoff=2251, color='blue', linestyle='-', label='lfr6')
     
     # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='so', reader='post', timeoff=0, color='darkslategray', linestyle='-', label='EOF')
-    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='so', reader='post', timeoff=0, color='indigo', linestyle='-', label='EOF')
+    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='so', reader='post', timeoff=0, color='darkslategray', linestyle='-', label='EOF-T')
+    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='so', reader='post', timeoff=0, color='indigo', linestyle='-', label='EOF-TS')
 
     plt.legend(
-        bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
-        loc='upper right',         # Location of the legend relative to bbox_to_anchor
+        bbox_to_anchor=(0.98, 0.02),  # x, y coordinates for legend placement
+        loc='lower right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
     plt.title('Timeseries of global mean Salinity')
 
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
 
     # Save the combined figure
     plt.savefig(figname)

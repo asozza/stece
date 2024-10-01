@@ -40,8 +40,8 @@ def drawing(figname):
     timeseries(expname='lfr6', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=2251, color='blue', linestyle='-', label='lfr6')
     
     # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='thetao', reader='post', timeoff=0, color='darkslategray', linestyle='-', label='EOF')
-    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='thetao', reader='post', timeoff=0, color='indigo', linestyle='-', label='EOF')
+    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='thetao', reader='post', timeoff=0, color='darkslategray', linestyle='-', label='EOF-T')
+    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='thetao', reader='post', timeoff=0, color='indigo', linestyle='-', label='EOF-TS')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
@@ -50,6 +50,8 @@ def drawing(figname):
     )
     plt.title('Timeseries of global mean temperature')
 
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
 
     # Save the combined figure
     plt.savefig(figname)

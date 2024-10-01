@@ -31,14 +31,18 @@ def get_memory_usage():
 def drawing(figname):
 
     # shift between EOF and REF experiments
-    timeseries_yearshift(expname1='FE01', startyear1=1990, endyear1=2139, expname2='lfr0', startyear2=1990, endyear2=2400, shift_threshold=300, varlabel='thetao', reader='post', timeoff=0, color='red', linestyle='-', label='EOF-T')
-    timeseries_yearshift(expname1='FE02', startyear1=1990, endyear1=2089, expname2='lfr0', startyear2=1990, endyear2=2400, shift_threshold=300, varlabel='thetao', reader='post', timeoff=0, color='blue', linestyle='-', label='EOF-TS')
+    timeseries_yearshift(expname1='FE01', startyear1=1990, endyear1=2139, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T')
+    timeseries_yearshift(expname1='FE02', startyear1=1990, endyear1=2089, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS')
 
     plt.legend(
-        bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
-        loc='upper right',         # Location of the legend relative to bbox_to_anchor
+        bbox_to_anchor=(0.02, 0.98),  # x, y coordinates for legend placement
+        loc='upper left',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
+
+    # Adjust layout to prevent overlap
+    #plt.tight_layout()
+
     plt.title('Year shift of global mean temperature')
 
     # Save the combined figure
@@ -52,7 +56,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig8.png'
+    figname='fig10.png'
     drawing(figname)
 
     # End timer

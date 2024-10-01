@@ -319,15 +319,13 @@ def timeseries_yearshift(expname1, startyear1, endyear1, expname2, startyear2, e
 
     # If an axis is provided, plot on it; otherwise, plot on the default plt object
     if ax is not None:
-        fig = ax.get_figure()
-        ax.scatter(tvec1, shift, s=2, **plot_kwargs)
+        pp = ax.scatter(tvec1, shift, s=2, **plot_kwargs)
         ax.axhline(0, color='gray', linestyle='--')  # Zero reference line
         ax.set_xlabel('time [years]')
         ax.set_ylabel('year shift [years]')  # Use a generic label or info from your dataset
         ax.grid()
     else:
-        fig = plt.subplots()
-        plt.scatter(tvec1, shift, s=2, **plot_kwargs)
+        pp = plt.scatter(tvec1, shift, s=2, **plot_kwargs)
         plt.axhline(0, color='gray', linestyle='--')  # Zero reference line
         plt.xlabel('time [years]')
         plt.ylabel('year shift [years]')
@@ -338,4 +336,4 @@ def timeseries_yearshift(expname1, startyear1, endyear1, expname2, startyear2, e
         dirs = paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
-    return fig
+    return pp

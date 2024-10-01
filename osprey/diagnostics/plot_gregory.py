@@ -41,6 +41,9 @@ def drawing(figname):
     )
     plt.title('Gregory plot (thetao vs qt_oce)')
 
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+
     # Save the combined figure
     plt.savefig(figname)
 

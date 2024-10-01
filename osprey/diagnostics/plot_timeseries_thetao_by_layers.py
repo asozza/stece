@@ -32,7 +32,7 @@ def get_memory_usage():
 def drawing(figname):
 
     # Create a figure with 3 subplots (one for each layer)
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
 
     # Surface layer
     timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='tos', reader='post', rescale=False, color='lightcoral', linestyle='--', label='surface - REF', ax=axes[0])
@@ -59,7 +59,7 @@ def drawing(figname):
     plt.tight_layout()
 
     # Set the main title for the figure
-    plt.title('Temperature by ocean layer', y=1.01)
+    #fig.suptitle('Temperature by ocean layer')
 
     # Save the combined figure
     plt.savefig(figname)

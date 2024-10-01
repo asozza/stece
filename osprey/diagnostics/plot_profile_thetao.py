@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from osprey.graphics.timeseries import timeseries
+from osprey.graphics.profile import profile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -30,20 +30,21 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    # global mean temperature merge from reference experiments
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', color='gray', linestyle='-', label='REF')
-
-    # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T')
-    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS')
+    # 10-year average - last chunk
+    profile(expname='lfr0', startyear=2390, endyear=2399, varlabel='thetao', reader='post', metric='diff', color='gray', linestyle='--', label='REF [2390-2399]')
+    profile(expname='FE01', startyear=2130, endyear=2139, varlabel='thetao', reader='post', metric='diff', color='red', linestyle='-', label='EOF-T[2130-2139]')
+    profile(expname='FE01', startyear=2080, endyear=2089, varlabel='thetao', reader='post', metric='diff', color='blue', linestyle='-', label='EOF-TS [2080-2089]')
 
     plt.legend(
-        bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
-        loc='upper right',         # Location of the legend relative to bbox_to_anchor
+        bbox_to_anchor=(0.98, 0.02),  # x, y coordinates for legend placement
+        loc = 'lower right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Timeseries of global mean temperature')
+    
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
 
+    plt.title('Temperature profiles \n diff from REF [2390-2399]')
 
     # Save the combined figure
     plt.savefig(figname)
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig1.png'
+    figname='fig8.png'
     drawing(figname)
 
     # End timer
