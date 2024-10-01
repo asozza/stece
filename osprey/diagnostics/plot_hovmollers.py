@@ -30,11 +30,11 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    #hovmoller(expname='FE01', startyear=1990, endyear=2139, varname='thetao', reader='post', rescale=True)
-    #plt.title('Temperature normalized by the initial state, exp=FE01')
+    hovmoller(expname='FE01', startyear=1990, endyear=2139, varname='thetao', reader='post', rescale=True)
+    plt.title('Temperature normalized by the initial state, exp=EOF-TS')
     
-    hovmoller(expname='FE02', startyear=1990, endyear=2089, varname='thetao', reader='post', rescale=True)
-    plt.title('Temperature normalized by the initial state, exp=FE02')
+    #hovmoller(expname='FE02', startyear=1990, endyear=2089, varname='thetao', reader='post', rescale=True)
+    #plt.title('Temperature normalized by the initial state, exp=EOF-TS')
 
     # Adjust layout to prevent overlap
     plt.tight_layout()
@@ -50,7 +50,8 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='hovm2.png'
+    figname='hovm1.png'
+    #figname='hovm2.png'
     drawing(figname)
 
     # End timer
