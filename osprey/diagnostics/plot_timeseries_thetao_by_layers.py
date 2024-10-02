@@ -32,7 +32,7 @@ def get_memory_usage():
 def drawing(figname):
 
     # Create a figure with 3 subplots (one for each layer)
-    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
     # Surface layer
     timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='tos', reader='post', rescale=False, color='lightcoral', linestyle='--', label='surface - REF', ax=axes[0])
