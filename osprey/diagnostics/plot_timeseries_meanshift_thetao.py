@@ -16,7 +16,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from osprey.graphics.timeseries import timeseries_yearshift
+from osprey.graphics.timeseries import timeseries_yearshift_mean
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -31,11 +31,10 @@ def get_memory_usage():
 def drawing(figname):
 
     # shift between EOF and REF experiments
-    timeseries_yearshift(expname1='FE01', startyear1=1990, endyear1=2139, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T 10y')
-    timeseries_yearshift(expname1='FE02', startyear1=1990, endyear1=2089, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS 10y')
-    timeseries_yearshift(expname1='FE03', startyear1=1990, endyear1=2049, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='green', linestyle='-', label='EOF-TS 15y')
-    timeseries_yearshift(expname1='FE04', startyear1=1990, endyear1=2029, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='gold', linestyle='-', label='EOF-TS 20y')
-
+    timeseries_yearshift_mean(expname1='FE01', startyear1=1990, endyear1=2149, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', residue=True, color='red', marker='o', label='EOF-T 10y')
+    timeseries_yearshift_mean(expname1='FE02', startyear1=1990, endyear1=2109, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', residue=True, color='blue', marker='s', label='EOF-TS 10y')
+    timeseries_yearshift_mean(expname1='FE03', startyear1=1990, endyear1=2049, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', residue=True, color='green', marker='*', label='EOF-TS 15y')
+    timeseries_yearshift_mean(expname1='FE04', startyear1=1990, endyear1=2029, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', residue=True, color='gold', marker='D', label='EOF-TS 20y')
 
     plt.legend(
         bbox_to_anchor=(0.02, 0.98),  # x, y coordinates for legend placement
@@ -59,7 +58,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig10.png'
+    figname='fig10d.png'
     drawing(figname)
 
     # End timer

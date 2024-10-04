@@ -15,8 +15,9 @@ import logging
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
-from osprey.graphics.timeseries import timeseries_yearshift
+from osprey.graphics.profile import profile
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -30,23 +31,35 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    # shift between EOF and REF experiments
-    timeseries_yearshift(expname1='FE01', startyear1=1990, endyear1=2139, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T 10y')
-    timeseries_yearshift(expname1='FE02', startyear1=1990, endyear1=2089, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS 10y')
-    timeseries_yearshift(expname1='FE03', startyear1=1990, endyear1=2049, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='green', linestyle='-', label='EOF-TS 15y')
-    timeseries_yearshift(expname1='FE04', startyear1=1990, endyear1=2029, expname2='lfr0', startyear2=1990, endyear2=2399, shift_threshold=500, varlabel='thetao', reader='post', color='gold', linestyle='-', label='EOF-TS 20y')
+    # Define the start and end years for the entire range
+    start_year = 2040
+    end_year = 2139
+    step = 10  # Define the step for 10-year intervals
 
+    # Calculate the number of profiles
+    num_profiles = (end_year - start_year + 1) // step
+
+    # Generate a color map transitioning from red to blue
+    colors = ['red', 'orange', 'gold', 'green', 'darkgreen', 'deepskyblue', 'blue', 'purple', 'magenta', 'pink']
+
+    # Create the plot
+    #plt.figure(figsize=(8, 6))
+
+    for i, start in enumerate(range(start_year, end_year + 1, step)):
+        end = start + step - 1  # Define the 10-year range
+        # 10-year average - last chunk
+        profile(expname='FE01', startyear=start, endyear=end, varlabel='thetao', reader='post', metric='diff', color=colors[i], linestyle='-', label=f'{start}-{end}')
 
     plt.legend(
-        bbox_to_anchor=(0.02, 0.98),  # x, y coordinates for legend placement
-        loc='upper left',         # Location of the legend relative to bbox_to_anchor
+        bbox_to_anchor=(0.98, 0.02),  # x, y coordinates for legend placement
+        loc = 'lower right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-
+    
     # Adjust layout to prevent overlap
     plt.tight_layout()
 
-    plt.title('Year shift of global mean temperature')
+    plt.title('Temperature profiles \n diff from REF [2390-2399]')
 
     # Save the combined figure
     plt.savefig(figname)
@@ -59,7 +72,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig10.png'
+    figname='fig8b.png'
     drawing(figname)
 
     # End timer

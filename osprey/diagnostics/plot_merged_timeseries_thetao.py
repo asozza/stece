@@ -39,7 +39,8 @@ def drawing(figname):
     timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1531, color='gray', linestyle='-', label='lfr4')
     timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1891, color='gray', linestyle='-', label='lfr5')
     timeseries(expname='lfr6', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=2251, color='gray', linestyle='-', label='lfr6')
-    
+    timeseries(expname='lgr0', startyear=1990, endyear=2220, varlabel='thetao', reader='post', timeoff=2251, color='green', linestyle='-', label='lgr0')
+
     # comparison with EOF experiments
     timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='thetao', reader='post', timeoff=0, color='red', linestyle='-', label='EOF-T')
     timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='thetao', reader='post', timeoff=0, color='blue', linestyle='-', label='EOF-TS')
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig3.png'
+    figname='fig3a.png'
     drawing(figname)
 
     # End timer
