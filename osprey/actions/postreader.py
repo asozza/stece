@@ -81,7 +81,8 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, replace=Fal
         ztag=None
 
     dirs = folders(expname)
-    
+    info = vardict('nemo')[varname]
+
     # try to read averaged data
     try:
         if replace == False:
@@ -92,7 +93,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, replace=Fal
         logger.info('Averaged data not found. Creating new file ...')
 
     # If averaged data not existing, read original data
-    data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
+    data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear, grid=info['grid'])
 
     if metric != 'base':
         mean_data = reader_meanfield()
