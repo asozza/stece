@@ -129,3 +129,90 @@ def gregory_plot(expname, startyear, endyear, varname1, varname2,
 
     return fig
 
+
+def gregory_plot_january(expname, startyear, endyear, varname1, varname2, 
+                         reader="post", metric="base", replace=False, rescale=False, avetype="moving", 
+                         color=None, linestyle='-', marker=None, label=None, figname=None):
+    """ 
+    Gregory Plot
+
+    Positional Args:
+    - expname: experiment name
+    - startyear,endyear: time window
+    - varname1,varname2: variable names
+
+    Optional Args:
+    - reader: read the original raw data or averaged data ['nemo', 'post']
+    - metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    - replace: replace existing files [False or True]
+    
+    Optional Args for figure settings:
+    - rescale: rescale by initial value
+    - avetype: choose the type of average ['moving' or 'standard']   
+    - color, linestyle, marker, label: plot attributes
+    - figname: save plot to file
+         
+    """
+
+    info1 = vardict('nemo')[varname1]
+    info2 = vardict('nemo')[varname2]
+
+    # Read data from raw NEMO output
+    if reader == "nemo":
+        data = reader_nemo(expname, startyear, endyear)
+        tvec = get_decimal_year(data['time'].values)
+
+        # apply moving average
+        if avetype == 'moving':
+            vec1 = movave(spacemean(data, varname1, info1['dim']),12)
+            vec2 = movave(spacemean(data, varname2, info2['dim']),12)
+            tvec, vec1, vec2 = _cutted(tvec), _cutted(vec1), _cutted(vec2)
+        elif avetype == 'standard':
+            vec1 = spacemean(data, varname1, info1['dim'])
+            vec2 = spacemean(data, varname2, info2['dim'])            
+        elif avetype == 'january':        
+            data_winter = data.sel(time=data['time.month']==1)
+            vec1 = spacemean(data_winter, varname1, info1['dim'])
+            vec2 = spacemean(data_winter, varname2, info2['dim'])  
+
+    # Read post-processed data
+    elif reader == "post":
+        data1 = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname1, diagname='timeseries', replace=replace, metric=metric)
+        data2 = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname2, diagname='timeseries', replace=replace, metric=metric)
+        tvec = data1['time'].values.flatten()
+
+        # apply moving average
+        if avetype == 'moving':
+            vec1 = movave(data1[varname1],12)
+            vec2 = movave(data2[varname2],12)
+            tvec, vec1, vec2 = _cutted(tvec), _cutted(vec1), _cutted(vec2)
+        else:
+            vec1 = data[varname1].values.flatten()
+            vec2 = data[varname1].values.flatten()
+
+    # plot
+    plot_kwargs = {}
+    if color:
+        plot_kwargs['color'] = color
+    if linestyle:
+        plot_kwargs['linestyle'] = linestyle
+    if marker:
+        plot_kwargs['marker'] = marker
+    if label:
+        plot_kwargs['label'] = label
+
+    fig = plt.subplot()
+
+    plt.plot(vec1, vec2, **plot_kwargs)
+
+    # Set labels, example labels here
+    plt.xlabel(info1['long_name'])
+    plt.ylabel(info2['long_name'])
+
+    # Save figure
+    if figname:
+        dirs = paths()
+        plt.savefig(os.path.join(dirs['osprey'], figname))
+
+    return fig
+
