@@ -59,52 +59,76 @@ def cumave(ydata):
 # space_mean:   space average
 #
 
-def timemean(data, varname):
-    """ Time average of a field """
+def timemean(data):
+    """ 
+    Time average of a field 
+    
+    Args:
+    data (DataArray): field
 
-    ave = data[varname].mean(dim=['time'])
+    """
+
+    ave = data.mean(dim=['time'])
 
     return ave
 
 
-def globalmean(data, varname, ndim, ztag=None, orca='ORCA2'):
-    """ Global average of a field """
+def globalmean(data, ndim, ztag=None, orca='ORCA2'):
+    """ 
+    Global average of a field 
+    
+    Args:
+    data (DataArray): field
+    ndim (string): dimensions <'1D','2D','3D'>
+    ztag (string): tag for sublayers <mix,pyc,aby>
+    orca (string): ORCA resolution <ORCA2,eORCA...>
+    
+    """
 
     #expname = get_expname(data)
     df = elements(orca)
     if ndim == '3D':
-        ave = data[varname].weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
+        ave = data.weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
         if ztag != None:
             z1,z2 = zlayer(ztag, orca)
             subvol = df['V'].isel(z=slice(z1,z2))
-            subvar = data[varname].isel(z=slice(z1,z2))
+            subvar = data.isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x'])
     elif ndim == '2D':
-        ave = data[varname].weighted(df['S']).mean(dim=['time', 'y', 'x'])
+        ave = data.weighted(df['S']).mean(dim=['time', 'y', 'x'])
     elif ndim == '1D':
-        ave = data[varname].weighted(df['z']).mean(dim=['time', 'z'])
+        ave = data.weighted(df['z']).mean(dim=['time', 'z'])
     else:
         raise ValueError(" Invalid dimensions ")
 
     return ave
 
 
-def spacemean(data, varname, ndim, ztag=None, orca='ORCA2'):
-    """ Spatial average of a field """
+def spacemean(data, ndim, ztag=None, orca='ORCA2'):
+    """ 
+    Spatial average of a field 
+    
+    Args:
+    data (DataArray): field
+    ndim (string): dimensions <'1D','2D','3D'>
+    ztag (string): tag for sublayers <mix,pyc,aby>
+    orca (string): ORCA resolution <ORCA2,eORCA...>
+    
+    """
 
     #expname = get_expname(data)
     df = elements(orca) 
     if ndim == '3D':
-        ave = data[varname].weighted(df['V']).mean(dim=['z', 'y', 'x'])
+        ave = data.weighted(df['V']).mean(dim=['z', 'y', 'x'])
         if ztag != None:
             z1,z2 = zlayer(ztag, orca)
             subvol = df['V'].isel(z=slice(z1,z2))
-            subvar = data[varname].isel(z=slice(z1,z2))
+            subvar = data.isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x'])
     elif ndim == '2D':
-        ave = data[varname].weighted(df['S']).mean(dim=['y', 'x'])
+        ave = data.weighted(df['S']).mean(dim=['y', 'x'])
     elif ndim == '1D':
-        ave = data[varname].weighted(df['z']).mean(dim=['z'])
+        ave = data.weighted(df['z']).mean(dim=['z'])
     else:
         raise ValueError(" Invalid dimensions ")
 
@@ -116,14 +140,15 @@ def spacemean(data, varname, ndim, ztag=None, orca='ORCA2'):
 
 def zlayer(ztag, orca):
     """     
-    Definition of vertical ocean layers for ORCAs 
+    Vertical ocean layers for ORCAs 
+    
     MIX: mixed layer (0-100 m), PYC: pycnocline (100-1000 m), ABY: abyss (1000-5000 m)
     levels in ORCA2: [0,9] [10,20] [21,30]
     levels in eORCA1: [0,23] [24,45] [46,74]
 
     Args:
-        ztag (string): mix, pyc, aby
-        orca (string): ORCA2,eORCA1
+        ztag (string): <mix, pyc, aby>
+        orca (string): <ORCA2,eORCA1>
             
     """
 
@@ -149,6 +174,7 @@ def zlayer(ztag, orca):
         raise ValueError(" Invalid ORCA grid ")
     
     return z1,z2
+
 
 #################################################################################
 # TOOLS FOR THE FORECAST

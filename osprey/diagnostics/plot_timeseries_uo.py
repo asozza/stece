@@ -31,11 +31,11 @@ def get_memory_usage():
 def drawing(figname):
 
     # global mean temperature merge from reference experiments
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='uo', reader='post', color='gray', linestyle='-', label='REF')
+    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='keos', reader='post', color='gray', linestyle='-', label='REF')
 
     # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='uo', reader='post', color='red', linestyle='-', label='EOF-T')
-    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='uo', reader='post', color='blue', linestyle='-', label='EOF-TS')
+    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='keos', reader='post', color='red', linestyle='-', label='EOF-T')
+    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='keos', reader='post', color='blue', linestyle='-', label='EOF-TS')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement

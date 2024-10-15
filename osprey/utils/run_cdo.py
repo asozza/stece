@@ -14,7 +14,6 @@ import numpy as np
 import logging
 import xarray as xr
 from cdo import Cdo
-from sklearn.decomposition import PCA
 
 from osprey.utils.folders import folders
 from osprey.utils.utils import run_bash_command
@@ -29,9 +28,8 @@ logger = logging.getLogger(__name__)
 # Initialize CDO
 cdo = Cdo()
 
-
 @error_handling_decorator
-def merge(expname, startyear, endyear):
+def merge_new(expname, startyear, endyear, model='oce', grid='T', freq='1m'):
     """Merge files using the CDO Python package with error handling."""
 
     dirs = folders(expname)
@@ -39,13 +37,13 @@ def merge(expname, startyear, endyear):
 
     filelist = []
     for year in range(startyear, endyear+1):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
+        pattern = os.path.join(dirs['nemo'], f"{expname}_{model}_{freq}_{grid}_{year}-{year}.nc")
         logger.info(f"Looking for files matching pattern: {pattern}")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
 
     os.makedirs(dirs['perm'], exist_ok=True)
-    filename = os.path.join(dirs['post'], f"{expname}_1m_T_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['post'], f"{expname}_{model}_{freq}_{grid}_{startyear}-{endyear}.nc")
     logger.info('File to be saved at %s', filename)
     remove_existing_file(filename)
 
@@ -56,8 +54,8 @@ def merge(expname, startyear, endyear):
         logger.error(f"No files found to merge.")
 
     # timemean
-    infile  = os.path.join(dirs['post'], f"{expname}_1m_T_{startyear}-{endyear}.nc")
-    outfile = os.path.join(dirs['post'], f"{expname}_T_{startyear}-{endyear}.nc")
+    infile  = os.path.join(dirs['post'], f"{expname}_{model}_{freq}_{grid}_{startyear}-{endyear}.nc")
+    outfile = os.path.join(dirs['post'], f"{expname}_{model}_{grid}_{startyear}-{endyear}.nc")
     logger.info('time mean to be saved at %s', outfile)
     cdo.timmean(input=infile, output=outfile)
 

@@ -48,7 +48,7 @@ def drawing(figname):
     for i, start in enumerate(range(start_year, end_year + 1, step)):
         end = start + step - 1  # Define the 10-year range
         # 10-year average - last chunk
-        profile(expname='FE01', startyear=start, endyear=end, varlabel='thetao', reader='post', metric='diff', color=colors[i], linestyle='-', label=f'{start}-{end}')
+        profile(expname='FE01', startyear=start, endyear=end, varlabel='thetao', reader='post', metric='diff', replace=True, color=colors[i], linestyle='-', label=f'{start}-{end}')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.02),  # x, y coordinates for legend placement
@@ -59,7 +59,7 @@ def drawing(figname):
     # Adjust layout to prevent overlap
     plt.tight_layout()
 
-    plt.title('Temperature profiles \n diff from REF [2390-2399]')
+    #plt.title('Temperature profiles \n diff from REF [2390-2399]')
 
     # Save the combined figure
     plt.savefig(figname)

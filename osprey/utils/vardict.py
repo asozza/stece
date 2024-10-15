@@ -2,12 +2,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Variable dictionary per component
+Dictionary of variables
 
 Author: Alessandro Sozza (CNR-ISAC)
 Date: July 2024
 """
 
+import gsw  # Gibbs SeaWater library for oceanographic calculations
+from osprey.means.regrid import regrid_U_to_T, regrid_V_to_T, regrid_W_to_T 
+
+def density(thetao, so):
+    """ Potential density """
+
+    pressure = gsw.p_from_z(-thetao['z'], thetao['lat'])
+    rho = gsw.density.rho(so, thetao, pressure)
+
+    return rho
 
 def vardict(component):
     """ Dictionary of EC-Earth variables """
@@ -103,6 +113,7 @@ def vardict(component):
                         'grid': 'T',
                         'units': 'kg/m2/s', 
                         'long_name': 'Snowfall flux'},
+
             # U-grid
             'e3u': {'dim': '3D', 
                     'grid': 'U',
@@ -136,6 +147,7 @@ def vardict(component):
                          'grid': 'U',
                          'units': '1e-3*kg/s', 
                          'long_name': 'Salt transport along i-axis'},
+
             # V-grid
             'e3v': {'dim': '3D', 
                     'grid': 'V',
@@ -169,6 +181,7 @@ def vardict(component):
                          'grid': 'V',
                          'units': '1e-3*kg/s', 
                          'long_name': 'Salt transport along j-axis'},
+
             # W-grid
             'e3w': {'dim': '3D', 
                     'grid': 'W',
@@ -198,7 +211,7 @@ def vardict(component):
                          'grid': 'W', 
                          'units': 'W/kg', 
                          'long_name': 'Internal wave-induced buoyancy flux'},
-            'pcmap_iwm': {'dim': '2D',
+            'pcmap_iwm': {'dim': '2D', 
                           'grid': 'W', 
                           'units': 'W/m^2', 
                           'long_name': 'Power consumption by wave-driven mixing'},
@@ -206,11 +219,54 @@ def vardict(component):
                          'grid': 'W',
                          'units': 'W/kg', 
                          'long_name': 'Power density available for mixing'},
-            'av_ratio ': {'dim': '3D', 
-                          'grid': 'W',
-                          'units': '-', 
-                          'long_name': 'S over T diffusivity ratio'}
+            'av_ratio': {'dim': '3D', 
+                         'grid': 'W',
+                         'units': '-', 
+                         'long_name': 'S over T diffusivity ratio'},
+
             # ice
+
+            # derived quantities
+            'keos': {'dim': '2D', 
+                     'grid': ['U', 'V'], 
+                     'units': 'm^2/s^2', 
+                     'long_name': 'Surface Kinetic Energy', 
+                     'dependencies': ['uos', 'vos'],
+                     'operation': lambda uos, vos: 0.5 * (uos**2 + vos**2),
+                     'preprocessing': {
+                         'uos': lambda data: regrid_U_to_T(u=data, ndim='2D'),
+                         'vos': lambda data: regrid_V_to_T(v=data, ndim='2D')}},                       
+            'keoh': {'dim': '3D', 
+                     'grid': ['U', 'V'], 
+                     'units': 'm^2/s^2', 
+                     'long_name': 'Horizontal Kinetic Energy', 
+                     'dependencies': ['uo', 'vo'],
+                     'operation': lambda uo, vo: 0.5 * (uo**2 + vo**2),
+                     'preprocessing': {
+                         'uo': lambda data: regrid_U_to_T(u=data, ndim='3D'),
+                         'vo': lambda data: regrid_V_to_T(v=data, ndim='3D')}},  
+            'keo': {'dim': '3D', 
+                    'grid': ['U', 'V', 'W'], 
+                    'units': 'm^2/s^2', 
+                    'long_name': 'Total Kinetic Energy', 
+                    'dependencies': ['uo', 'vo', 'wo'],
+                    'operation': lambda uo, vo, wo: 0.5 * (uo**2 + vo**2 + wo**2),
+                    'preprocessing': {
+                        'uo': lambda data: regrid_U_to_T(u=data, ndim='3D'),
+                        'vo': lambda data: regrid_V_to_T(v=data, ndim='3D'),
+                        'wo': lambda data: regrid_W_to_T(w=data, ndim='3D')}},
+            'rho': {'dim': '3D', 
+                    'grid': ['T', 'T'], 
+                    'units': 'kg/m^3', 
+                    'long_name': 'Potential Density', 
+                    'dependencies': ['thetao', 'so'],
+                    'operation': lambda thetao, so: density(thetao, so)},
+            'woto': {'dim': '3D', 
+                     'grid': ['T', 'W'], 
+                     'units': 'K*m/s', 
+                     'long_name': 'Buoyancy flux', 
+                     'dependencies': ['thetao', 'wo'],
+                     'operation': lambda thetao, wo: thetao*wo}
         }
 
     return list

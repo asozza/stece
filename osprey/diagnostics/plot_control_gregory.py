@@ -33,17 +33,14 @@ def drawing(figname):
     # global mean temperature merge from reference experiments
     # palette: lightcoral, red, orange, green, darkseagreen, cornflowerblue, blue, darkslategray, indigo
     color='blue'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', timeoff=0, color=color, linestyle='-', label='lfr0')
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel='thetao', reader='post', timeoff=410, color=color, linestyle='-', label='lfr1')
-    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=811, color=color, linestyle='-', label='lfr2')
-    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1171, color=color, linestyle='-', label='lfr3')
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1531, color=color, linestyle='-', label='lfr4')
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1891, color=color, linestyle='-', label='lfr5')
-    timeseries(expname='lgr0', startyear=1990, endyear=2220, varlabel='thetao', reader='post', timeoff=2251, color=color, linestyle='-', label='lgr0')
-
-    # comparison with EOF experiments
-    #timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='thetao', reader='post', timeoff=0, color='red', linestyle='-', label='EOF-T')
-    #timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='thetao', reader='post', timeoff=0, color='blue', linestyle='-', label='EOF-TS')
+    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', timeoff=0, color=color, linestyle='-')
+    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel='thetao', reader='post', timeoff=410, color=color, linestyle='-')
+    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=811, color=color, linestyle='-')
+    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1171, color=color, linestyle='-')
+    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1531, color=color, linestyle='-')
+    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=1891, color=color, linestyle='-')
+    timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=2251, color=color, linestyle='-')
+    timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel='thetao', reader='post', timeoff=2611, color=color, linestyle='-')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
@@ -81,3 +78,4 @@ if __name__ == "__main__":
     # Log execution time and memory load
     logging.info(f"Total execution time: {execution_time:.2f} seconds")
     logging.info(f"Memory load at the end: {memory_usage:.2f} MB")
+

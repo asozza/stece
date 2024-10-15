@@ -1,7 +1,7 @@
 ---
-expname: 'lfr0'
-startyear: 2390
-endyear: 2400
+expname: 'lfr5'
+startyear: 2340
+endyear: 2349
 orca: 'ORCA2'
 grid: 'T'
 freq: '1m'

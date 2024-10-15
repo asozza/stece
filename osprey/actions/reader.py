@@ -16,7 +16,7 @@ import xarray as xr
 import dask
 
 from osprey.utils.folders import folders, paths
-from osprey.utils.run_cdo import merge
+from osprey.utils.run_cdo import merge_new
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -160,12 +160,11 @@ def reader_meanfield():
 
     dirs = folders(expname)
     dict = _nemodict(grid, freq)
-    filename = os.path.join(dirs['nemo'], f"{expname}_{grid}_{startyear}-{endyear}.nc")
+    filename = os.path.join(dirs['post'], f"{expname}_{grid}_{startyear}-{endyear}.nc")
 
     if not filename:
-        raise FileNotFoundError(f"No data file found.")
-        # create file
-        merge(expname, startyear, endyear)
+        logger.info('Mean field not found. Creating new file ...')
+        merge_new(expname=expname, startyear=startyear, endyear=endyear, model='oce', grid='T', freq='1m')
 
     logging.info('Files to be loaded %s', filename)
     data = xr.open_mfdataset(filename, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
