@@ -11,9 +11,24 @@ Date: June 2024
 import os
 import glob
 import shutil
+import netCDF4 as nc
 
 from osprey.utils.folders import folders
 from osprey.utils.utils import get_nemo_timestep
+
+
+def delete_attrs(file):
+    # Open the dataset in 'r+' mode to allow modifications
+    with nc.Dataset(file, 'r+') as dataset:
+        # Iterate over all variables in the dataset
+        for var_name, variable in dataset.variables.items():
+            # Get all attribute names for the variable
+            attr_names = list(variable.ncattrs())
+            # Delete each attribute
+            for attr in attr_names:
+                variable.delncattr(attr)  # Correct method to delete an attribute
+
+    return None
 
 
 def writer_restart(expname, rdata, leg):
@@ -26,6 +41,9 @@ def writer_restart(expname, rdata, leg):
     # ocean restart creation
     oceout = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')
     rdata.to_netcdf(oceout, mode='w', unlimited_dims={'time_counter': True})
+
+    # delete attributes
+    delete_attrs(oceout)
 
     # copy ice restart
     orig = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc')

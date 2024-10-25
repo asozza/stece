@@ -10,6 +10,7 @@ Date: May 2024
 
 import os
 import glob
+import subprocess
 import numpy as np
 import xarray as xr
 import cftime
@@ -19,6 +20,16 @@ from osprey.utils.time import get_leg
 from osprey.utils import run_cdo_old
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import globalmean
+
+
+def _forecast_xarray(foreyear):
+    """Get the xarray for the forecast time"""
+    
+    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 0, 0, 0, has_year_zero=False)
+    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])},
+                      attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
+
+    return xf
 
 def _time_xarray(startyear, endyear):
     """Reconstruct the time array of restarts"""
@@ -145,3 +156,77 @@ def change_timeaxis(expname, var, startyear, endyear):
 
 
 ##########################################################################################
+
+def project_eofs(dir, varname, neofs, xf, mode):
+    """ 
+    Function to project a field in the future using EOFs. 
+    
+    Different options are available:
+    - projection using the full set of EOFs (mode=full)
+    - projection using only the first EOF (mode=first)
+    - projection using EOFs up to a percentage of the full (mode=frac)
+    - reconstruction of the original field using EOFs (mode=reco)
+    
+    """
+
+    print(dir)
+    filename = os.path.join(dir, f"{varname}_pattern.nc")
+    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+    field = pattern.isel(time=0)*0
+
+    if mode == 'standard':
+        for i in range(neofs):
+            filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)        
+            p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+            theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
+            basis = pattern.isel(time=i)
+            field = field + theta*basis        
+
+    elif mode == 'first':
+        filename = os.path.join(dir, f"{varname}_series_00000.nc")    
+        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)        
+        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
+        basis = pattern.isel(time=i)
+        field = field + theta*basis                
+
+    elif mode == 'reco':
+
+        for i in range(neofs):
+            filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
+            theta = timeseries[varname].isel(time=-1)
+            basis = pattern.isel(time=i)
+            field = field + theta*basis
+
+        # add figure
+
+
+    elif mode == 'frac':
+        
+        threshold_percentage = 0.9
+
+        weights = []
+        cdo_command = f"cdo info -div {varname}_variance.nc -timsum {varname}_variance.nc"
+        output = subprocess.check_output(cdo_command, shell=True, text=True)
+        for line in output.splitlines():
+            if "Mean" in line:
+                mean_value = float(line.split(":")[3].strip())
+                weights.append(mean_value)
+        weights = np.array(weights)
+        cumulative_weights = np.cumsum(weights) / np.sum(weights)
+
+        # Find the index where cumulative sum exceeds the threshold percentage
+        feofs = np.searchsorted(cumulative_weights, threshold_percentage) + 1
+
+        for i in range(feofs):
+            filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
+            p = timeseries.polyfit(dim='time', deg=1, skipna=True)
+            theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
+            basis = pattern.isel(time=i)
+            field += theta * basis        
+
+
+    return field

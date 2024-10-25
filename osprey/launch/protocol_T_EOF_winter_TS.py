@@ -18,7 +18,7 @@ import xarray as xr
 
 from osprey.utils.folders import folders
 from osprey.actions.rebuilder import rebuilder
-from osprey.actions.forecaster import forecaster_EOF_winter_multivar
+from osprey.actions.forecaster import forecaster_EOF_def
 from osprey.actions.writer import writer_restart
 from osprey.actions.replacer import replacer, restorer
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     # forecast based on local temperature fit
     if args.forecast:
-        rdata = forecaster_EOF_winter_multivar(expname, varnames, leg, yearspan, yearleap)
+        rdata = forecaster_EOF_def(expname=expname, varnames=varnames, endleg=leg, yearspan=yearspan, yearleap=yearleap, mode='full', smoothing=True)
         writer_restart(expname, rdata, leg)
 
     # replace nemo restart files

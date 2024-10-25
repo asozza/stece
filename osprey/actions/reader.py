@@ -16,7 +16,7 @@ import xarray as xr
 import dask
 
 from osprey.utils.folders import folders, paths
-from osprey.utils.run_cdo import merge_new
+#from osprey.utils.run_cdo import merge_new
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -217,12 +217,32 @@ def reader_rebuilt(expname, startleg, endleg):
     filelist = []
     for leg in range(startleg,endleg+1):
         pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
+        #pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')        
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     logging.info(' File to be loaded %s', filelist)
     data = xr.open_mfdataset(filelist, use_cftime=True)
 
     return data
+
+
+def reader_rebuilt2(expname, startleg, endleg):
+    """ Read rebuilt NEMO restart files """
+
+    dirs = folders(expname)
+    
+    filelist = []
+    for leg in range(startleg,endleg+1):
+        #pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc')
+        pattern = os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc')        
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+    logging.info(' File to be loaded %s', filelist)
+    data = xr.open_mfdataset(filelist, use_cftime=True)
+
+    return data
+
+
 
 ##########################################################################################
 

@@ -9,6 +9,7 @@ Date: Mar 2024
 """
 
 import os
+import subprocess
 import numpy as np
 from copy import deepcopy
 import cftime
@@ -21,9 +22,10 @@ from osprey.actions.postreader import reader_restart
 from osprey.means.eof import change_timeaxis, postproc_var_3D
 from osprey.means.eof import preproc_pattern_2D, preproc_pattern_3D, preproc_timeseries_2D, preproc_timeseries_3D
 from osprey.means.means import timemean
-from osprey.utils import run_cdo_old
+from osprey.utils import run_cdo_old, run_cdo
 from osprey.utils.utils import remove_existing_file, run_bash_command
-
+from osprey.actions.stabilizer import constraints
+from osprey.means.eof import project_eofs
 
 def _forecast_xarray(foreyear):
     """Get the xarray for the forecast time"""
@@ -246,6 +248,7 @@ def forecaster_EOF_restart(expname,
     
     """
 
+
     dirs = folders(expname)
     startleg = get_startleg(endleg, yearspan)
     startyear = get_year(startleg)
@@ -306,14 +309,14 @@ def forecaster_EOF_restart(expname,
 
     return rdata
 
-def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap, reco=False):
+def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap, reco=False, smoothing=True):
     """ 
-    Function to forecast winter temperature field using EOF 
+    Function to forecast winter temperature field using EOF
     
     Args:
     expname: experiment name
     varname: variable name
-    endleg: leg 
+    endleg: leg
     yearspan: years backward from endleg used by EOFs
     yearleap: years forward from endleg to forecast
     reco: reconstruction of present time
@@ -342,10 +345,18 @@ def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap
 
     # create EOF
     for varname in varnames:
-        run_cdo_old.merge_winter(expname, varname, startyear, endyear)    
+
+        run_cdo_old.merge_winter(expname, varname, startyear, endyear)
+
+        #if smoothing:
+        #    infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+        #    outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
+        #    run_cdo.add_smoothing(infile, outfile)
+        #    subprocess.run(["mv", outfile, infile])
+        
         run_cdo_old.detrend(expname, varname, endleg)
         run_cdo_old.get_EOF(expname, varname, endleg, window)
-    
+
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
         pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
         field = pattern.isel(time=0)*0
@@ -359,24 +370,122 @@ def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap
                 theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
             field = field + theta*basis
-
-        if reco ==  False:   
+ 
+        if reco == False:   
             field = field.drop_vars({'time'})
 
         # retrend
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
         xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
-        ave = timemean(xdata, varname)
+        ave = timemean(xdata[varname])
         total = field + ave
 
-        #if reco == False:
-        #    total = total.expand_dims({'time': 1})
-        total = postproc_var_3D(total)
+        # other post-processing manipulations
+        if smoothing:
+            infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_total.nc")
+            rdata.to_netcdf(infile, mode='w', unlimited_dims={'time_counter': True})
+            outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
+            run_cdo.add_smoothing(infile, outfile)
+            total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=postproc_var_3D)
+        else:
+            total = postproc_var_3D(total)
         total['time_counter'] = rdata['time_counter']
 
         # loop on the corresponding varlist    
         varlist = varlists.get(varname, []) # Get the corresponding varlist, default to an empty list if not found
         for vars in varlist:
             rdata[vars] = xr.where(rdata[vars] != 0.0, total[varname], 0.0)
+
+        # add constraints
+        rdata = constraints(rdata)
+
+    return rdata
+
+
+###########################################################################################################
+
+def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full', smoothing=False):
+    """ 
+    Function to forecast winter temperature field using EOF
+    
+    Args:
+    expname: experiment name
+    varname: variable name
+    endleg: leg
+    yearspan: years backward from endleg used by EOFs
+    yearleap: years forward from endleg to forecast
+    reco: reconstruction of present time
+    
+    """
+
+    dirs = folders(expname)
+    startleg = get_startleg(endleg, yearspan)
+    startyear = get_year(startleg)
+    endyear = get_year(endleg)
+    window = endyear - startyear + 1
+
+    # forecast year
+    foreyear = get_forecast_year(endyear, yearleap)
+    xf = _forecast_xarray(foreyear)
+
+    # read forecast and change restart
+    rdata = reader_rebuilt(expname, endleg, endleg)
+
+    # Define the varlists for each variable
+    varlists = {
+        'thetao': ['tn', 'tb'],
+        'so': ['sn', 'sb'],
+        'zos': ['sshn', 'sshb']
+    }
+
+    # create EOF
+    for varname in varnames:
+
+        #run_cdo_old.merge_winter(expname, varname, startyear, endyear)
+        run_cdo.merge_winter_only(expname, varname, startyear, endyear)
+
+        #if smoothing:
+        #    infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+        #    outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
+        #    run_cdo.add_smoothing(infile, outfile)
+        #    subprocess.run(["mv", outfile, infile])
+        
+        #run_cdo_old.detrend(expname, varname, endleg)
+        run_cdo.detrend(expname, varname, endleg)
+
+        #run_cdo_old.get_EOF(expname, varname, endleg, window)
+        run_cdo.get_EOF(expname, varname, endleg, window)
+
+        dir = os.path.join(os.path.join(dirs['tmp'], str(endleg).zfill(3)))
+        field = project_eofs(dir, varname, window, xf, mode)
+ 
+        if mode == 'reco':   
+            field = field.drop_vars({'time'})
+
+        # retrend
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+        ave = timemean(xdata[varname])
+        total = field + ave
+        total = total.expand_dims({'time': 1})
+
+        # add smoothing and post-processing features
+        if smoothing:
+            infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_total.nc")
+            total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
+            outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
+            run_cdo.add_smoothing(infile, outfile)
+            total = xr.open_mfdataset(outfile, use_cftime=True)       
+
+        total = total.rename({'time': 'time_counter', 'z': 'nav_lev'})
+        total['time_counter'] = rdata['time_counter']
+
+        # loop on the corresponding varlist    
+        varlist = varlists.get(varname, []) # Get the corresponding varlist, default to an empty list if not found
+        for vars in varlist:
+            rdata[vars] = xr.where(rdata[vars] != 0.0, total[varname], 0.0)
+        
+        # add constraints
+        rdata = constraints(rdata)
 
     return rdata

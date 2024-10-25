@@ -69,8 +69,8 @@ def gregory_plot(expname, startyear, endyear, varname1, varname2,
 
         # apply moving average
         if avetype == 'moving':
-            vec1 = movave(spacemean(data, varname1, info1['dim']),12)
-            vec2 = movave(spacemean(data, varname2, info2['dim']),12)
+            vec1 = movave(spacemean(data[varname1], info1['dim']),12)
+            vec2 = movave(spacemean(data[varname2], info2['dim']),12)
             tvec, vec1, vec2 = _cutted(tvec), _cutted(vec1), _cutted(vec2)
         else:
             vec1 = data[varname1].values.flatten()
@@ -164,16 +164,16 @@ def gregory_plot_january(expname, startyear, endyear, varname1, varname2,
 
         # apply moving average
         if avetype == 'moving':
-            vec1 = movave(spacemean(data, varname1, info1['dim']),12)
-            vec2 = movave(spacemean(data, varname2, info2['dim']),12)
+            vec1 = movave(spacemean(data[varname1], info1['dim']),12)
+            vec2 = movave(spacemean(data[varname2], info2['dim']),12)
             tvec, vec1, vec2 = _cutted(tvec), _cutted(vec1), _cutted(vec2)
         elif avetype == 'standard':
-            vec1 = spacemean(data, varname1, info1['dim'])
-            vec2 = spacemean(data, varname2, info2['dim'])            
+            vec1 = spacemean(data[varname1], info1['dim'])
+            vec2 = spacemean(data[varname2], info2['dim'])            
         elif avetype == 'january':        
             data_winter = data.sel(time=data['time.month']==1)
-            vec1 = spacemean(data_winter, varname1, info1['dim'])
-            vec2 = spacemean(data_winter, varname2, info2['dim'])  
+            vec1 = spacemean(data_winter[varname1], info1['dim'])
+            vec2 = spacemean(data_winter[varname2], info2['dim'])  
 
     # Read post-processed data
     elif reader == "post":

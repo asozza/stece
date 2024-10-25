@@ -121,6 +121,7 @@ def get_EOF_new(expname, var, leg, window):
 
     return None
 
+
 def retrend(expname, var, leg):
     """ CDO command to add trend """
 

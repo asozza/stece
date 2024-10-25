@@ -19,6 +19,8 @@ from osprey.utils.folders import folders
 from osprey.utils.utils import run_bash_command
 from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
 from osprey.utils.time import get_leg, get_year
+from osprey.utils.vardict import vardict
+from osprey.actions.reader import reader_nemo
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -121,6 +123,7 @@ def get_EOF(expname, varname, leg, window):
 
     # Get the directories and file paths
     dirs = folders(expname)
+    info = vardict('nemo')[varname]
 
     # Define file paths for anomaly, covariance, and pattern output files
     flda = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_anomaly.nc")
@@ -133,21 +136,22 @@ def get_EOF(expname, varname, leg, window):
 
     logger.info(f"Computing EOF for variable {varname} with window size {window}.")
     
-    # CDO command to compute EOFs
-    cdo.eof3d(window, input=flda, output=fldcov)
-    
-    # Compute EOF patterns
-    cdo.eof3d(window, input=flda, output=fldpat)
+    # CDO command to compute EOFs covariance and pattern
+    if info['dim'] == '3D':
+        cdo.run(f"eof3d,{window} {flda} {fldcov} {fldpat}")
+    elif info['dim'] == '2D':
+        cdo.run(f"eof,{window} {flda} {fldcov} {fldpat}")
 
     # Define timeseries output file pattern
     timeseries = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_series_")
-    
-    # Remove existing timeseries files
     remove_existing_filelist(timeseries)
 
     # Compute EOF coefficients (timeseries)
     logger.info(f"Computing EOF coefficients for {varname}.")
-    cdo.eofcoeff3d(input=[fldpat, flda], output=timeseries)
+    if info['dim'] == '3D':
+        cdo.run(f"eofcoeff3d {fldpat} {flda} {timeseries}")
+    elif info['dim'] == '2D':
+        cdo.run(f"eofcoeff {fldpat} {flda} {timeseries}")
 
     logger.info(f"EOF computation completed successfully: {fldcov}, {fldpat}, {timeseries}")
     
@@ -240,53 +244,60 @@ def merge_winter(expname, varname, startyear, endyear):
 
     return None
 
-def merge_winter_only(expname, startyear, endyear):
+
+def add_smoothing(input, output):
+    """ add smoothing """
+
+    remove_existing_file(output)
+
+    #cdo.smooth("radius=2deg", input=input, output=output)
+    cdo.smooth9(input=input, output=output)
+
+    return None
+
+
+import os
+from cdo import Cdo
+
+def merge_winter_only(expname, varname, startyear, endyear):
     """
     Process NEMO output files to focus on winter months (December and January),
     calculate a moving average, and merge the results using xarray and CDO.
 
     Parameters:
     - expname: experiment name.
+    - varname: variable name to process.
     - startyear: the starting year of the time window.
     - endyear: the ending year of the time window.
-    - var: variable name to process.
-    - dirs: dictionary containing directory paths ('nemo' for input, 'tmp' for temporary files).
     """
-
+    
+    # Directory paths
+    dirs = folders(expname)
+    cdo = Cdo()
+    
     # Step 1: Load the data with xarray
-    files = []
-    for year in range(startyear, endyear + 1):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}.nc")
-        files.extend(glob.glob(pattern))
+    ds = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
 
-    # Combine all files into a single dataset
-    ds = xr.open_mfdataset(files, combine='by_coords')
-
-    # Step 2: Select the variable and group by month to filter December and January
+    # Step 2: Select the variable and filter for December (12) and January (1)
     ds_var = ds[varname]
-
-    # Group by month and filter out only December (12) and January (1)
-    ds_winter = ds_var.groupby('time.month').filter(lambda x: x.month in [12, 1])
+    ds_winter = ds_var.where(ds_var['time.month'].isin([12, 1]), drop=True)
 
     # Step 3: Remove the first January and the last December
     ds_winter = ds_winter.where(~((ds_winter['time.month'] == 1) & (ds_winter['time.year'] == startyear)), drop=True)
     ds_winter = ds_winter.where(~((ds_winter['time.month'] == 12) & (ds_winter['time.year'] == endyear)), drop=True)
 
-    # Step 4: Calculate a moving average with a window of 2 months (for Dec-Jan pairs)
+    # Step 4: Calculate a moving average with a 2-month window for Dec-Jan pairs
     ds_winter_avg = ds_winter.rolling(time=2, center=True).mean().dropna('time', how='all')
 
-    # Step 5: Use CDO for further processing (if needed)
+    # Step 5: Use CDO for further processing (e.g., final time-mean)
     temp_file = os.path.join(dirs['tmp'], f"{varname}_winter_{startyear}_{endyear}_temp.nc")
     final_file = os.path.join(dirs['tmp'], f"{varname}_winter_{startyear}_{endyear}.nc")
     ds_winter_avg.to_netcdf(temp_file)
 
-    # Example of a CDO operation (e.g., to further clean up or process the data)
-    # Here, we might calculate the final average over all winters or perform a time mean
+    # Perform CDO operation (e.g., time mean)
     cdo.timmean(input=temp_file, output=final_file)
 
     # Remove the temporary file
     os.remove(temp_file)
 
-    return final_file
-
-
+    return None
