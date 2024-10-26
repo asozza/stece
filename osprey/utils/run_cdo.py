@@ -23,8 +23,7 @@ from osprey.utils.vardict import vardict
 from osprey.actions.reader import reader_nemo
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Initialize CDO
@@ -138,8 +137,10 @@ def get_EOF(expname, varname, leg, window):
     
     # CDO command to compute EOFs covariance and pattern
     if info['dim'] == '3D':
+        logger.info(f"Compute 3D EOFs")
         cdo.run(f"eof3d,{window} {flda} {fldcov} {fldpat}")
-    elif info['dim'] == '2D':
+    elif info['dim'] == '2D':   
+        logger.info(f"Compute 2D EOFs")        
         cdo.run(f"eof,{window} {flda} {fldcov} {fldpat}")
 
     # Define timeseries output file pattern
@@ -205,7 +206,8 @@ def merge_winter(expname, varname, startyear, endyear):
     """ CDO command to merge winter-only data """
 
     dirs = folders(expname)
-    endleg = get_leg(endyear)
+    endleg = endyear - 1990 + 2
+    
     os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
 
     for year in range(startyear-1, endyear):
@@ -214,30 +216,34 @@ def merge_winter(expname, varname, startyear, endyear):
             pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year-i}-{year-i}.nc")
             matching_files = glob.glob(pattern)
             filelist.extend(matching_files)
+
         datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_data.nc")
         remove_existing_file(datafile)
-        run_bash_command(f"cdo cat {' '.join(filelist)} {datafile}")
         varfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_monthly.nc")
         remove_existing_file(varfile)
-        run_bash_command(f"cdo selname,{varname} {datafile} {varfile}")
         djfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ.nc")
         remove_existing_file(djfile)
-        run_bash_command(f"cdo selmon,12,1 {varfile} {djfile}")
         auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ2.nc")
         remove_existing_file(auxfile)
-        run_bash_command(f"cdo delete,timestep=1,-1 {djfile} {auxfile}")
         winterfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")
         remove_existing_file(winterfile)
-        run_bash_command(f"cdo timmean {auxfile} {winterfile}")
+
+        cdo.run(f"cat {' '.join(filelist)} {datafile}")        
+        cdo.run(f"selname,{varname} {datafile} {varfile}")        
+        cdo.run(f"selmon,12,1 {varfile} {djfile}")        
+        cdo.run(f"delete,timestep=1,-1 {djfile} {auxfile}")        
+        cdo.run(f"timmean {auxfile} {winterfile}")
 
     filelist = []
     for year in range(startyear-1, endyear):
         pattern = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")                        
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
-    datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{var}.nc")
+
+    datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
     remove_existing_file(datafile)
-    run_bash_command(f"cdo cat {' '.join(filelist)} {datafile}")
+
+    cdo.run(f"cat {' '.join(filelist)} {datafile}")
 
     auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_")
     remove_existing_filelist(auxfile)
@@ -256,9 +262,6 @@ def add_smoothing(input, output):
     return None
 
 
-import os
-from cdo import Cdo
-
 def merge_winter_only(expname, varname, startyear, endyear):
     """
     Process NEMO output files to focus on winter months (December and January),
@@ -273,7 +276,8 @@ def merge_winter_only(expname, varname, startyear, endyear):
     
     # Directory paths
     dirs = folders(expname)
-    cdo = Cdo()
+
+    endleg = endyear - 1990 + 2
     
     # Step 1: Load the data with xarray
     ds = reader_nemo(expname=expname, startyear=startyear, endyear=endyear)
@@ -290,8 +294,8 @@ def merge_winter_only(expname, varname, startyear, endyear):
     ds_winter_avg = ds_winter.rolling(time=2, center=True).mean().dropna('time', how='all')
 
     # Step 5: Use CDO for further processing (e.g., final time-mean)
-    temp_file = os.path.join(dirs['tmp'], f"{varname}_winter_{startyear}_{endyear}_temp.nc")
-    final_file = os.path.join(dirs['tmp'], f"{varname}_winter_{startyear}_{endyear}.nc")
+    temp_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_temp.nc")
+    final_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
     ds_winter_avg.to_netcdf(temp_file)
 
     # Perform CDO operation (e.g., time mean)

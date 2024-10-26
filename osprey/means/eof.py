@@ -20,7 +20,7 @@ from osprey.utils.time import get_leg
 from osprey.utils import run_cdo_old
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import globalmean
-
+from osprey.utils.vardict import vardict
 
 def _forecast_xarray(foreyear):
     """Get the xarray for the forecast time"""
@@ -88,6 +88,60 @@ def postproc_var_3D(data):
     data = data.rename({'time': 'time_counter', 'z': 'nav_lev'})
 
     return data
+
+
+def process_data(data, mode, dim='3D'):
+    """
+    Function for preprocessing or postprocessing 2D/3D data.
+
+    Parameters:
+    - data: xarray.DataArray or xarray.Dataset
+        Input data to be processed.
+    - mode: str
+        Operation mode. Choose from:
+        'pattern' - Preprocessing for EOF pattern.
+        'timeseries' - Preprocessing for EOF timeseries.
+        'postprocess' - Post-processing for variable field.
+    - dim: str, optional (default='3D')
+        Dimensionality of the dataset. Choose from '2D' or '3D'.
+
+    Returns:
+    - Processed data (xarray.DataArray or xarray.Dataset)
+    """
+
+    if dim not in {'2D', '3D'}:
+        raise ValueError(f"Invalid dim '{dim}'. Choose '2D' or '3D'.")
+
+    if mode == 'pattern':
+        # Preprocessing routine for EOF pattern
+        data = data.rename_dims({'x_grid_T': 'x', 'y_grid_T': 'y'})
+        data = data.rename({'nav_lat_grid_T': 'lat', 'nav_lon_grid_T': 'lon'})
+        data = data.rename({'time_counter': 'time'})
+        data = data.drop_vars({'time_counter_bnds'}, errors='ignore')
+        if dim == '3D':
+            data = data.rename({'deptht': 'z'})
+            data = data.drop_vars({'deptht_bnds'}, errors='ignore')        
+
+    elif mode == 'series':
+        # Preprocessing routine for EOF timeseries
+        data = data.rename({'time_counter': 'time'})
+        data = data.isel(lon=0, lat=0)
+        data = data.drop_vars({'time_counter_bnds', 'lon', 'lat'}, errors='ignore')
+        if dim == '3D':
+            data = data.isel(zaxis_Reduced=0)
+            data = data.drop_vars({'zaxis_Reduced'}, errors='ignore')
+
+    elif mode == 'post':
+        # Post-processing routine for variable field
+        data = data.rename({'time': 'time_counter'})
+        if dim == '3D':
+            data = data.rename({'z': 'nav_lev'})
+
+    else:
+        raise ValueError(f"Invalid mode '{mode}'. Choose from 'pattern', 'tseries', or 'postproc'.")
+
+    return data
+
 
 ##########################################################################################
 
@@ -169,15 +223,17 @@ def project_eofs(dir, varname, neofs, xf, mode):
     
     """
 
+    info = vardict('nemo')[varname]
+
     print(dir)
     filename = os.path.join(dir, f"{varname}_pattern.nc")
-    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim']))
     field = pattern.isel(time=0)*0
 
     if mode == 'standard':
         for i in range(neofs):
             filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)        
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim']))        
             p = timeseries.polyfit(dim='time', deg=1, skipna = True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
             basis = pattern.isel(time=i)
@@ -185,7 +241,7 @@ def project_eofs(dir, varname, neofs, xf, mode):
 
     elif mode == 'first':
         filename = os.path.join(dir, f"{varname}_series_00000.nc")    
-        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)        
+        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim']))        
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
         theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
         basis = pattern.isel(time=i)
@@ -195,7 +251,7 @@ def project_eofs(dir, varname, neofs, xf, mode):
 
         for i in range(neofs):
             filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim']))
             theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
             field = field + theta*basis
@@ -222,7 +278,7 @@ def project_eofs(dir, varname, neofs, xf, mode):
 
         for i in range(feofs):
             filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_timeseries_3D)
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim']))
             p = timeseries.polyfit(dim='time', deg=1, skipna=True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
             basis = pattern.isel(time=i)

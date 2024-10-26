@@ -13,6 +13,7 @@ import subprocess
 import numpy as np
 from copy import deepcopy
 import cftime
+import logging
 import xarray as xr
 
 from osprey.utils.folders import folders
@@ -25,7 +26,10 @@ from osprey.means.means import timemean
 from osprey.utils import run_cdo_old, run_cdo
 from osprey.utils.utils import remove_existing_file, run_bash_command
 from osprey.actions.stabilizer import constraints
-from osprey.means.eof import project_eofs
+from osprey.means.eof import project_eofs,process_data
+from osprey.utils.vardict import vardict
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def _forecast_xarray(foreyear):
     """Get the xarray for the forecast time"""
@@ -346,6 +350,8 @@ def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap
     # create EOF
     for varname in varnames:
 
+        info = vardict('nemo')[varname]
+
         run_cdo_old.merge_winter(expname, varname, startyear, endyear)
 
         #if smoothing:
@@ -386,7 +392,7 @@ def forecaster_EOF_winter_multivar(expname, varnames, endleg, yearspan, yearleap
             rdata.to_netcdf(infile, mode='w', unlimited_dims={'time_counter': True})
             outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
             run_cdo.add_smoothing(infile, outfile)
-            total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=postproc_var_3D)
+            total = xr.open_mfdataset(outfile, use_cftime=True)
         else:
             total = postproc_var_3D(total)
         total['time_counter'] = rdata['time_counter']
@@ -419,10 +425,13 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     """
 
     dirs = folders(expname)
-    startleg = get_startleg(endleg, yearspan)
-    startyear = get_year(startleg)
-    endyear = get_year(endleg)
+    startleg = endleg - yearspan + 1
+    startyear = 1990 + startleg - 2
+    endyear = 1990 + endleg - 2
     window = endyear - startyear + 1
+
+    logging.info(f"Start/end year: {startyear}-{endyear}")
+    logging.info(f"Time window: {window}")
 
     # forecast year
     foreyear = get_forecast_year(endyear, yearleap)
@@ -441,15 +450,11 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     # create EOF
     for varname in varnames:
 
-        #run_cdo_old.merge_winter(expname, varname, startyear, endyear)
-        run_cdo.merge_winter_only(expname, varname, startyear, endyear)
+        info = vardict('nemo')[varname]
 
-        #if smoothing:
-        #    infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-        #    outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
-        #    run_cdo.add_smoothing(infile, outfile)
-        #    subprocess.run(["mv", outfile, infile])
-        
+        #run_cdo_old.merge_winter(expname, varname, startyear, endyear)
+        run_cdo.merge_winter(expname, varname, startyear, endyear)
+
         #run_cdo_old.detrend(expname, varname, endleg)
         run_cdo.detrend(expname, varname, endleg)
 
@@ -457,14 +462,14 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
         run_cdo.get_EOF(expname, varname, endleg, window)
 
         dir = os.path.join(os.path.join(dirs['tmp'], str(endleg).zfill(3)))
-        field = project_eofs(dir, varname, window, xf, mode)
+        field = project_eofs(dir=dir, varname=varname, neofs=window, xf=xf, mode=mode)
  
         if mode == 'reco':   
             field = field.drop_vars({'time'})
 
         # retrend
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=preproc_pattern_3D)
+        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim']))
         ave = timemean(xdata[varname])
         total = field + ave
         total = total.expand_dims({'time': 1})
@@ -475,9 +480,9 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
             total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
             outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
             run_cdo.add_smoothing(infile, outfile)
-            total = xr.open_mfdataset(outfile, use_cftime=True)       
+            total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, mode='post', dim=info['dim']))    
 
-        total = total.rename({'time': 'time_counter', 'z': 'nav_lev'})
+        #total = total.rename({'time': 'time_counter', 'z': 'nav_lev'})
         total['time_counter'] = rdata['time_counter']
 
         # loop on the corresponding varlist    
