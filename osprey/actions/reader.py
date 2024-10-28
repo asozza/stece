@@ -16,11 +16,11 @@ import xarray as xr
 import dask
 
 from osprey.utils.folders import folders, paths
+from osprey.utils.vardict import vardict
 #from osprey.utils.run_cdo import merge_new
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # dask optimization
@@ -115,7 +115,7 @@ def preproc_nemo_ice(data):
 
 def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
     """ 
-    Reader_nemo: Main function to read NEMO data 
+    reader_nemo: function to read NEMO data 
     
     Args:
     expname: experiment name
@@ -157,32 +157,33 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
     return data
 
 
-def reader_meanfield():
-    """ Read/compute mean field using cdo """
-
-    # read info about meanfield from yaml file
-    local_paths = paths()
-    filename = os.path.join(local_paths['osprey'], 'meanfield.yaml')
-    with open(filename) as yamlfile:
-        info = yaml.load(yamlfile, Loader=yaml.FullLoader)
-    keys = ['expname', 'startyear', 'endyear', 'orca', 'grid', 'freq', 'replace']
-    expname, startyear, endyear, orca, grid, freq, replace = [info[key] for key in keys]
-
-    logger.info(f"Loading mean field for expname={expname}, startyear={startyear}, endyear={endyear}")
-
-    dirs = folders(expname)
-    dict = _nemodict(grid, freq)
-    filename = os.path.join(dirs['post'], f"{expname}_{grid}_{startyear}-{endyear}.nc")
-
-    if not filename:
-        logger.info('Mean field not found. Creating new file ...')
-        merge_new(expname=expname, startyear=startyear, endyear=endyear, model='oce', grid='T', freq='1m')
-
-    logging.info('Files to be loaded %s', filename)
-    data = xr.open_mfdataset(filename, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
+def reader_nemo_field(expname, startyear, endyear, varname):
+    """ 
+    reader_nemo_field: function to read NEMO field 
     
-    return data
+    Args:
+    expname: experiment name
+    startyear,endyear: time window
+    varname: variable name
 
+    """
+
+    info = vardict('nemo')[varname]
+
+    # Check for 'dependencies' if dealing with derived variable 
+    if 'dependencies' in info: 
+        field = {}
+        for grid, var in zip(info['grid'], info['dependencies']):
+            data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear, grid=grid)
+            field[var] = data[var]
+            if 'preprocessing' in info:
+                field[var] = info['preprocessing'][var](field[var])
+        data = info['operation'](*[field[var] for var in info['dependencies']])
+    else:
+        data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear, grid=info['grid'])
+        data = data[varname]
+
+    return data
 
 ##########################################################################################
 # Reader of NEMO domain
