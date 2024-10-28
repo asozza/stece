@@ -124,7 +124,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, replace=Fal
 
     # Now you can read
     data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, metric=metric)
-
+    
     return data
 
 

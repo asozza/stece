@@ -39,8 +39,7 @@ def _nemodict(grid, freq):
 
     """
 
-
-    gridlist = ["T", "U", "V", "W"]    
+    gridlist = ["T", "U", "V"]    
     if grid in gridlist:
         grid_lower = grid.lower()
         return {
@@ -54,6 +53,17 @@ def _nemodict(grid, freq):
                 "depth": f"depth{grid_lower}",
                 "x_grid_inner": f"x_grid_{grid}_inner",
                 "y_grid_inner": f"y_grid_{grid}_inner"
+            }
+        }
+    elif grid == "W":
+        grid_lower = grid.lower()
+        return {
+            "W": {
+                "preproc": preproc_nemo,
+                "format": f"oce_{freq}_{grid}",
+                "nav_lat": "nav_lat",
+                "nav_lon": "nav_lon",
+                "depth": f"depth{grid_lower}"
             }
         }
     elif grid == "ice":
@@ -79,14 +89,16 @@ def preproc_nemo(data, grid):
     
     grid_mappings = _nemodict(grid, None)[grid]  # None for freq as it is not used here
 
-    data = data.rename_dims({grid_mappings["x_grid"]: 'x', grid_mappings["y_grid"]: 'y'})
+    if grid != 'W':
+        data = data.rename_dims({grid_mappings["x_grid"]: 'x', grid_mappings["y_grid"]: 'y'})
+        data = data.swap_dims({grid_mappings["x_grid_inner"]: 'x', grid_mappings["y_grid_inner"]: 'y'})
+
     data = data.rename({
         grid_mappings["nav_lat"]: 'lat', 
         grid_mappings["nav_lon"]: 'lon', 
         grid_mappings["depth"]: 'z', 
         'time_counter': 'time'
     })
-    data = data.swap_dims({grid_mappings["x_grid_inner"]: 'x', grid_mappings["y_grid_inner"]: 'y'})
     data = data.drop_vars(['time_centered'], errors='ignore')
     data = data.drop_dims(['axis_nbounds'], errors='ignore')
 
@@ -170,7 +182,6 @@ def reader_meanfield():
     data = xr.open_mfdataset(filename, preprocess=lambda d: dict[grid]["preproc"](d, grid), use_cftime=True)
     
     return data
-
 
 
 ##########################################################################################
