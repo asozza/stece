@@ -10,14 +10,12 @@ Date: June 2024
 
 import os
 import glob
-import yaml
 import logging
 import xarray as xr
 import dask
 
 from osprey.utils.folders import folders, paths
 from osprey.utils.vardict import vardict
-#from osprey.utils.run_cdo import merge_new
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

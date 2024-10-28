@@ -25,7 +25,6 @@ from osprey.utils.time import get_year, get_startyear, get_forecast_year
 from osprey.utils import run_cdo
 from osprey.utils.vardict import vardict
 
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -168,4 +167,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
         rdata = constraints(rdata)
 
     return rdata
+
+
+###########################################################################################################
 

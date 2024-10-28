@@ -58,7 +58,7 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, metric):
 
 def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, metric):
     """ 
-    Reader of averaged data 
+    Writer of averaged data 
     
     Args:
     data: data array
@@ -83,7 +83,7 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, metri
 # MAIN FUNCTION
 def postreader_nemo(expname, startyear, endyear, varlabel, diagname, orca='ORCA2', replace=False, metric='base', refinfo=None):
     """ 
-    Postreader Main
+    Postreader_nemo: main function for reading averaged data
     
     Args:
     expname: experiment name
@@ -119,8 +119,9 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, orca='ORCA2
     # try to read REF 'base' averaged data, otherwise read original data
     if metric != 'base':
         try:
-            xdata = reader_averaged(expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], varlabel=varlabel, diagname=diagname, metric='base')
-            logger.info('Averaged base data found.')
+            if not replace:
+                xdata = reader_averaged(expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], varlabel=varlabel, diagname=diagname, metric='base')
+                logger.info('Averaged base data found.')
         except FileNotFoundError:
             logger.info('Averaged base data not found. Creating new file ...')
             ds = reader_nemo_field(expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], varname=varname)
@@ -129,8 +130,9 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, orca='ORCA2
 
     # try to read 'base' averaged data, otherwise read original data
     try:
-        data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, metric='base')
-        logger.info('Averaged base data found.')
+        if not replace:
+            data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, metric='base')
+            logger.info('Averaged base data found.')
     except FileNotFoundError:
         logger.info('Averaged base data not found. Creating new file ...')
         ds = reader_nemo_field(expname=expname, startyear=startyear, endyear=endyear, varname=varname)
@@ -284,7 +286,7 @@ def averaging(data, varlabel, diagname, orca):
 # Reader of multiple restarts (rebuilt or not)
 def reader_restart(expname, startyear, endyear):
     """ 
-    Reader of NEMO restart files in a range of legs 
+    reader_restart: reader of NEMO restart files in a range of legs 
     
     Args:
     expname: experiment name

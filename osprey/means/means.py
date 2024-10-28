@@ -14,10 +14,9 @@ import cftime
 import dask
 from scipy.interpolate import interp1d
 
-#from osprey.utils.utils import get_expname
 from osprey.actions.reader import elements
 
-dask.config.set({'array.optimize_blockwise': True})
+#dask.config.set({'array.optimize_blockwise': True})
 
 def flatten_to_triad(m, nj, ni):
     """ Recover triad indexes from flatten array length """
@@ -184,7 +183,7 @@ def zlayer(ztag, orca):
 # - year shifting / year gain
 #
 
-def cost(x, x0, metric):
+def apply_cost_function(x, x0, metric):
     """
     Calculate various cost functions based on the given metric.
 
@@ -231,48 +230,6 @@ def cost(x, x0, metric):
 
     else:
         raise ValueError(f"Unknown metric: {metric}")
-
-
-def apply_cost_function(data, meandata, metric):
-    """
-    Apply a cost function to each variable in the dataset.
-
-    Args:
-        data (xarray.Dataset): The current dataset with data variables.
-        meanfield (xarray.Dataset): The reference dataset with meanfield values.
-        metric (str): The metric used to compute the cost.
-
-    Returns:
-        xarray.Dataset: A dataset containing the computed cost metrics.
-    """
-    # Initialize an empty dataset to store the cost results
-    cost_ds = xr.Dataset()
-
-    #data = data.chunk({'time': 100, 'z': 31, 'y': 148, 'x': 180})
-    #meandata = meandata.chunk({'z': 31, 'y': 148, 'x': 180})
-
-    # Loop through each variable in the dataset
-    for var_name in data.data_vars:
-        var_x = data[var_name]
-        
-        if var_name in meandata.data_vars:
-            var_x0 = meandata[var_name]
-
-            # Apply the cost function
-            cost_result = cost(var_x, var_x0, metric)
-            
-            # Add the result to the new dataset
-            cost_ds[var_name] = cost_result
-
-    # Copy coordinates from the original dataset (lat, lon, etc.) to the new dataset
-    cost_ds = cost_ds.assign_coords({
-        'lat': data['lat'],
-        'lon': data['lon'],
-        'z': data['z'],
-        'time': data['time']
-    })
-
-    return cost_ds
 
 
 def year_shift(x1, y1, x2, y2, shift_threshold=20.0):
