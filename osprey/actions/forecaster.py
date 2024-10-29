@@ -145,7 +145,8 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
         xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim']))
         ave = timemean(xdata[varname])
         total = field + ave
-        total = total.expand_dims({'time': 1})
+        total = total.transpose("time", "z", "y", "x")
+        #total = total.expand_dims({'time': 1})
 
         # add smoothing and post-processing features
         if smoothing:

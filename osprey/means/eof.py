@@ -211,7 +211,7 @@ def change_timeaxis(expname, var, startyear, endyear):
 
 ##########################################################################################
 
-def project_eofs(dir, varname, neofs, xf, mode):
+def project_eofs(dir, varname, neofs, xf, mode='full'):
     """ 
     Function to project a field in the future using EOFs. 
     
@@ -230,7 +230,9 @@ def project_eofs(dir, varname, neofs, xf, mode):
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim']))
     field = pattern.isel(time=0)*0
 
-    if mode == 'standard':
+
+    if mode == 'full':
+
         for i in range(neofs):
             filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim']))        
@@ -239,13 +241,16 @@ def project_eofs(dir, varname, neofs, xf, mode):
             basis = pattern.isel(time=i)
             field = field + theta*basis        
 
+
     elif mode == 'first':
+
         filename = os.path.join(dir, f"{varname}_series_00000.nc")    
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim']))        
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
         theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
         basis = pattern.isel(time=i)
         field = field + theta*basis                
+
 
     elif mode == 'reco':
 
