@@ -269,5 +269,10 @@ def vardict(component):
                      'operation': lambda thetao, wo: thetao*wo}
         }
 
+    #if component == 'oifs':
+    #    list = {
+    #        
+    #    }
+
     return list
 

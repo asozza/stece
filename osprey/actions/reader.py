@@ -12,6 +12,7 @@ import os
 import glob
 import logging
 import xarray as xr
+import cftime
 import dask
 
 from osprey.utils.folders import folders, paths

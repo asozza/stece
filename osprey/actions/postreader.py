@@ -13,6 +13,7 @@ import yaml
 import logging
 import numpy as np
 import xarray as xr
+import cftime
 import dask
 
 from osprey.utils.vardict import vardict
