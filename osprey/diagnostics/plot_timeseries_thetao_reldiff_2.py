@@ -30,20 +30,19 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    # global mean temperature merge from reference experiments
-    timeseries(expname='lfr0', startyear=1990, endyear=2010, varlabel='thetao', reader='post', color='gray', linestyle='-', label='REF')
+    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349}
 
+    # global mean temperature merge from reference experiments
     # comparison with EOF experiments
-    timeseries(expname='FE02', startyear=1990, endyear=2010, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-TS Raw')
-    timeseries(expname='FE05', startyear=1990, endyear=2010, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS Smoothed')
+    timeseries(expname='FE02', startyear=1990, endyear=2019, varlabel='thetao', reader='post', metric="reldiff", refinfo=refinfo, rescale=False, avetype="standard", timeoff=0, color='red', linestyle='-', label='EOF-TS 10y')
+    timeseries(expname='FE05', startyear=1990, endyear=2019, varlabel='thetao', reader='post', metric="reldiff", refinfo=refinfo, rescale=False, avetype="standard", timeoff=0, color='blue', linestyle='-', label='EOF-TS 30y')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
         loc='upper right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Timeseries of global mean temperature')
-
+    plt.title('Timeseries of reldiff metric of global mean temperature \n wrt REF [2390-2399] ')
 
     # Save the combined figure
     plt.savefig(figname)
@@ -56,7 +55,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='thetao-smoothed.png'
+    figname='thetao_reldiff.png'
     drawing(figname)
 
     # End timer

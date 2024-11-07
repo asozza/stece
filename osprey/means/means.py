@@ -58,7 +58,7 @@ def cumave(ydata):
 # space_mean:   space average
 #
 
-def timemean(data):
+def timemean_old(data):
     """ 
     Time average of a field 
     
@@ -71,6 +71,45 @@ def timemean(data):
 
     return ave
 
+def timemean(data, format='global'):
+    """ 
+    Time average of a field with various options
+    
+    Args:
+    data (DataArray): Input field with a time dimension.
+    format (str): Type of time averaging. Options are:
+                  - 'global': average over all time points.
+                  - 'monthly': average by month across years.
+                  - 'seasonally': average by season (DJF, MAM, JJA, SON) across years.
+                  - 'yearly': average by year.
+                                    
+    Returns:
+    DataArray: Time-averaged field based on the specified format.
+    """
+    
+    if format == 'plain':
+        ave = data
+
+    elif format == 'global':
+        # Global time average over all time points
+        ave = data.mean(dim='time')
+        
+    elif format == 'monthly':
+        # Average by month across years
+        ave = data.groupby('time.month').mean(dim='time')
+        
+    elif format == 'seasonally':
+        # Average by season (DJF, MAM, JJA, SON) across years
+        ave = data.groupby('time.season').mean(dim='time')
+        
+    elif format == 'yearly':
+        # Average by year
+        ave = data.groupby('time.year').mean(dim='time')
+
+    else:
+        raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly'.")
+    
+    return ave
 
 def globalmean(data, ndim, ztag=None, orca='ORCA2'):
     """ 
@@ -183,7 +222,7 @@ def zlayer(ztag, orca):
 # - year shifting / year gain
 #
 
-def apply_cost_function(x, x0, metric):
+def cost(x, x0, metric):
     """
     Calculate various cost functions based on the given metric.
 
@@ -230,6 +269,38 @@ def apply_cost_function(x, x0, metric):
 
     else:
         raise ValueError(f"Unknown metric: {metric}")
+
+
+def apply_cost_function(data, mdata, metric, format='global'):
+    """
+    Apply a cost function to data based on `format`.
+
+    Args:
+        data (xarray.DataArray): The current dataset.
+        mdata (xarray.DataArray): The reference dataset.
+        metric (str): The metric used to compute the cost.
+        format (str, optional): Time format ['plain', 'monthly', 'seasonally', 'yearly', 'global']
+
+    Returns:
+        xarray.DataArray: Data containing the computed cost metrics.
+    """
+
+    if (format == 'global' or format == 'plain'): 
+        cdata = cost(data, mdata, metric)
+
+    if format == 'monthly':
+        if 'time' in data.dims and 'month' in mdata.dims:
+            cdata = data.groupby("time.month").map(lambda x: cost(x, mdata.sel(month=x['time.month']), metric))
+
+    if format == 'seasonally':
+        if 'time' in data.dims and 'season' in mdata.dims:
+            cdata = data.groupby("time.season").map(lambda x: cost(x, mdata.sel(season=x['time.season']), metric))
+
+    if format == 'yearly':
+        if 'time' in data.dims and 'year' in mdata.dims:
+            cdata = data.groupby("time.year").map(lambda x: cost(x, mdata.sel(season=x['time.year']), metric))
+
+    return cdata
 
 
 def year_shift(x1, y1, x2, y2, shift_threshold=20.0):

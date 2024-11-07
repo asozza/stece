@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 from osprey.utils.folders import paths
 from osprey.utils.time import get_decimal_year
 from osprey.utils.vardict import vardict
-from osprey.means.means import cost, movave
+from osprey.means.means import apply_cost_function, movave
 from osprey.means.means import spacemean, year_shift
-from osprey.actions.reader import reader_nemo
-from osprey.actions.postreader import postreader_nemo, reader_meanfield
+from osprey.actions.reader import reader_nemo, reader_nemo_field
+from osprey.actions.postreader import postreader_nemo
 
 def _cutted(vec):
     """ Cut vector """
@@ -32,10 +32,7 @@ def _rescaled(vec):
     """ rescale by the initial value """
     return vec/vec[0]
 
-def timeseries(expname, startyear, endyear, varlabel, 
-               reader="nemo", metric="base", replace=False, 
-               rescale=False, avetype="standard", timeoff=0, 
-               color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
+def timeseries(expname, startyear, endyear, varlabel, reader="nemo", replace=False, metric="base", refinfo=None, rescale=False, avetype="standard", timeoff=0, color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
     """ 
     Graphics of timeseries 
     
@@ -68,26 +65,24 @@ def timeseries(expname, startyear, endyear, varlabel,
 
     # Read data from raw NEMO output
     if reader == "nemo":
-        data = reader_nemo(expname, startyear, endyear, grid=info['grid'])
+        data = reader_nemo_field(expname, startyear, endyear, varname)
         tvec = get_decimal_year(data['time'].values)
 
         # apply cost function
         if metric != 'base':
-            mean_data = reader_meanfield(varname=varname)
-            data = cost(data, mean_data, metric)
+            xdata = reader_nemo_field(refinfo['expname'], refinfo['startyear'], refinfo['endyear'], varname)
+            data = apply_cost_function(data, xdata, metric)
 
         # apply moving average (if needed)
-        if avetype == 'moving':       
-            vec = movave(spacemean(data, varname, info['dim'], ztag),12)                
+        if avetype == 'moving':
+            vec = movave(spacemean(data, info['dim'], ztag),12)
             tvec, vec = _cutted(tvec), _cutted(vec)
         else:
-            vec = spacemean(data, varname, info['dim'], ztag)
+            vec = spacemean(data, info['dim'], ztag)
 
     # Read post-processed data
     elif reader == "post":
-        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, 
-                               varlabel=varlabel, diagname='timeseries', 
-                               replace=replace, metric=metric)
+        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='timeseries', replace=replace, metric=metric, refinfo=refinfo)
         tvec = data['time'].values.flatten()
 
         # apply moving average

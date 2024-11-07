@@ -30,12 +30,15 @@ def get_memory_usage():
 
 def drawing(figname):
 
+    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349}
+
     # global mean temperature merge from reference experiments
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', color='gray', linestyle='-', label='REF')
+    #timeseries(expname='lfr0', startyear=1990, endyear=2039, varlabel='thetao', reader="post", metric="base", refinfo=None, rescale=False, avetype="standard", timeoff=0, color=None, linestyle='-', marker=None, label=None, ax=None, figname=None)
+    timeseries(expname='lfr0', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='gray', linestyle='-', label='REF')
 
     # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2139, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T')
-    timeseries(expname='FE02', startyear=1990, endyear=2089, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS')
+    timeseries(expname='FE02', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-TS 10y')
+    timeseries(expname='FE05', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS 30y')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
@@ -56,7 +59,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig1.png'
+    figname='thetao_FE05.png'
     drawing(figname)
 
     # End timer
