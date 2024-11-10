@@ -156,7 +156,7 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
     return data
 
 
-def reader_nemo_field(expname, startyear, endyear, varname):
+def reader_nemo_field(expname, startyear, endyear, varname, freq="1m"):
     """ 
     reader_nemo_field: function to read NEMO field 
     
@@ -179,7 +179,7 @@ def reader_nemo_field(expname, startyear, endyear, varname):
                 field[var] = info['preprocessing'][var](field[var])
         data = info['operation'](*[field[var] for var in info['dependencies']])
     else:
-        data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear, grid=info['grid'])
+        data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear, grid=info['grid'], freq=freq)
         data = data[varname]
 
     return data
