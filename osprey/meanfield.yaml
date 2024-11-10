@@ -1,8 +1,0 @@
----
-expname: 'lfr5'
-startyear: 2340
-endyear: 2349
-orca: 'ORCA2'
-grid: 'T'
-freq: '1m'
-replace: False
