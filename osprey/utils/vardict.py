@@ -23,7 +23,7 @@ def vardict(component):
     """ Dictionary of EC-Earth variables """
 
     if component == 'nemo':
-        list = {
+        varlist = {
             # T grid
             'e3t': {'dim': '3D', 
                     'grid': 'T',
@@ -269,10 +269,15 @@ def vardict(component):
                      'operation': lambda thetao, wo: thetao*wo}
         }
 
-    #if component == 'oifs':
-    #    list = {
-    #        
-    #    }
+    elif component == 'oifs':
+        varlist = {
+            'tas': {'dim': '2D',
+                    'units': 'K',
+                    'long_name': 'Near-Surface Air Temperature'}
+        }
 
-    return list
+    else:
+        raise ValueError(f"Unknown component: {component}. Valid components are nemo and oifs.")
+
+    return varlist
 
