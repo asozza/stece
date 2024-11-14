@@ -29,11 +29,22 @@ def get_memory_usage():
     return mem_info.rss / (1024 ** 2)  # Convert bytes to megabytes (MB)
 
 
-def test():
+def drawing(figname):
 
     # global mean temperature merge from reference experiments
-    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349, 'diagname': 'scalar', 'format': 'global'}
-    data = postreader_nemo(expname='lfr0', startyear=1990, endyear=2010, varlabel='thetao', diagname='timeseries', replace=True, metric='diff', refinfo=refinfo)
+    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349, 'diagname': 'timeseries', 'format': 'monthly'}
+    timeseries(expname='lfr0', startyear=1990, endyear=2009, varlabel='thetao', reader='post', replace=True, metric='base', color='red', linestyle='-', label='REF')
+    #timeseries(expname='lfr0', startyear=1990, endyear=2009, varlabel='thetao', reader='post', replace=True, metric='diff', refinfo=refinfo, color='red', linestyle='-', label='REF')
+
+    plt.legend(
+        bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
+        loc='upper right',         # Location of the legend relative to bbox_to_anchor
+        borderaxespad=0           # Padding between the legend and the plot
+    )
+    plt.title('Timeseries of global mean temperature')
+
+    # Save the combined figure
+    plt.savefig(figname)
 
     return None
 
@@ -43,7 +54,8 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    test()
+    figname='thetao2.png'
+    drawing(figname)
 
     # End timer
     end_time = time.time()

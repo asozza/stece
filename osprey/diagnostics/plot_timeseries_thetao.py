@@ -47,7 +47,6 @@ def drawing(figname):
     )
     plt.title('Timeseries of global mean temperature')
 
-
     # Save the combined figure
     plt.savefig(figname)
 

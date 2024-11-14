@@ -2,21 +2,21 @@
 # mamba env create -f environment-common.yml 
 # or if you really want to use conda
 # conda env create -f environment-common.yml
-name: stece
+#name: stece
 
 channels:
   - conda-forge
 
 dependencies:
-  - python=>3.9,<3.10
+  - python=3.10.10
   - cdo=2.4.0
   - eccodes>=2.31.0,<2.34.0 
   - ipykernel
   - numpy
   - scipy
-  - xarray=2023
+  - xarray
   - dask
-  - pandas=1.5.3
+  - pandas
   - matplotlib
   - netcdf4
   - python-cdo

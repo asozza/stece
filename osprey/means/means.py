@@ -12,6 +12,7 @@ import numpy as np
 import xarray as xr
 import cftime
 import dask
+import logging
 from scipy.interpolate import interp1d
 
 from osprey.actions.reader import elements
@@ -290,15 +291,31 @@ def apply_cost_function(data, mdata, metric, format='global'):
 
     if format == 'monthly':
         if 'time' in data.dims and 'month' in mdata.dims:
-            cdata = data.groupby("time.month").map(lambda x: cost(x, mdata.sel(month=x['time.month']), metric))
+            cdata = data.groupby("time.dt.month").map(lambda x: cost(x, mdata.sel(month=x['time.dtmonth'][0]), metric))
 
     if format == 'seasonally':
         if 'time' in data.dims and 'season' in mdata.dims:
-            cdata = data.groupby("time.season").map(lambda x: cost(x, mdata.sel(season=x['time.season']), metric))
+            if isinstance(data.time.values[0], cftime.datetime):
+                mdata_extended = data.copy(deep=True)
+                mdata_extended.values = np.zeros_like(data.values)
+                n_tiled = len(data.time) // len(mdata.season) + 1
+                mdata_tiled = np.tile(mdata.values, n_tiled)[:len(data.time)]
+                mdata_extended.values = mdata_tiled
+                diff = data - mdata_extended
+            else:
+                cdata = data.groupby("time.season").map(lambda x: cost(x, mdata.sel(season=x['time.season'][0]), metric))
 
     if format == 'yearly':
         if 'time' in data.dims and 'year' in mdata.dims:
-            cdata = data.groupby("time.year").map(lambda x: cost(x, mdata.sel(season=x['time.year']), metric))
+            if isinstance(data.time.values[0], cftime.datetime):
+                mdata_extended = data.copy(deep=True)
+                mdata_extended.values = np.zeros_like(data.values)
+                n_tiled = len(data.time) // len(mdata.year) + 1
+                mdata_tiled = np.tile(mdata.values, n_tiled)[:len(data.time)]
+                mdata_extended.values = mdata_tiled
+                diff = data - mdata_extended
+            else:
+                cdata = data.groupby("time.year").map(lambda x: cost(x, mdata.sel(season=x['time.year'][0]), metric))
 
     return cdata
 

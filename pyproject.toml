@@ -11,7 +11,7 @@ authors = [
 ]
 description = "osprey"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = "=3.10.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Intended Audience :: Science/Research",
@@ -22,11 +22,20 @@ dependencies = [
     "xarray",
     "netcdf4",
     "numba",
+    "numpy",
     "dask",
+    "pandas",
     "ruamel.yaml",
     "matplotlib",
     "cftime",
-    "nc-time-axis"
+    "nc-time-axis",
+    "ipykernel",
+    "cdo",
+    "python-cdo",
+    "scipy",
+    "eccodes",
+    "gsw",
+    "psutil"
 ]
 
 [tool.setuptools]
