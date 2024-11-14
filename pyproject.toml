@@ -11,7 +11,7 @@ authors = [
 ]
 description = "osprey"
 readme = "README.md"
-requires-python = "=3.10.10"
+requires-python = ">3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Intended Audience :: Science/Research",
@@ -29,11 +29,9 @@ dependencies = [
     "matplotlib",
     "cftime",
     "nc-time-axis",
-    "ipykernel",
     "cdo",
     "python-cdo",
     "scipy",
-    "eccodes",
     "gsw",
     "psutil"
 ]
