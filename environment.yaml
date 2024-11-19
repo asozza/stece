@@ -2,7 +2,7 @@
 # mamba env create -f environment-common.yml 
 # or if you really want to use conda
 # conda env create -f environment-common.yml
-#name: stece
+name: stece
 
 channels:
   - conda-forge
@@ -19,7 +19,6 @@ dependencies:
   - pandas
   - matplotlib
   - netcdf4
-  - python-cdo
   - ruamel.yaml
   - nc-time-axis
   - cftime

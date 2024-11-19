@@ -14,11 +14,12 @@ import numpy as np
 from copy import deepcopy
 import cftime
 import logging
+import shutil
 import xarray as xr
 
 from osprey.actions.reader import reader_nemo, reader_rebuilt 
 from osprey.actions.stabilizer import constraints
-from osprey.means.eof import project_eofs,process_data
+from osprey.means.eof import project_eofs, process_data
 from osprey.means.means import timemean
 from osprey.utils.folders import folders
 from osprey.utils.time import get_year, get_startyear, get_forecast_year
@@ -117,7 +118,9 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     varlists = {
         'thetao': ['tn', 'tb'],
         'so': ['sn', 'sb'],
-        'zos': ['sshn', 'sshb']
+        'zos': ['sshn', 'sshb'],
+        'uo': ['un', 'ub'],
+        'vo': ['vn', 'vb']
     }
 
     # create EOF
@@ -126,10 +129,21 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
         info = vardict('nemo')[varname]
 
         #run_cdo_old.merge_winter(expname, varname, startyear, endyear)
-        run_cdo.merge_winter(expname, varname, startyear, endyear)
+        run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
 
         #run_cdo_old.detrend(expname, varname, endleg)
         run_cdo.detrend(expname, varname, endleg)
+
+        # add smoothing in pre-processing
+        if smoothing:
+            infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly.nc")
+            outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly_smoothed.nc")
+            run_cdo.add_smoothing(infile, outfile)
+
+            original_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly_original.nc")   
+            shutil.copy(infile, original_file)  
+            shutil.copy(outfile, infile) 
+
 
         #run_cdo_old.get_EOF(expname, varname, endleg, window)
         run_cdo.get_EOF(expname, varname, endleg, window)
@@ -142,10 +156,13 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
 
         # retrend
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim']))
+        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
         ave = timemean(xdata[varname])
         total = field + ave
-        total = total.transpose("time", "z", "y", "x")
+        if info['dim'] == '3D':
+            total = total.transpose("time", "z", "y", "x")
+        if info['dim'] == '2D':
+            total = total.transpose("time", "y", "x")
         #total = total.expand_dims({'time': 1})
 
         # add smoothing and post-processing features
@@ -154,7 +171,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
             total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
             outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
             run_cdo.add_smoothing(infile, outfile)
-            total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, mode='post', dim=info['dim']))    
+            total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, mode='post', dim=info['dim'], grid=info['grid']))    
 
         #total = total.rename({'time': 'time_counter', 'z': 'nav_lev'})
         total['time_counter'] = rdata['time_counter']

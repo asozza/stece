@@ -30,7 +30,6 @@ dependencies = [
     "cftime",
     "nc-time-axis",
     "cdo",
-    "python-cdo",
     "scipy",
     "gsw",
     "psutil"

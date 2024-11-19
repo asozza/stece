@@ -202,7 +202,7 @@ def EOF_info(expname, varname, leg):
     return None
 
 
-def merge_winter(expname, varname, startyear, endyear):
+def merge_winter(expname, varname, startyear, endyear, grid='T'):
     """ CDO command to merge winter-only data """
 
     dirs = folders(expname)
@@ -213,7 +213,7 @@ def merge_winter(expname, varname, startyear, endyear):
     for year in range(startyear-1, endyear):
         filelist = []
         for i in range(2):
-            pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year-i}-{year-i}.nc")
+            pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_{grid}_{year-i}-{year-i}.nc")
             matching_files = glob.glob(pattern)
             filelist.extend(matching_files)
 
