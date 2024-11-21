@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 from osprey.utils.folders import paths
 from osprey.utils.time import get_decimal_year
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 from osprey.means.means import apply_cost_function, movave
 from osprey.means.means import spacemean, timemean, year_shift
 from osprey.actions.reader import reader_nemo, reader_nemo_field
@@ -64,7 +64,7 @@ def timeseries(expname, startyear, endyear, varlabel, format='plain', reader="ne
     else:
         varname, ztag = varlabel, None
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":
@@ -95,7 +95,7 @@ def timeseries(expname, startyear, endyear, varlabel, format='plain', reader="ne
     # Read post-processed data
     elif reader == "post":
         data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='timeseries', format=format, orca=orca, replace=replace, metric=metric, refinfo=refinfo)
-        tvec = data[data.dims[0]].values.flatten()
+        tvec = data[data[varname].dims[0]].values.flatten()
 
         # apply moving average
         if (avetype == 'moving' and format == 'plain'):
@@ -172,7 +172,7 @@ def timeseries_two(expname1, expname2, startyear, endyear, varlabel,
     else:
         varname, ztag = varlabel, None
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # read data from raw NEMO output
     if reader == 'nemo':
@@ -267,7 +267,7 @@ def timeseries_yearshift(expname1, startyear1, endyear1, expname2, startyear2, e
     else:
         varname, ztag = varlabel, None
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":
@@ -375,7 +375,7 @@ def timeseries_yearshift_mean(expname1, startyear1, endyear1, expname2, startyea
     else:
         varname, ztag = varlabel, None
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":
@@ -497,7 +497,7 @@ def timeseries_with_markers(expname, startyear, endyear, varlabel,
     else:
         varname, ztag = varlabel, None
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":

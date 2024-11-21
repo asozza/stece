@@ -16,7 +16,7 @@ import xarray as xr
 import cftime
 import dask
 
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 from osprey.utils.folders import folders
 from osprey.utils.time import get_leg, get_decimal_year
 from osprey.utils.utils import error_handling_decorator
@@ -33,49 +33,6 @@ dask.config.set({'array.optimize_blockwise': True})
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Dictionary of abbreviations for diagnostics, format and metric
-def abbr_dict(entry_type):
-    """ Dictionary of abbreviations for diagnostics, format and metric """
-
-    if entry_type == 'diagname':
-        options = {
-            'scalar': 'scalar',
-            'timeseries': 'series',
-            'profile': 'prof',
-            'hovmoller': 'hovm',
-            'map': 'map',
-            'field': 'fld',
-            'pdf': 'pdf'
-        }
-
-    elif entry_type == 'format': 
-        options = {
-            'plain': 'p',
-            'global': 'g',
-            'yearly': 'y',
-            'monthly': 'm',
-            'seasonally': 's'
-        }
-            
-    elif entry_type == 'metric': 
-        options = {
-            'base': 'B',
-            'diff': 'D',
-            'var': 'V',
-            'rel': 'R'
-    }
-        
-    elif entry_type == 'use_cft':
-        options = {
-            True: 'cft',
-            False: 'dyt'
-        }        
-
-    else:
-        raise ValueError(f"Unknown entry: {entry_type}. Valid entries are diagname, format, metric and use_cft.")
-
-    return options
 
 
 ##########################################################################################
@@ -98,16 +55,16 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, use
     dirs = folders(expname)
 
     # load abbrevations
-    dflag = abbr_dict('diagname')[diagname]
-    fflag = abbr_dict('format')[format]
-    mflag = abbr_dict('metric')[metric]
-    tflag = abbr_dict('use_cft')[use_cft]
+    dflag = catalogue.abbrevations('diagname')[diagname]
+    fflag = catalogue.abbrevations('format')[format]
+    mflag = catalogue.abbrevations('metric')[metric]
+    tflag = catalogue.abbrevations('use_cft')[use_cft]
 
     # Build filename
     filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{dflag}_{fflag}_{tflag}"
     if metric != 'base':
-        rdflag = abbr_dict('diagname')[refinfo['diagname']]
-        rfflag = abbr_dict('format')[refinfo['format']]
+        rdflag = catalogue.abbrevations('diagname')[refinfo['diagname']]
+        rfflag = catalogue.abbrevations('format')[refinfo['format']]
         filename += f"_{mflag}_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{rdflag}_{rfflag}"
     filename = os.path.join(dirs['post'], f"{filename}.nc")
 
@@ -137,27 +94,32 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, forma
     """
 
     dirs = folders(expname)
+    cinfo = catalogue.coordinates(use_cft)
 
     # load abbrevations
-    dflag = abbr_dict('diagname')[diagname]
-    fflag = abbr_dict('format')[format]
-    mflag = abbr_dict('metric')[metric]
-    tflag = abbr_dict('use_cft')[use_cft]
+    dflag = catalogue.abbrevations('diagname')[diagname]
+    fflag = catalogue.abbrevations('format')[format]
+    mflag = catalogue.abbrevations('metric')[metric]
+    tflag = catalogue.abbrevations('use_cft')[use_cft]
 
     # Build filename
     filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{dflag}_{fflag}_{tflag}"
     if metric != 'base':
-        rdflag = abbr_dict('diagname')[refinfo['diagname']]
-        rfflag = abbr_dict('format')[refinfo['format']]
+        rdflag = catalogue.abbrevations('diagname')[refinfo['diagname']]
+        rfflag = catalogue.abbrevations('format')[refinfo['format']]
         filename += f"_{mflag}_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{rdflag}_{rfflag}"
     filename = os.path.join(dirs['post'], f"{filename}.nc")
 
     # write file
     logging.info('File to be saved at %s', filename)
-    if use_cft:
-        data.to_netcdf(filename, mode='w', use_cftime=True)
-    else:
-        data.to_netcdf(filename, mode='w')
+
+    if ('time' in data and use_cft):
+        data['time'].encoding = {
+            "units": data['time'].attrs.pop("units", cinfo['time']),
+            "calendar": data['time'].attrs.pop("calendar", cinfo['time'])
+        }
+
+    data.to_netcdf(filename, mode='w')
 
     return None
 
@@ -187,7 +149,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
         ztag=None
 
     dirs = folders(expname)
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     ## try to read averaged data
     try:
@@ -265,7 +227,8 @@ def averaging(data, varlabel, diagname, format, orca, use_cft=False):
         varname=varlabel
         ztag=None
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
+    cinfo = catalogue.coordinates(use_cft)
 
     # scalar / single-valued
     if diagname == 'scalar' or (diagname == 'timeseries' and format == 'global'):
@@ -277,45 +240,29 @@ def averaging(data, varlabel, diagname, format, orca, use_cft=False):
             attrs = {'description': 'ECE4/NEMO global averaged scalar'})
 
     # timeseries
-    if (diagname  == 'timeseries' and format != 'global'):
+    if diagname == 'timeseries' and format != 'global':
 
         if format == 'plain':
-            
-            time_axis = 'T'
-            time_name = 'time'
-            time_calendar = 'gregorian'
-            time_units = 'seconds since 1990-01-01 00:00:00'
-            time_origin = '1900-01-01 00:00:00'
-            if use_cft:
-                tvec = data['time'].values  # Preserve as cftime
-            else:
-                tvec = get_decimal_year(data['time'].values)  # Convert to float64            
+            tvec = (data['time'].values if use_cft else get_decimal_year(data['time'].values))
 
         elif format == 'monthly':
-            time_coord_name = 'month'
-            time_units_name = 'months'
             tvec = data['time.month'].values[:12]
 
         elif format == 'seasonally':
-            time_coord_name = 'season'
-            time_units_name = 'seasons'
             tvec = data['time.season'].values[:4]
 
         elif format == 'yearly':
-            time_coord_name = 'year'
-            time_units_name = 'years since 1990-01-01 00:00:00'
             tvec = data['time.year'].values[::12]
 
-        vec = timemean(data=data, format=format)        
+        vec = timemean(data=data, format=format)
         vec = spacemean(data=vec, ndim=info['dim'], ztag=ztag, orca=orca)
         if format != 'plain' and 'time' in vec:
             vec = vec.drop_vars('time')
+
         ds = xr.Dataset({
-            time_coord_name: xr.DataArray(data = tvec, dims = [vec.dims[0]], coords = {vec.dims[0]: tvec}, 
-                            attrs = {'axis' : time_axis, 'standard_name' : vec.dims[0], 'long_name' : vec.dims[0],
-                                     'calendar': time_calendar, 'units' : time_units}), 
-            varlabel : xr.DataArray(data = vec, dims = [vec.dims[0]], coords = {vec.dims[0]: tvec}, 
-                            attrs  = {'units' : info['units'], 'long_name' : info['long_name']})},
+            vec.dims[0]: xr.DataArray(data=tvec, dims=[vec.dims[0]], coords={vec.dims[0]: tvec}, attrs=cinfo[vec.dims[0]]), 
+            varlabel : xr.DataArray(data=vec, dims=[vec.dims[0]], coords={vec.dims[0]: tvec}, 
+                            attrs  = {'units': info['units'], 'long_name': info['long_name']})},
             attrs = {'description': 'ECE4/NEMO averaged timeseries'})
 
     # vertical profile

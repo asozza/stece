@@ -11,7 +11,6 @@ Date: Mar 2024
 import os
 import subprocess
 import numpy as np
-from copy import deepcopy
 import cftime
 import logging
 import shutil
@@ -24,7 +23,7 @@ from osprey.means.means import timemean
 from osprey.utils.folders import folders
 from osprey.utils.time import get_year, get_startyear, get_forecast_year
 from osprey.utils import run_cdo
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -126,7 +125,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     # create EOF
     for varname in varnames:
 
-        info = vardict('nemo')[varname]
+        info = catalogue.observables('nemo')[varname]
 
         #run_cdo_old.merge_winter(expname, varname, startyear, endyear)
         run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])

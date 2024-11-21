@@ -16,7 +16,7 @@ import cftime
 import dask
 
 from osprey.utils.folders import folders, paths
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -167,7 +167,7 @@ def reader_nemo_field(expname, startyear, endyear, varname, freq="1m"):
 
     """
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Check for 'dependencies' if dealing with derived variable 
     if 'dependencies' in info: 
