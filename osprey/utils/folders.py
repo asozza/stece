@@ -25,6 +25,10 @@ def folders(expname):
         'perm': os.path.join("/perm/itas/ece4", expname, "nemo")
     }
 
+    # Create 'post' folder if it doesn't exist
+    if not os.path.exists(dirs['post']):
+        os.makedirs(dirs['post'])
+
     return dirs
 
 def paths():

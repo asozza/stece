@@ -19,7 +19,7 @@ from osprey.utils.folders import folders
 from osprey.utils.utils import run_bash_command
 from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
 from osprey.utils.time import get_leg, get_year
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 from osprey.actions.reader import reader_nemo
 
 # Set up logging
@@ -122,7 +122,7 @@ def get_EOF(expname, varname, leg, window):
 
     # Get the directories and file paths
     dirs = folders(expname)
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Define file paths for anomaly, covariance, and pattern output files
     flda = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_anomaly.nc")

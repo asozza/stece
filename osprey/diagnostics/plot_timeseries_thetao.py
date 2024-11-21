@@ -34,11 +34,16 @@ def drawing(figname):
 
     # global mean temperature merge from reference experiments
     #timeseries(expname='lfr0', startyear=1990, endyear=2039, varlabel='thetao', reader="post", metric="base", refinfo=None, rescale=False, avetype="standard", timeoff=0, color=None, linestyle='-', marker=None, label=None, ax=None, figname=None)
-    timeseries(expname='lfr0', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='gray', linestyle='-', label='REF')
+    timeseries(expname='lfr0', startyear=1990, endyear=2400, varlabel='thetao', reader='post', timeoff=0, color='gray', linestyle='-', label='REF')
+    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel='thetao', reader='post', timeoff=410, color='gray', linestyle='-')
 
     # comparison with EOF experiments
-    timeseries(expname='FE02', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-TS 10y')
-    timeseries(expname='FE05', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS 30y')
+    timeseries(expname='FE01', startyear=1990, endyear=2210, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T 10y')
+    timeseries(expname='FE02', startyear=1990, endyear=2160, varlabel='thetao', reader='post', color='orange', linestyle='-', label='EOF-TS 10y')
+    timeseries(expname='FE03', startyear=1990, endyear=2090, varlabel='thetao', reader='post', color='green', linestyle='-', label='EOF-TS 15y')
+    timeseries(expname='FE04', startyear=1990, endyear=2030, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS 20y')
+    #timeseries(expname='FE05', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='violet', linestyle='-', label='EOF-TS 30y')
+
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
@@ -58,7 +63,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='thetao_FE05.png'
+    figname='thetao_FE_2.png'
     drawing(figname)
 
     # End timer

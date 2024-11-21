@@ -125,7 +125,7 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, forma
 
 
 # MAIN FUNCTION
-def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='plain', orca='ORCA2', use_cft=False, replace=False, metric='base', refinfo=None):
+def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='plain', orca='ORCA2', use_cft=True, replace=False, metric='base', refinfo=None):
     """ 
     Postreader_nemo: main function for reading averaged data
     
@@ -208,7 +208,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
     return data
 
 
-def averaging(data, varlabel, diagname, format, orca, use_cft=False):
+def averaging(data, varlabel, diagname, format, orca, use_cft=True):
     """ 
     Averaging: Perform different flavours of averaging 
     

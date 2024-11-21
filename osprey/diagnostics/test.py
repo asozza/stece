@@ -33,7 +33,7 @@ def drawing(figname):
 
     # global mean temperature merge from reference experiments
     refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349, 'diagname': 'timeseries', 'format': 'monthly'}
-    timeseries(expname='lfr0', startyear=1990, endyear=2009, varlabel='thetao', reader='post', replace=True, metric='base', color='red', linestyle='-', label='REF')
+    timeseries(expname='FE01', startyear=1990, endyear=2279, varlabel='thetao', reader='post', replace=True, metric='base', color='red', linestyle='-', label='REF')
     #timeseries(expname='lfr0', startyear=1990, endyear=2009, varlabel='thetao', reader='post', replace=True, metric='diff', refinfo=refinfo, color='red', linestyle='-', label='REF')
 
     plt.legend(
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='thetao2.png'
+    figname='thetao3.png'
     drawing(figname)
 
     # End timer

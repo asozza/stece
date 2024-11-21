@@ -20,7 +20,7 @@ from osprey.utils.time import get_leg
 from osprey.utils import run_cdo_old
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import globalmean
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 
 def _forecast_xarray(foreyear):
     """Get the xarray for the forecast time"""
@@ -146,7 +146,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
     
     """
 
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     print(dir)
     filename = os.path.join(dir, f"{varname}_pattern.nc")

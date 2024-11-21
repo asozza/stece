@@ -291,7 +291,7 @@ def apply_cost_function(data, mdata, metric, format='global'):
 
     if format == 'monthly':
         if 'time' in data.dims and 'month' in mdata.dims:
-            cdata = data.groupby("time.dt.month").map(lambda x: cost(x, mdata.sel(month=x['time.dtmonth'][0]), metric))
+            cdata = data.groupby("time.dt.month").map(lambda x: cost(x, mdata.sel(month=x['time.dt.month'][0]), metric))
 
     if format == 'seasonally':
         if 'time' in data.dims and 'season' in mdata.dims:
