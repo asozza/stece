@@ -22,7 +22,7 @@ from osprey.utils.time import get_leg, get_decimal_year
 from osprey.utils.utils import error_handling_decorator
 from osprey.utils.utils import remove_existing_file
 
-from osprey.means.means import spacemean, timemean
+from osprey.means.means import globalmean, spacemean, timemean
 from osprey.means.means import apply_cost_function
 
 from osprey.actions.reader import reader_rebuilt, reader_nemo_field
@@ -34,23 +34,11 @@ dask.config.set({'array.optimize_blockwise': True})
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# dictionary of months by seasons
-season_months = {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]}
-
-def _update_description(data, refinfo):
-
-    description = data.attrs.get('description', 'No description')  # Recupera la descrizione esistente o usa un default
-    if 'refinfo' in locals() and isinstance(refinfo, dict):  # Controlla se refinfo esiste
-        refinfo_str = ', '.join([f"{key}: {value}" for key, value in refinfo.items()])
-        description += f" ({refinfo_str})"
-    data.attrs['description'] = description
-
-    return data
 
 ##########################################################################################
 # Reader for averaged data
 
-def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, metric):
+def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, use_cft, metric, refinfo=None):
     """ 
     Reader of averaged data 
     
@@ -58,21 +46,39 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, met
     expname: experiment name
     startyear,endyear: time window
     varlabel: variable label (varname + ztag)
-    diagname: diagnostics name [series, prof, hovm, map, fld, pdf]
+    diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf]
     format: time format [plain, global, monthly, seasonally, yearly]
     metric: tag indicating the type of cost function [base, diff, var, rel, ...]
     
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['post'], f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}.nc")
+
+    # load abbrevations
+    dflag = catalogue.abbrevations('diagname')[diagname]
+    fflag = catalogue.abbrevations('format')[format]
+    mflag = catalogue.abbrevations('metric')[metric]
+    tflag = catalogue.abbrevations('use_cft')[use_cft]
+
+    # Build filename
+    filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{dflag}_{fflag}_{tflag}"
+    if metric != 'base':
+        rdflag = catalogue.abbrevations('diagname')[refinfo['diagname']]
+        rfflag = catalogue.abbrevations('format')[refinfo['format']]
+        filename += f"_{mflag}_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{rdflag}_{rfflag}"
+    filename = os.path.join(dirs['post'], f"{filename}.nc")
+
+    # open file
     logging.info('File to be loaded %s', filename)
-    data = xr.open_dataset(filename, use_cftime=True)
-    
+    if use_cft:    
+        data = xr.open_dataset(filename, use_cftime=True)
+    else:
+        data = xr.open_dataset(filename)
+
     return data
 
 
-def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, format, metric):
+def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, format, use_cft, metric, refinfo=None):
     """ 
     Writer of averaged data 
     
@@ -81,22 +87,45 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, forma
     expname: experiment name
     startyear,endyear: time window
     varlabel: variable label (varname + ztag)
-    diagname: diagnostics name [series, prof, hovm, map, fld, pdf]
+    diagname: diagnostics name [timeseries, profile, hovmoller, map, field, pdf]
     format: time format [plain, global, monthly, seasonally, yearly]
     metric: tag indicating the type of cost function [base, diff, var, rel, ...]
     
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['post'], f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}.nc")
-    logging.info('File to be loaded %s', filename)
-    data.to_netcdf(filename, mode='w', engine='netcdf4', format='NETCDF4')
+    cinfo = catalogue.coordinates(use_cft)
+
+    # load abbrevations
+    dflag = catalogue.abbrevations('diagname')[diagname]
+    fflag = catalogue.abbrevations('format')[format]
+    mflag = catalogue.abbrevations('metric')[metric]
+    tflag = catalogue.abbrevations('use_cft')[use_cft]
+
+    # Build filename
+    filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{dflag}_{fflag}_{tflag}"
+    if metric != 'base':
+        rdflag = catalogue.abbrevations('diagname')[refinfo['diagname']]
+        rfflag = catalogue.abbrevations('format')[refinfo['format']]
+        filename += f"_{mflag}_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{rdflag}_{rfflag}"
+    filename = os.path.join(dirs['post'], f"{filename}.nc")
+
+    # write file
+    logging.info('File to be saved at %s', filename)
+
+    if ('time' in data and use_cft):
+        data['time'].encoding = {
+            "units": data['time'].attrs.pop("units", cinfo['time']),
+            "calendar": data['time'].attrs.pop("calendar", cinfo['time'])
+        }
+
+    data.to_netcdf(filename, mode='w')
 
     return None
 
 
 # MAIN FUNCTION
-def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='plain', orca='ORCA2', replace=False, metric='base', refinfo=None):
+def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='plain', orca='ORCA2', use_cft=True, replace=False, metric='base', refinfo=None):
     """ 
     Postreader_nemo: main function for reading averaged data
     
@@ -104,7 +133,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
     expname: experiment name
     startyear,endyear: time window
     varlabel: variable label (varname + ztag)
-    diagname: diagnostics name [series, prof, hovm, map, fld, pdf]
+    diagname: diagnostics name [scalar, timeseries, profile, hovmoller, map, field, pdf]
     format: time format [plain, global, monthly, seasonally, yearly]
     orca: ORCA configuration [ORCA2, eORCA1]
     replace: replace existing averaged file [False or True]
@@ -125,22 +154,19 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
     ## try to read averaged data
     try:
         if not replace:
-            data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric)
+            data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, use_cft=use_cft, metric=metric)
             logging.info('Averaged data found.')
             return data 
         else:
             # When replace is True, skip checking for the file and recreate it
             raise FileNotFoundError  # Trigger the exception deliberately to skip reading of averaged file
     except FileNotFoundError:
-        if replace:
-            logging.info('Averaged data to be replaced. Creating new file ...')
-        else:
-            logging.info('Averaged data not found. Creating new file ...')
+        logging.info('Averaged data not found or replace is True. Creating new file ...')
 
     ## otherwise read original data and perform averaging
     ds = reader_nemo_field(expname=expname, startyear=startyear, endyear=endyear, varname=varname)
-    data = averaging(data=ds, varlabel=varlabel, diagname=diagname, format=format, orca=orca)
-    writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric='base')
+    data = averaging(data=ds, varlabel=varlabel, diagname=diagname, format=format, orca=orca, use_cft=use_cft)
+    writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, use_cft=use_cft, metric='base')
 
     if metric == 'base':
         return data
@@ -156,44 +182,40 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
                 # When replace is True, skip checking for the file and recreate it
                 raise FileNotFoundError  # Trigger the exception deliberately to skip reading of averaged file
         except FileNotFoundError:
-            if replace:
-                logging.info('Averaged reference data to be replaced. Creating new file ...')
-            else:
-                logging.info('Averaged reference data not found. Creating new file ...')
+            logging.info('Averaged reference data not found or replace is True. Creating new file ...')
             xds = reader_nemo_field(expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], varname=varname)
-            mds = averaging(data=xds, varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], orca=orca)
+            mds = averaging(data=xds, varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], orca=orca, use_cft=use_cft)
             writer_averaged(data=mds, expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], 
-                            varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], metric='base')
+                            varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], use_cft=use_cft, metric='base')
 
         # apply cost function
         if refinfo['diagname'] == 'field':
 
             # apply cost function first and averaging again afterwards
             data = apply_cost_function(data, mds, metric, format=refinfo['format'])    
-            data = averaging(data=data, varlabel=varlabel, diagname=diagname, format=format, orca=orca)
+            data = averaging(data=data, varlabel=varlabel, diagname=diagname, format=format, orca=orca, use_cft=use_cft)
 
         else:
 
             # apply cost function to averaged data
             data = apply_cost_function(data, mds, metric, format=refinfo['format'])               
-            data = _update_description(data, refinfo)
 
-        writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric)
+        writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, use_cft=use_cft, metric=metric, refinfo=refinfo)
 
     # Now you can read
-    data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric)
+    data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, use_cft=use_cft, metric=metric, refinfo=refinfo)
     
     return data
 
 
-def averaging(data, varlabel, diagname, format, orca):
+def averaging(data, varlabel, diagname, format, orca, use_cft=True):
     """ 
     Averaging: Perform different flavours of averaging 
     
     Args:
     data: data array of a single field
     varlabel: variable label (varname + ztag)
-    diagname: diagnostics name [scalar, series, prof, hovm, map, fld, pdf]
+    diagname: diagnostics name [scalar, timeseries, profile, hovmoller, map, field, pdf]
     format: time format [plain, global, monthly, seasonally, yearly]
     orca: ORCA configuration <ORCA2, eORCA1>
     
@@ -206,60 +228,51 @@ def averaging(data, varlabel, diagname, format, orca):
         ztag=None
 
     info = catalogue.observables('nemo')[varname]
-    #cinfo = catalogue.coordinates('nemo')
+    cinfo = catalogue.coordinates(use_cft)
 
     # scalar / single-valued
     if diagname == 'scalar' or (diagname == 'timeseries' and format == 'global'):
-        
-        ds = timemean(data=data, format='global')
-        ds = spacemean(data=ds, ndim=info['dim'], ztag=ztag, orca=orca)
-        
+        vec = timemean(data=data, format='global')
+        vec = spacemean(data=vec, ndim=info['dim'], ztag=ztag, orca=orca)
         ds = xr.Dataset({
-            varlabel : xr.DataArray(data = ds, dims = [], coords = {},
+            varlabel : xr.DataArray(data = vec, dims = [], coords = {},
                             attrs  = {'units' : info['units'], 'long_name' : info['long_name']})},
             attrs = {'description': 'ECE4/NEMO global averaged scalar'})
 
     # timeseries
     if diagname == 'timeseries' and format != 'global':
 
-        ds = timemean(data=data, format=format)
-        ds = spacemean(data=ds, ndim=info['dim'], ztag=ztag, orca=orca)
+        if format == 'plain':
+            tvec = (data['time'].values if use_cft else get_decimal_year(data['time'].values))
 
-        if format == 'yearly':
-                dates = [cftime.DatetimeGregorian(year, 7, 1, 0, 0, 0, has_year_zero=False) for year in ds['year'].values]
-                ds = xr.DataArray(data=ds, dims=["time"], coords={"time": dates})
+        elif format == 'monthly':
+            tvec = data['time.month'].values[:12]
 
-        if format == 'monthly':
-            last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
-            ds = xr.DataArray(data=ds, dims=["time"], coords={"time": dates})
+        elif format == 'seasonally':
+            tvec = data['time.season'].values[:4]
 
-        if format == 'seasonally':        
-            last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
-            values = []
-            for month in range(1, 13):
-                for season, months in season_months.items():
-                    if month in months:
-                        values.append(ds.sel(season=season).values)
-                        break 
-            ds = xr.DataArray(data=values, dims=["time"], coords={"time": dates})
+        elif format == 'yearly':
+            tvec = data['time.year'].values[::12]
+
+        vec = timemean(data=data, format=format)
+        vec = spacemean(data=vec, ndim=info['dim'], ztag=ztag, orca=orca)
+        if format != 'plain' and 'time' in vec:
+            vec = vec.drop_vars('time')
 
         ds = xr.Dataset({
-                varlabel : xr.DataArray(data=ds, dims=[ds.dims[0]], coords={ds.dims[0]: ds['time']}, 
-                                        attrs  = {'units': info['units'], 'long_name': info['long_name']})}, 
-                attrs = {'description': 'ECE4/NEMO averaged timeseries'})
+            vec.dims[0]: xr.DataArray(data=tvec, dims=[vec.dims[0]], coords={vec.dims[0]: tvec}, attrs=cinfo[vec.dims[0]]), 
+            varlabel : xr.DataArray(data=vec, dims=[vec.dims[0]], coords={vec.dims[0]: tvec}, 
+                            attrs  = {'units': info['units'], 'long_name': info['long_name']})},
+            attrs = {'description': 'ECE4/NEMO averaged timeseries'})
 
     # vertical profile
     if (diagname == 'profile' and info['dim'] == '3D'):
-        
         zvec = data['z'].values.flatten()
         vec = timemean(data=data, format='global')
         vec = spacemean(data=vec, ndim='2D', ztag=ztag, orca=orca)
-
         ds = xr.Dataset({
             'z': xr.DataArray(data = zvec, dims = ['z'], coords = {'z': zvec}, 
-                              attrs = {'units' : 'm', 'long_name' : 'depth'}), 
+                                 attrs = {'units' : 'm', 'long_name' : 'depth'}), 
             varname : xr.DataArray(data = vec, dims = ['z'], coords = {'z': zvec}, 
                                    attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO averaged profile'})
@@ -269,7 +282,10 @@ def averaging(data, varlabel, diagname, format, orca):
 
         if format == 'plain':
             time_coord_name = 'time'
-            tvec = data['time'].values  # Preserve as cftime       
+            if use_cft:
+                tvec = data['time'].values  # Preserve as cftime
+            else:
+                tvec = get_decimal_year(data['time'].values)  # Convert to float64            
 
         elif format == 'monthly':
             time_coord_name = 'month'

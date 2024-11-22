@@ -284,82 +284,38 @@ def observables(component):
     return varlist
 
 
-def coordinates(use_cft):
+def coordinates(component):
     """ Dictionary of coordinates in EC-Earth """
 
-    coordlist = {
-        
-        "time": {"axis": "T", 
-                 "standard_name": "time", 
-                 "long_name": "time", 
-                 "calendar": "gregorian", 
-                 "units": "seconds since 1990-01-01 00:00:00" if use_cft else "years since 1990.00", 
-                 "origin": "1990-01-01 00:00:00" if use_cft else "1990.00"},
-        "month": {"standard_name": "month",
-                 "long_name": "month",                 
-                 "units": "months"},
-        "season": {"standard_name": "season",
-                 "long_name": "season",                 
-                 "units": "seasons"},
-        "year": {"standard_name": "year",
-                 "long_name": "year",                 
-                 "units": "years",
-                 "origin": "1990"},
-        "lat": {"standard_name": "latitude",
-                "long_name": "latitude",
-                "units": "deg"},
-        "lon": {"standard_name": "longitude",
-                "long_name": "longitude",
-                "units": "deg"},
-        "z": {"standard_name": "depth",
-              "long_name": "depth",
-              "units": "m",
-              "positive": "up"}
-
-    }
+    if component == 'nemo':
+        coordlist = {        
+            "time": {"axis": "T", 
+                     "standard_name": "time", 
+                     "long_name": "time", 
+                     "calendar": "gregorian", 
+                     "units": "seconds since 1990-01-01 00:00:00", 
+                     "time_origin": "1990-01-01 00:00:00"},
+            "month": {"standard_name": "month",
+                     "long_name": "month",                 
+                     "units": "months"},
+            "season": {"standard_name": "season",
+                     "long_name": "season",                 
+                     "units": "seasons"},
+            "year": {"standard_name": "year",
+                     "long_name": "year",                 
+                     "units": "years",
+                     "origin": "1990"},
+            "lat": {"standard_name": "latitude",
+                    "long_name": "latitude",
+                    "units": "deg"},
+            "lon": {"standard_name": "longitude",
+                    "long_name": "longitude",
+                    "units": "deg"},
+            "z": {"standard_name": "depth",
+                  "long_name": "depth",
+                  "units": "m",
+                  "positive": "up"}
+        }
 
     return coordlist
 
-
-# Dictionary of abbreviations for diagnostics, format and metric
-def abbrevations(entry_type):
-    """ Dictionary of abbreviations for diagnostics, format and metric """
-
-    if entry_type == 'diagname':
-        options = {
-            'scalar': 'scalar',
-            'timeseries': 'series',
-            'profile': 'prof',
-            'hovmoller': 'hovm',
-            'map': 'map',
-            'field': 'fld',
-            'pdf': 'pdf'
-        }
-
-    elif entry_type == 'format': 
-        options = {
-            'plain': 'p',
-            'global': 'g',
-            'yearly': 'y',
-            'monthly': 'm',
-            'seasonally': 's'
-        }
-            
-    elif entry_type == 'metric': 
-        options = {
-            'base': 'B',
-            'diff': 'D',
-            'var': 'V',
-            'rel': 'R'
-    }
-        
-    elif entry_type == 'use_cft':
-        options = {
-            True: 'cft',
-            False: 'dyt'
-        }        
-
-    else:
-        raise ValueError(f"Unknown entry: {entry_type}. Valid entries are diagname, format, metric and use_cft.")
-
-    return options

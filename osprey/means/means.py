@@ -19,6 +19,7 @@ from osprey.actions.reader import elements
 
 #dask.config.set({'array.optimize_blockwise': True})
 
+
 def flatten_to_triad(m, nj, ni):
     """ Recover triad indexes from flatten array length """
 
@@ -59,19 +60,6 @@ def cumave(ydata):
 # space_mean:   space average
 #
 
-def timemean_old(data):
-    """ 
-    Time average of a field 
-    
-    Args:
-    data (DataArray): field
-
-    """
-
-    ave = data.mean(dim=['time'])
-
-    return ave
-
 def timemean(data, format='global'):
     """ 
     Time average of a field with various options
@@ -110,36 +98,6 @@ def timemean(data, format='global'):
     else:
         raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly'.")
     
-    return ave
-
-def globalmean(data, ndim, ztag=None, orca='ORCA2'):
-    """ 
-    Global average of a field 
-    
-    Args:
-    data (DataArray): field
-    ndim (string): dimensions <'1D','2D','3D'>
-    ztag (string): tag for sublayers <mix,pyc,aby>
-    orca (string): ORCA resolution <ORCA2,eORCA...>
-    
-    """
-
-    #expname = get_expname(data)
-    df = elements(orca)
-    if ndim == '3D':
-        ave = data.weighted(df['V']).mean(dim=['time', 'z', 'y', 'x'])
-        if ztag != None:
-            z1,z2 = zlayer(ztag, orca)
-            subvol = df['V'].isel(z=slice(z1,z2))
-            subvar = data.isel(z=slice(z1,z2))
-            ave = subvar.weighted(subvol).mean(dim=['time', 'z', 'y', 'x'])
-    elif ndim == '2D':
-        ave = data.weighted(df['S']).mean(dim=['time', 'y', 'x'])
-    elif ndim == '1D':
-        ave = data.weighted(df['z']).mean(dim=['time', 'z'])
-    else:
-        raise ValueError(" Invalid dimensions ")
-
     return ave
 
 
