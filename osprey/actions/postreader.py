@@ -18,7 +18,7 @@ import dask
 
 from osprey.utils import catalogue
 from osprey.utils.folders import folders
-from osprey.utils.time import get_leg, get_decimal_year
+from osprey.utils.time import get_leg
 from osprey.utils.utils import error_handling_decorator
 from osprey.utils.utils import remove_existing_file
 
@@ -42,7 +42,7 @@ def _update_description(data, refinfo):
     description = data.attrs.get('description', 'No description')  # Recupera la descrizione esistente o usa un default
     if 'refinfo' in locals() and isinstance(refinfo, dict):  # Controlla se refinfo esiste
         refinfo_str = ', '.join([f"{key}: {value}" for key, value in refinfo.items()])
-        description += f" ({refinfo_str})"
+        description += f" {refinfo_str}"
     data.attrs['description'] = description
 
     return data
@@ -50,7 +50,7 @@ def _update_description(data, refinfo):
 ##########################################################################################
 # Reader for averaged data
 
-def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, metric):
+def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, metric, refinfo):
     """ 
     Reader of averaged data 
     
@@ -65,14 +65,19 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, met
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['post'], f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}.nc")
+
+    filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}"
+    if metric != 'base':
+        filename += f"_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{refinfo['diagname']}_{refinfo['format']}"
+    filename = os.path.join(dirs['post'], f"{filename}.nc")
+
     logging.info('File to be loaded %s', filename)
     data = xr.open_dataset(filename, use_cftime=True)
     
     return data
 
 
-def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, format, metric):
+def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, format, metric, refinfo):
     """ 
     Writer of averaged data 
     
@@ -88,7 +93,11 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, forma
     """
 
     dirs = folders(expname)
-    filename = os.path.join(dirs['post'], f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}.nc")
+    filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}"
+    if metric != 'base':
+        filename += f"_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{refinfo['diagname']}_{refinfo['format']}"
+    filename = os.path.join(dirs['post'], f"{filename}.nc")
+
     logging.info('File to be loaded %s', filename)
     data.to_netcdf(filename, mode='w', engine='netcdf4', format='NETCDF4')
 
@@ -125,7 +134,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
     ## try to read averaged data
     try:
         if not replace:
-            data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric)
+            data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric, refinfo=refinfo)
             logging.info('Averaged data found.')
             return data 
         else:
@@ -140,7 +149,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
     ## otherwise read original data and perform averaging
     ds = reader_nemo_field(expname=expname, startyear=startyear, endyear=endyear, varname=varname)
     data = averaging(data=ds, varlabel=varlabel, diagname=diagname, format=format, orca=orca)
-    writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric='base')
+    writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric='base', refinfo=None)
 
     if metric == 'base':
         return data
@@ -150,7 +159,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
         try:
             if not replace:
                 mds = reader_averaged(expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], 
-                                      varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], metric='base')
+                                      varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], metric='base', refinfo=None)
                 logging.info('Averaged reference data found.')
             else:
                 # When replace is True, skip checking for the file and recreate it
@@ -163,25 +172,25 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='pla
             xds = reader_nemo_field(expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], varname=varname)
             mds = averaging(data=xds, varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], orca=orca)
             writer_averaged(data=mds, expname=refinfo['expname'], startyear=refinfo['startyear'], endyear=refinfo['endyear'], 
-                            varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], metric='base')
+                            varlabel=varlabel, diagname=refinfo['diagname'], format=refinfo['format'], metric='base', refinfo=None)
 
         # apply cost function
         if refinfo['diagname'] == 'field':
 
             # apply cost function first and averaging again afterwards
-            data = apply_cost_function(data, mds, metric, format=refinfo['format'])    
+            data = apply_cost_function(data, mds, metric, format=format, format_ref=refinfo['format'])    
             data = averaging(data=data, varlabel=varlabel, diagname=diagname, format=format, orca=orca)
 
         else:
 
             # apply cost function to averaged data
-            data = apply_cost_function(data, mds, metric, format=refinfo['format'])               
+            data = apply_cost_function(data, mds, metric, format=format, format_ref=refinfo['format'])               
             data = _update_description(data, refinfo)
 
-        writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric)
+        writer_averaged(data=data, expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric, refinfo=refinfo)
 
     # Now you can read
-    data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric)
+    data = reader_averaged(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname=diagname, format=format, metric=metric, refinfo=refinfo)
     
     return data
 
@@ -234,7 +243,7 @@ def averaging(data, varlabel, diagname, format, orca):
             dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
             ds = xr.DataArray(data=ds, dims=["time"], coords={"time": dates})
 
-        if format == 'seasonally':        
+        if format == 'seasonally':
             last_year = data['time.year'].values[-1]
             dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
             values = []
@@ -242,7 +251,7 @@ def averaging(data, varlabel, diagname, format, orca):
                 for season, months in season_months.items():
                     if month in months:
                         values.append(ds.sel(season=season).values)
-                        break 
+                        break
             ds = xr.DataArray(data=values, dims=["time"], coords={"time": dates})
 
         ds = xr.Dataset({

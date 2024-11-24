@@ -113,7 +113,6 @@ def spacemean(data, ndim, ztag=None, orca='ORCA2'):
     
     """
 
-    #expname = get_expname(data)
     df = elements(orca) 
     if ndim == '3D':
         ave = data.weighted(df['V']).mean(dim=['z', 'y', 'x'])
@@ -202,6 +201,7 @@ def cost(x, x0, metric):
     Returns:
         xarray.DataArray: The result of the chosen cost function.
     """
+
     if metric == 'base':
         return x    
 
@@ -230,50 +230,53 @@ def cost(x, x0, metric):
         raise ValueError(f"Unknown metric: {metric}")
 
 
-def apply_cost_function(data, mdata, metric, format='global'):
+def apply_cost_function(data, data_ref, metric, format='plain', format_ref='global'):
     """
-    Apply a cost function to data based on `format`.
+    Apply a cost function to data based on formats.
 
     Args:
         data (xarray.DataArray): The current dataset.
-        mdata (xarray.DataArray): The reference dataset.
-        metric (str): The metric used to compute the cost.
-        format (str, optional): Time format ['plain', 'monthly', 'seasonally', 'yearly', 'global']
+        data_ref (xarray.DataArray): The reference dataset.
+        metric (str): The metric used to compute the cost.b
+        format (str, optional): Time format of the current dataset ['plain', 'monthly', 'seasonally', 'yearly', 'global'].
+        format_ref (str, optional): Time format of the reference dataset.
 
     Returns:
         xarray.DataArray: Data containing the computed cost metrics.
     """
 
-    if (format == 'global' or format == 'plain'): 
-        cdata = cost(data, mdata, metric)
+    if format_ref == 'global': 
+        cdata = cost(data, data_ref, metric)
 
-    if format == 'monthly':
-        if 'time' in data.dims and 'month' in mdata.dims:
-            cdata = data.groupby("time.dt.month").map(lambda x: cost(x, mdata.sel(month=x['time.dt.month'][0]), metric))
+    elif format == format_ref:
+        cdata = cost(data, data_ref, metric)
 
-    if format == 'seasonally':
-        if 'time' in data.dims and 'season' in mdata.dims:
-            if isinstance(data.time.values[0], cftime.datetime):
-                mdata_extended = data.copy(deep=True)
-                mdata_extended.values = np.zeros_like(data.values)
-                n_tiled = len(data.time) // len(mdata.season) + 1
-                mdata_tiled = np.tile(mdata.values, n_tiled)[:len(data.time)]
-                mdata_extended.values = mdata_tiled
-                diff = data - mdata_extended
+    elif (format == 'monthly' and format_ref == 'seasonally'):
+        cdata = cost(data, data_ref, metric)
+
+    elif format == 'plain':
+
+        if format_ref in ['monthly', 'seasonally']:
+            n_years = int(data['time'].size/12)
+            start_year = data['time.year'][-1]
+            varname = list(data.data_vars)[0]
+            data_ref_repeated = np.tile(data_ref[varname].values, n_years)
+            data_ref_new = xr.Dataset({varname: (["time"], data_ref_repeated)}, coords={"time": data['time']})
+            cdata = cost(data, data_ref_new, metric)
+
+        elif format_ref == 'yearly':
+            if (data['time'].size/12 == data_ref['time'].size):
+                n_years = data_ref["time"].size
+                start_year = int(data_ref["time.year"][0])
+                varname = list(data.data_vars)[0]
+                data_ref_repeated = np.repeat(data_ref[varname].values, 12)
+                data_ref_new = xr.Dataset({varname: (["time"], data_ref_repeated)}, coords={"time": data['time']})
+                cdata = cost(data, data_ref_new, metric)
             else:
-                cdata = data.groupby("time.season").map(lambda x: cost(x, mdata.sel(season=x['time.season'][0]), metric))
-
-    if format == 'yearly':
-        if 'time' in data.dims and 'year' in mdata.dims:
-            if isinstance(data.time.values[0], cftime.datetime):
-                mdata_extended = data.copy(deep=True)
-                mdata_extended.values = np.zeros_like(data.values)
-                n_tiled = len(data.time) // len(mdata.year) + 1
-                mdata_tiled = np.tile(mdata.values, n_tiled)[:len(data.time)]
-                mdata_extended.values = mdata_tiled
-                diff = data - mdata_extended
-            else:
-                cdata = data.groupby("time.year").map(lambda x: cost(x, mdata.sel(season=x['time.year'][0]), metric))
+                raise ValueError("data and data_ref have different sizes.")
+        
+    else:
+        raise ValueError(f"Wrong combination of {format} and {format_ref}")
 
     return cdata
 

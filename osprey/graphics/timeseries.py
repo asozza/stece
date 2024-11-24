@@ -95,7 +95,7 @@ def timeseries(expname, startyear, endyear, varlabel, format='plain', reader="ne
     # Read post-processed data
     elif reader == "post":
         data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='timeseries', format=format, orca=orca, replace=replace, metric=metric, refinfo=refinfo)
-        tvec = data[data[varname].dims[0]].values.flatten()
+        tvec = get_decimal_year(data['time'].values)
 
         # apply moving average
         if (avetype == 'moving' and format == 'plain'):
