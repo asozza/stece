@@ -19,6 +19,12 @@ from osprey.actions.reader import elements
 
 #dask.config.set({'array.optimize_blockwise': True})
 
+# dictionary of months by seasons
+season_months = {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]}
+
+
+#################################################################################
+# matrix algebra
 
 def flatten_to_triad(m, nj, ni):
     """ Recover triad indexes from flatten array length """
@@ -60,7 +66,7 @@ def cumave(ydata):
 # space_mean:   space average
 #
 
-def timemean(data, format='global'):
+def timemean(data, format='global', use_cftime=True):
     """ 
     Time average of a field with various options
     
@@ -71,7 +77,9 @@ def timemean(data, format='global'):
                   - 'monthly': average by month across years.
                   - 'seasonally': average by season (DJF, MAM, JJA, SON) across years.
                   - 'yearly': average by year.
-                                    
+                  - 'seasons': average by season yearly.
+                  - 'winter,spring,summer,autumn': average by a single season yearly.
+
     Returns:
     DataArray: Time-averaged field based on the specified format.
     """
@@ -83,21 +91,57 @@ def timemean(data, format='global'):
         # Global time average over all time points
         ave = data.mean(dim='time')
         
-    elif format == 'monthly':
+    # TO BE FIXED YET: monthly and seasonally sohuld be at center of the period.
+    elif format == 'monthly':       
         # Average by month across years
         ave = data.groupby('time.month').mean(dim='time')
         
+        if use_cftime:
+            last_year = data['time.year'].values[-1]
+            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
+            ave = xr.DataArray(data=ave, dims=["time"], coords={"time": dates})
+
     elif format == 'seasonally':
         # Average by season (DJF, MAM, JJA, SON) across years
         ave = data.groupby('time.season').mean(dim='time')
-        
+
+        if use_cftime:
+            last_year = data['time.year'].values[-1]
+            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
+            values = []
+            for month in range(1, 13):
+                for season, months in season_months.items():
+                    if month in months:
+                        values.append(ave.sel(season=season).values)
+                        break
+            ave = xr.DataArray(data=values, dims=["time"], coords={"time": dates})
+
     elif format == 'yearly':
         # Average by year
         ave = data.groupby('time.year').mean(dim='time')
+        
+        if use_cftime:
+            dates = [cftime.DatetimeGregorian(year, 7, 1, 0, 0, 0, has_year_zero=False) for year in ave['year'].values]
+            ave = xr.DataArray(data=ave, dims=["time"], coords={"time": dates})
+
+    elif format == 'seasons':
+        # Average by seasons over years        
+        ave = data.groupby(['time.year', 'time.season']).mean(dim='time')
+
+        if use_cftime:
+            season_times = []
+            for (year, season), group in data.groupby(['time.year', 'time.season']):            
+                center_time = group['time'].mean()
+                season_times.append(center_time.item())
+            season_times = xr.DataArray(season_times, dims=['time'], name='time', coords={'time': season_times})
+            ave = ave.stack(time=("year", "season"))
+            ave = ave.drop_vars(['year','season'])
+
+    # ADD SIGLE SEASONS. can it be extracted from the previous block? 
 
     else:
         raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly'.")
-    
+
     return ave
 
 
@@ -114,6 +158,7 @@ def spacemean(data, ndim, ztag=None, orca='ORCA2'):
     """
 
     df = elements(orca) 
+
     if ndim == '3D':
         ave = data.weighted(df['V']).mean(dim=['z', 'y', 'x'])
         if ztag != None:
@@ -121,10 +166,13 @@ def spacemean(data, ndim, ztag=None, orca='ORCA2'):
             subvol = df['V'].isel(z=slice(z1,z2))
             subvar = data.isel(z=slice(z1,z2))
             ave = subvar.weighted(subvol).mean(dim=['z', 'y', 'x'])
+
     elif ndim == '2D':
         ave = data.weighted(df['S']).mean(dim=['y', 'x'])
+
     elif ndim == '1D':
         ave = data.weighted(df['z']).mean(dim=['z'])
+
     else:
         raise ValueError(" Invalid dimensions ")
 

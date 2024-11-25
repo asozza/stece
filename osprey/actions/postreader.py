@@ -39,8 +39,8 @@ season_months = {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [
 
 def _update_description(data, refinfo):
 
-    description = data.attrs.get('description', 'No description')  # Recupera la descrizione esistente o usa un default
-    if 'refinfo' in locals() and isinstance(refinfo, dict):  # Controlla se refinfo esiste
+    description = data.attrs.get('description', 'No description')
+    if 'refinfo' in locals() and isinstance(refinfo, dict):
         refinfo_str = ', '.join([f"{key}: {value}" for key, value in refinfo.items()])
         description += f" {refinfo_str}"
     data.attrs['description'] = description
@@ -215,7 +215,6 @@ def averaging(data, varlabel, diagname, format, orca):
         ztag=None
 
     info = catalogue.observables('nemo')[varname]
-    #cinfo = catalogue.coordinates('nemo')
 
     # scalar / single-valued
     if diagname == 'scalar' or (diagname == 'timeseries' and format == 'global'):
@@ -234,85 +233,46 @@ def averaging(data, varlabel, diagname, format, orca):
         ds = timemean(data=data, format=format)
         ds = spacemean(data=ds, ndim=info['dim'], ztag=ztag, orca=orca)
 
-        if format == 'yearly':
-                dates = [cftime.DatetimeGregorian(year, 7, 1, 0, 0, 0, has_year_zero=False) for year in ds['year'].values]
-                ds = xr.DataArray(data=ds, dims=["time"], coords={"time": dates})
-
-        if format == 'monthly':
-            last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
-            ds = xr.DataArray(data=ds, dims=["time"], coords={"time": dates})
-
-        if format == 'seasonally':
-            last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
-            values = []
-            for month in range(1, 13):
-                for season, months in season_months.items():
-                    if month in months:
-                        values.append(ds.sel(season=season).values)
-                        break
-            ds = xr.DataArray(data=values, dims=["time"], coords={"time": dates})
-
         ds = xr.Dataset({
                 varlabel : xr.DataArray(data=ds, dims=[ds.dims[0]], coords={ds.dims[0]: ds['time']}, 
-                                        attrs  = {'units': info['units'], 'long_name': info['long_name']})}, 
+                                        attrs = {'units': info['units'], 'long_name': info['long_name']})}, 
                 attrs = {'description': 'ECE4/NEMO averaged timeseries'})
+
 
     # vertical profile
     if (diagname == 'profile' and info['dim'] == '3D'):
         
-        zvec = data['z'].values.flatten()
-        vec = timemean(data=data, format='global')
-        vec = spacemean(data=vec, ndim='2D', ztag=ztag, orca=orca)
+        data = timemean(data=data, format='global')
+        data = spacemean(data=data, ndim='2D', ztag=ztag, orca=orca)
 
         ds = xr.Dataset({
-            'z': xr.DataArray(data = zvec, dims = ['z'], coords = {'z': zvec}, 
-                              attrs = {'units' : 'm', 'long_name' : 'depth'}), 
-            varname : xr.DataArray(data = vec, dims = ['z'], coords = {'z': zvec}, 
-                                   attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
+            varname : xr.DataArray(data=data, dims=['z'], coords={'z': data['z']}, 
+                                   attrs = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO averaged profile'})
+
 
     # hovmoller diagram
     if (diagname == 'hovmoller' and info['dim'] == '3D'):
 
-        if format == 'plain':
-            time_coord_name = 'time'
-            tvec = data['time'].values  # Preserve as cftime       
+        if (format == 'plain' or format == 'yearly'):
 
-        elif format == 'monthly':
-            time_coord_name = 'month'
-            tvec = data['time.month'].values[:12]
+            ds = timemean(data=data, format=format)
+            ds = spacemean(data=ds, ndim='2D', ztag=ztag, orca=orca)
 
-        elif format == 'seasonally':
-            time_coord_name = 'season'
-            tvec = data['time.season'].values[:4]
+            ds = xr.Dataset({
+                    varlabel : xr.DataArray(data=ds, dims=['time', 'z'], coords={'time': ds['time'], 'z': ds['z']}, 
+                                            attrs = {'units': info['units'], 'long_name': info['long_name']})}, 
+                    attrs = {'description': 'ECE4/NEMO averaged Hovmoller diagram'})
 
-        elif format == 'yearly':
-            time_coord_name = 'year'
-            tvec = data['time.year'].values[::12]
-
-        zvec = data['z'].values.flatten()
-        vec = timemean(data=data, format=format)        
-        vec = spacemean(data=vec, ndim=info['dim'], ztag=ztag, orca=orca)
-        if format != 'plain' and 'time' in vec:
-            vec = vec.drop_vars('time')
-        ds = xr.Dataset({
-            'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
-                        attrs = {'units' : 'years', 'long_name' : 'time'}), 
-            'z': xr.DataArray(data = zvec, dims = ['z'], coords = {'z': zvec}, 
-                        attrs = {'units' : 'm', 'long_name' : 'depth'}), 
-            varname : xr.DataArray(data = vec, dims = ['time', 'z'], coords = {'time': tvec, 'z': zvec},
-                        attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO Hovmoller diagram'})
 
     # 2D horizontal map 
-    # ISSUE: time dimension still exist, if format != 'global'
-    # e se volessi una mappa solo di una stagione?
+    # ISSUE: what if format != 'global'?
     if diagname == 'map':
-        vec = timemean(data=data, format='global')
+
+        ds = timemean(data=data, format='global')
         if info['dim'] == '3D':
-            vec  = spacemean(data=vec, ndim='1D', ztag=ztag, orca=orca)      
+            ds  = spacemean(data=ds, ndim='1D', ztag=ztag, orca=orca)      
+
         ds = xr.Dataset({
             'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
@@ -320,11 +280,14 @@ def averaging(data, varlabel, diagname, format, orca):
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
             varlabel : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO Averaged map'})
+            attrs = {'description': 'ECE4/NEMO averaged map'})
+
 
     # time-averaged spatial-only field 
     if diagname == 'field':
+
         vec = timemean(data=data, format=format)
+
         data_vars = {
             'lat': xr.DataArray(data=data['lat'], dims=['y', 'x'], coords={'y': data['y'], 'x': data['x']}, 
                         attrs={'units': 'deg', 'long_name': 'latitude'}),
@@ -343,38 +306,6 @@ def averaging(data, varlabel, diagname, format, orca):
         # Create the dataset
         ds = xr.Dataset(data_vars=data_vars, attrs={'description': 'ECE4/NEMO Time-averaged field'})
 
-
-    # 3D field with monthly variability
-    if diagname == 'field_monthly' and info['dim'] == '3D':
-        vec = timemean(data=data)
-        ds = xr.Dataset({
-            'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
-                                 attrs = {'units' : 'years', 'long_name' : 'time'}),
-            'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
-                                attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
-            'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
-                                attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
-            'z': xr.DataArray(data = data['z'], dims = ['z'], coords = {'z': data['z']}, 
-                              attrs = {'units' : 'm', 'long_name' : 'depth'}),                             
-            varlabel : xr.DataArray(data = vec, dims = ['time', 'z', 'y', 'x'], 
-                                    coords = {'time': data['time'], 'z': data['z'], 'y': data['y'], 'x': data['x']}, 
-                                    attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO Yearly-averaged monthly field'})
-
-
-    # 2D field with monthly variability
-    if diagname == 'field_monthly' and info['dim'] == '2D':
-        vec = timemean(data=data[varname])
-        ds = xr.Dataset({
-            'time': xr.DataArray(data = tvec, dims = ['time'], coords = {'time': tvec}, 
-                        attrs = {'units' : 'years', 'long_name' : 'time'}),
-            'lat': xr.DataArray(data = data['lat'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
-                        attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
-            'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
-                        attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                                 
-            varlabel : xr.DataArray(data = vec, dims = ['z', 'y', 'x'], coords = {'z': data['z'], 'y': data['y'], 'x': data['x']},
-                        attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
-            attrs = {'description': 'ECE4/NEMO Yearly-averaged monthly field'})
 
     return ds
 

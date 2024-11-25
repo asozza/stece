@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Graphics for T-S diagram
+Graphics for chart
 
 Author: Alessandro Sozza (CNR-ISAC) 
 Date: Oct 2024

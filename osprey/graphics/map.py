@@ -19,8 +19,8 @@ from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
 from osprey.utils.time import get_decimal_year
 from osprey.means.means import cost, movave
-from osprey.means.means import globalmean, spacemean, timemean
-from osprey.utils.vardict import vardict
+from osprey.means.means import spacemean, timemean
+from osprey.utils import catalogue
 
 
 def map(expname, startyear, endyear, varname, reader="post", metric="base", replace=False, figname=None):
@@ -42,10 +42,11 @@ def map(expname, startyear, endyear, varname, reader="post", metric="base", repl
     
     """
     
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":
+
         data = reader_nemo(expname, startyear, endyear)
         if info['dim'] == '2D':
             vec = timemean(data, varname)
@@ -54,6 +55,7 @@ def map(expname, startyear, endyear, varname, reader="post", metric="base", repl
         
     # Read post-processed data
     elif reader == "post":
+
         data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='map', replace=replace, metric=metric)
         vec = data[varname]
     

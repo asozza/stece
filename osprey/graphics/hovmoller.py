@@ -20,7 +20,7 @@ from osprey.actions.postreader import postreader_nemo
 from osprey.utils.time import get_decimal_year
 from osprey.means.means import cost, movave
 from osprey.means.means import spacemean
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 
 def _rescaled(vec):
     """ rescale by the initial value """
@@ -47,15 +47,17 @@ def hovmoller(expname, startyear, endyear, varname,
     
     """
     
-    info = vardict('nemo')[varname]
+    info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":
+
         data = reader_nemo(expname, startyear, endyear)
         vec = spacemean(data, varname, '2D')
 
     # Read post-processed data
     elif reader == "post":
+
         data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='hovmoller', replace=replace, metric=metric)
         vec = data[varname]
 
