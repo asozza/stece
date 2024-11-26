@@ -31,19 +31,17 @@ def get_memory_usage():
 def drawing(figname):
 
     # global mean temperature merge from reference experiments
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', metric='reldiff', color='gray', linestyle='-', label='REF')
+    # palette: lightcoral, red, orange, green, darkseagreen, cornflowerblue, blue, darkslategray, indigo
+    color='red'
+    varlabel='thetao'
+    timeseries(expname='lhr0', startyear=1990, endyear=2279, varlabel=varlabel, reader='post', timeoff=0, color=color, linestyle='-')
+    timeseries(expname='lhr1', startyear=1990, endyear=2279, varlabel=varlabel, reader='post', timeoff=289, color=color, linestyle='-')
+    timeseries(expname='lhr2', startyear=1990, endyear=2279, varlabel=varlabel, reader='post', timeoff=578, color=color, linestyle='-')
 
-    # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2230, varlabel='thetao', reader='post', metric='reldiff', color='red', linestyle='-', label='EOF-T 10y')
-    timeseries(expname='FE02', startyear=1990, endyear=2180, varlabel='thetao', reader='post', metric='reldiff', color='blue', linestyle='-', label='EOF-TS 10y')
-    timeseries(expname='FE03', startyear=1990, endyear=2100, varlabel='thetao', reader='post', metric='reldiff', color='blue', linestyle='-', label='EOF-TS 15y')
+    plt.title('Timeseries of global mean temperature')
 
-    plt.legend(
-        bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
-        loc='upper right',         # Location of the legend relative to bbox_to_anchor
-        borderaxespad=0           # Padding between the legend and the plot
-    )
-    plt.title('Timeseries of reldiff metric of global mean temperature \n wrt REF [2390-2399] ')
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
 
     # Save the combined figure
     plt.savefig(figname)
@@ -56,7 +54,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig1_thetao_reldiff.png'
+    figname='fig1_thetao.png'
     drawing(figname)
 
     # End timer
@@ -71,3 +69,4 @@ if __name__ == "__main__":
     # Log execution time and memory load
     logging.info(f"Total execution time: {execution_time:.2f} seconds")
     logging.info(f"Memory load at the end: {memory_usage:.2f} MB")
+

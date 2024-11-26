@@ -44,6 +44,7 @@ def drawing(figname):
     timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2611, color=color, linestyle='-')
     timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2971, color=color, linestyle='-')
     timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3331, color=color, linestyle='-')
+    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3691, color=color, linestyle='-')
 
     plt.title('Timeseries of global mean temperature')
 

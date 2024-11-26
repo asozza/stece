@@ -34,7 +34,8 @@ def _rescaled(vec):
     return vec/vec[0]
 
 
-def timeseries(expname, startyear, endyear, varlabel, format="plain", reader="post", orca="ORCA2", replace=False, metric="base", refinfo=None, 
+def timeseries(expname, startyear, endyear, varlabel, 
+               format="plain", reader="post", orca="ORCA2", replace=False, metric="base", refinfo=None, 
                rescale=False, avetype="standard", timeoff=0, color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
     """ 
     Graphics of timeseries 
@@ -88,7 +89,8 @@ def timeseries(expname, startyear, endyear, varlabel, format="plain", reader="po
     # Read post-processed data
     elif reader == "post":
 
-        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='timeseries', format=format, orca=orca, replace=replace, metric=metric, refinfo=refinfo)
+        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, 
+                               diagname='timeseries', format=format, orca=orca, replace=replace, metric=metric, refinfo=refinfo)
         tvec = get_decimal_year(data['time'].values)
 
     # apply moving average
@@ -135,8 +137,9 @@ def timeseries(expname, startyear, endyear, varlabel, format="plain", reader="po
     return pp
  
 
+
 def timeseries_yearshift(expname1, startyear1, endyear1, expname2, startyear2, endyear2, varlabel, shift_threshold, 
-                         reader="nemo", replace=False, avetype="standard", timeoff=0, 
+                         format='plain', reader="post", orca="ORCA2", replace=False, avetype="standard", timeoff=0, 
                          color=None, linestyle='-', marker=None, label=None, ax=None, figname=None):
     """ 
     Graphics of year-shift timeseries 

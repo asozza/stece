@@ -47,6 +47,7 @@ def drawing(figname):
     timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=2611, color=color, linestyle='-', ax=axes[0])
     timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=2971, color=color, linestyle='-', ax=axes[0])
     timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=3331, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=3691, color=color, linestyle='-', ax=axes[0])
     axes[0].legend(loc='upper right')
     axes[0].set_title('Surface')
 
@@ -63,6 +64,7 @@ def drawing(figname):
     timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=2611, color=color, linestyle='-', ax=axes[1])
     timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=2971, color=color, linestyle='-', ax=axes[1])
     timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=3331, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=3691, color=color, linestyle='-', ax=axes[1])
     axes[1].legend(loc='upper right')
     axes[1].set_title('Pycnocline')
 
@@ -79,6 +81,7 @@ def drawing(figname):
     timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=2611, color=color, linestyle='-', ax=axes[2])
     timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=2971, color=color, linestyle='-', ax=axes[2])
     timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=3331, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, timeoff=3691, color=color, linestyle='-', ax=axes[2])
     axes[2].legend(loc='upper left')
     axes[2].set_title('Bottom')
 

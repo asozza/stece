@@ -105,7 +105,7 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, forma
 
 
 # MAIN FUNCTION
-def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='plain', orca='ORCA2', replace=False, metric='base', refinfo=None):
+def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='global', orca='ORCA2', replace=False, metric='base', refinfo=None):
     """ 
     Postreader_nemo: main function for reading averaged data
     
@@ -216,6 +216,7 @@ def averaging(data, varlabel, diagname, format, orca):
 
     info = catalogue.observables('nemo')[varname]
 
+
     # scalar / single-valued
     if diagname == 'scalar' or (diagname == 'timeseries' and format == 'global'):
         
@@ -226,6 +227,7 @@ def averaging(data, varlabel, diagname, format, orca):
             varlabel : xr.DataArray(data = ds, dims = [], coords = {},
                             attrs  = {'units' : info['units'], 'long_name' : info['long_name']})},
             attrs = {'description': 'ECE4/NEMO global averaged scalar'})
+
 
     # timeseries
     if diagname == 'timeseries' and format != 'global':

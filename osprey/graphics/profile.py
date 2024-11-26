@@ -68,7 +68,8 @@ def profile(expname, startyear, endyear, varlabel,
     # Read data from post-processed data
     elif reader == 'post':
 
-        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, diagname='profile', replace=replace, metric=metric)
+        data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, 
+                               diagname='profile', format='global', orca=orca, replace=replace, metric=metric, refinfo=refinfo)
         vec=data[varname].values.flatten()
 
     # fixing depth y-axis
