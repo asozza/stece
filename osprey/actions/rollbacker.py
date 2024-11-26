@@ -27,7 +27,7 @@ def rollbacker(expname, leg):
     year = get_year(leg)
 
     # Cleaning - remove files in the run folder
-    files_to_remove = ['rstas.nc', 'rstos.nc', 'srf000*.????', 'restart*.nc', 'rcf']
+    files_to_remove = ['rstas.nc', 'rstos.nc', 'srf*', 'restart*.nc', 'rcf']
     for file_pattern in files_to_remove:
         filelist = sorted(glob.glob(os.path.join(dirs['exp'], file_pattern)))
         for file in filelist:
@@ -67,7 +67,7 @@ def rollbacker(expname, leg):
                     os.remove(file_path)
 
     # Update time.step
-    restart_files = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), f"{expname}_restart_????.nc"))
+    restart_files = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), f"*_restart_*.nc"))
     if restart_files:
         timestep = get_nemo_timestep(restart_files[0])
         tstepfile = os.path.join(dirs['exp'], 'time.step')
@@ -98,7 +98,7 @@ def rollbacker(expname, leg):
         raise ValueError("Cannot go forward in time.")
 
     # Copying restart files for the requested leg
-    restart_patterns = ['rstas.nc', 'rstos.nc', 'srf000*.????', 'rcf', '*restart*']
+    restart_patterns = ['rstas.nc', 'rstos.nc', 'srf*', 'rcf', '*restart*']
     for file_pattern in restart_patterns:
         filelist = sorted(glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), file_pattern)))
         for file in filelist:
