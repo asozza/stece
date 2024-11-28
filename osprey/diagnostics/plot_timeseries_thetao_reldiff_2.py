@@ -30,7 +30,7 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349}
+    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349, 'diagname': 'timeseries', 'format': 'global'}
 
     # global mean temperature merge from reference experiments
     # comparison with EOF experiments

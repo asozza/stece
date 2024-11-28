@@ -153,6 +153,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
     field = pattern.isel(time=0)*0
 
+    # Full set of EOFs
     if mode == 'full':
 
         for i in range(neofs):
@@ -163,7 +164,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
             basis = pattern.isel(time=i)
             field = field + theta*basis        
 
-
+    # First EOF
     elif mode == 'first':
 
         filename = os.path.join(dir, f"{varname}_series_00000.nc")    
@@ -173,7 +174,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
         basis = pattern.isel(time=i)
         field = field + theta*basis                
 
-
+    # Reconstruct the last frame (for dry-runs)
     elif mode == 'reco':
 
         for i in range(neofs):
@@ -185,7 +186,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
 
         # add figure
 
-
+    # EOFs up to a percentage of the full
     elif mode == 'frac':
         
         threshold_percentage = 0.9
@@ -211,5 +212,6 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
             basis = pattern.isel(time=i)
             field += theta * basis
 
+    # add mode='weighted' weight the yearleap based on the distance from equilibrium.
 
     return field

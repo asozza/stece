@@ -244,7 +244,7 @@ def averaging(data, varlabel, diagname, format, orca):
     # vertical profile
     if (diagname == 'profile' and info['dim'] == '3D'):
         
-        data = timemean(data=data, format='global')
+        data = timemean(data=data, format='global', use_cftime=False)
         data = spacemean(data=data, ndim='2D', ztag=ztag, orca=orca)
 
         ds = xr.Dataset({

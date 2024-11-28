@@ -36,7 +36,7 @@ def paths():
 
     dirs = {
         'rebuild': "/ec/res4/hpcperm/itas/src/rebuild_nemo",
-        'osprey': "/ec/res4/hpcperm/itas/src/github/stece/osprey",
+        'osprey': "/ec/res4/hpcperm/itas/src/github/stece/osprey/figs",
         'domain': "/ec/res4/hpcperm/itas/data/ECE4-DATA/nemo/domain"
     }
 

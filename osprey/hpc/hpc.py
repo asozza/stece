@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-LOBSTER: LOad Balancing ScripT for Ec-earth fouR
-------------------------------------------------
-Functions and tools
+HPC tools
 
 Authors
 Alessandro Sozza (CNR-ISAC, Mar 2024)

@@ -25,6 +25,7 @@ from osprey.utils.time import get_year, get_startyear, get_forecast_year
 from osprey.utils import run_cdo
 from osprey.utils import catalogue
 
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -127,10 +128,10 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
 
         info = catalogue.observables('nemo')[varname]
 
-        #run_cdo_old.merge_winter(expname, varname, startyear, endyear)
+        # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
         run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
 
-        #run_cdo_old.detrend(expname, varname, endleg)
+        # 
         run_cdo.detrend(expname, varname, endleg)
 
         # add smoothing in pre-processing
@@ -142,7 +143,6 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
             original_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly_original.nc")   
             shutil.copy(infile, original_file)  
             shutil.copy(outfile, infile) 
-
 
         #run_cdo_old.get_EOF(expname, varname, endleg, window)
         run_cdo.get_EOF(expname, varname, endleg, window)

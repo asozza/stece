@@ -93,25 +93,15 @@ def hovmoller(expname, startyear, endyear, varlabel,
 
         data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varlabel, 
                                diagname='hovmoller', format=format, orca=orca, replace=replace, metric=metric, refinfo=refinfo)
+        data = data[varname]
         #tvec = get_decimal_year(data['time'].values)
 
     # apply rescaling
     if rescale:
-        vec = _rescaled(vec)
-
-    # apply moving average
-    if (avetype == 'moving' and format == 'plain'):
-        vec = movave(data[varlabel],12)
-        tvec, vec = _cutted(tvec), _cutted(vec)
-    else:
-        vec = data[varlabel].values #.flatten()
-
-    # add time offset
-    if timeoff > 0:
-        tvec = [time + timeoff for time in tvec]
+        data = _rescaled(data)
     
     # plot
-    pp = vec.plot(x='time', y='z', cmap=plt.cm.coolwarm)
+    pp = data.plot(x='time', y='z', cmap=plt.cm.coolwarm)
     plt.xlabel('time')
     plt.ylabel('depth')
     plt.ylim(0,5000)
