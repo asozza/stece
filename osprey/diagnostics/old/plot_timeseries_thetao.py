@@ -30,25 +30,27 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349, 'diagname': 'timeseries', 'format': 'global'}
+    refinfo = {'expname': 'lgr3', 'startyear': 2340, 'endyear': 2349}
 
     # global mean temperature merge from reference experiments
-    varlabel='thetao'
-    color='gray'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='gray', linestyle='-', label='REF')
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color=color, linestyle='-')
+    #timeseries(expname='lfr0', startyear=1990, endyear=2039, varlabel='thetao', reader="post", metric="base", refinfo=None, rescale=False, avetype="standard", timeoff=0, color=None, linestyle='-', marker=None, label=None, ax=None, figname=None)
+    timeseries(expname='lfr0', startyear=1990, endyear=2400, varlabel='thetao', reader='post', timeoff=0, color='gray', linestyle='-', label='REF')
+    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel='thetao', reader='post', timeoff=410, color='gray', linestyle='-')
 
     # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2230, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='red', linestyle='-', label='EOF-T 10y')
-    timeseries(expname='FE02', startyear=1990, endyear=2180, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='blue', linestyle='-', label='EOF-TS 10y')
-    timeseries(expname='FE03', startyear=1990, endyear=2100, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='violet', linestyle='-', label='EOF-TS 15y')
+    timeseries(expname='FE01', startyear=1990, endyear=2210, varlabel='thetao', reader='post', color='red', linestyle='-', label='EOF-T 10y')
+    timeseries(expname='FE02', startyear=1990, endyear=2160, varlabel='thetao', reader='post', color='orange', linestyle='-', label='EOF-TS 10y')
+    timeseries(expname='FE03', startyear=1990, endyear=2090, varlabel='thetao', reader='post', color='green', linestyle='-', label='EOF-TS 15y')
+    timeseries(expname='FE04', startyear=1990, endyear=2030, varlabel='thetao', reader='post', color='blue', linestyle='-', label='EOF-TS 20y')
+    #timeseries(expname='FE05', startyear=1990, endyear=2019, varlabel='thetao', reader='post', color='violet', linestyle='-', label='EOF-TS 30y')
+
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
         loc='upper right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Timeseries of reldiff metric of global mean temperature \n wrt REF [2390-2399]')
+    plt.title('Timeseries of global mean temperature')
 
     # Save the combined figure
     plt.savefig(figname)
@@ -61,7 +63,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig0_thetao_diff.png'
+    figname='thetao_FE_2.png'
     drawing(figname)
 
     # End timer

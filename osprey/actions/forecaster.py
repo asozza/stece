@@ -9,14 +9,13 @@ Date: Mar 2024
 """
 
 import os
-import subprocess
 import numpy as np
 import cftime
 import logging
 import shutil
 import xarray as xr
 
-from osprey.actions.reader import reader_nemo, reader_rebuilt 
+from osprey.actions.reader import reader_nemo, reader_rebuilt
 from osprey.actions.stabilizer import constraints
 from osprey.means.eof import project_eofs, process_data
 from osprey.means.means import timemean
@@ -27,6 +26,15 @@ from osprey.utils import catalogue
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Define the varlists for each variable
+varlists = {
+    'thetao': ['tn', 'tb'],
+    'so': ['sn', 'sb'],
+    'zos': ['sshn', 'sshb'],
+    'uo': ['un', 'ub'],
+    'vo': ['vn', 'vb']
+}
 
 
 def _forecast_xarray(foreyear):
@@ -99,6 +107,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     """
 
     dirs = folders(expname)
+
     startleg = endleg - yearspan + 1
     startyear = 1990 + startleg - 2
     endyear = 1990 + endleg - 2
@@ -114,45 +123,23 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     # read forecast and change restart
     rdata = reader_rebuilt(expname, endleg, endleg)
 
-    # Define the varlists for each variable
-    varlists = {
-        'thetao': ['tn', 'tb'],
-        'so': ['sn', 'sb'],
-        'zos': ['sshn', 'sshb'],
-        'uo': ['un', 'ub'],
-        'vo': ['vn', 'vb']
-    }
-
     # create EOF
     for varname in varnames:
-
+        
         info = catalogue.observables('nemo')[varname]
-
+        
+        # prepare field and EOFs
         # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
         run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
-
-        # 
         run_cdo.detrend(expname, varname, endleg)
-
-        # add smoothing in pre-processing
-        if smoothing:
-            infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly.nc")
-            outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly_smoothed.nc")
-            run_cdo.add_smoothing(infile, outfile)
-
-            original_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly_original.nc")   
-            shutil.copy(infile, original_file)  
-            shutil.copy(outfile, infile) 
-
-        #run_cdo_old.get_EOF(expname, varname, endleg, window)
         run_cdo.get_EOF(expname, varname, endleg, window)
-
-        dir = os.path.join(os.path.join(dirs['tmp'], str(endleg).zfill(3)))
-        field = project_eofs(dir=dir, varname=varname, neofs=window, xf=xf, mode=mode)
- 
-        if mode == 'reco':   
+        
+        # field projection in the future
+        field = project_eofs(expname=expname, varname=varname, endleg=endleg, neofs=window, xf=xf, mode=mode)
+        
+        if mode == 'reco':
             field = field.drop_vars({'time'})
-
+        
         # retrend
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
         xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
@@ -162,7 +149,6 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
             total = total.transpose("time", "z", "y", "x")
         if info['dim'] == '2D':
             total = total.transpose("time", "y", "x")
-        #total = total.expand_dims({'time': 1})
 
         # add smoothing and post-processing features
         if smoothing:

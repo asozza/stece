@@ -175,7 +175,7 @@ def reader_nemo_field(expname, startyear, endyear, varname, freq="1m"):
         for grid, var in zip(info['grid'], info['dependencies']):
             data = reader_nemo(expname=expname, startyear=startyear, endyear=endyear, grid=grid)
             field[var] = data[var]
-            if 'preprocessing' in info:
+            if 'preprocessing' in info and var in info['preprocessing']:
                 field[var] = info['preprocessing'][var](field[var])
         data = info['operation'](*[field[var] for var in info['dependencies']])
     else:

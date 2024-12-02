@@ -34,12 +34,12 @@ def drawing(figname):
     # palette: lightcoral, red, orange, green, darkseagreen, cornflowerblue, blue, darkslategray, indigo
     color='blue'
     varlabel='thetao'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', timeoff=0, color=color, linestyle='-')
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color=color, linestyle='-')
-    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=811, color=color, linestyle='-')
-    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1171, color=color, linestyle='-')
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1531, color=color, linestyle='-')
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1891, color=color, linestyle='-')
+    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', timeoff=0, color='red', linestyle='-')
+    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color='orange', linestyle='-')
+    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=811, color='yellow', linestyle='-')
+    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1171, color='green', linestyle='-')
+    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1531, color='violet', linestyle='-')
+    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1891, color='brown', linestyle='-')
     timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2251, color=color, linestyle='-')
     timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2611, color=color, linestyle='-')
     timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2971, color=color, linestyle='-')

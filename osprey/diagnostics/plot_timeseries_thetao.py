@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='thetao_FE_2.png'
+    figname='fig_thetao_base.png'
     drawing(figname)
 
     # End timer

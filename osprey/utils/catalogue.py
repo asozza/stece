@@ -268,14 +268,39 @@ def observables(component):
                      'units': 'K*m/s', 
                      'long_name': 'Buoyancy flux', 
                      'dependencies': ['thetao', 'wo'],
-                     'operation': lambda thetao, wo: thetao*wo}
+                     'operation': lambda thetao, wo: thetao*wo,
+                     'preprocessing': {
+                         'wo': lambda data: regrid_W_to_T(w=data, ndim='3D')}
+                     }
         }
 
     elif component == 'oifs':
         varlist = {
             'tas': {'dim': '2D',
                     'units': 'K',
-                    'long_name': 'Near-Surface Air Temperature'}
+                    'long_name': 'Near-Surface Air Temperature'},
+            'tasmin': {'dim': '2D', 
+                       'units': 'K', 
+                       'long_name': 'Daily Minimum Near-Surface Air Temperature'},
+            'tasmax': {'dim': '2D', 
+                       'units': 'K', 
+                       'long_name': 'Daily Maximum Near-Surface Air Temperature'},
+            'tdps': {'dim': '2D', 
+                     'units': 'K', 
+                     'long_name': 'Dew-point Temperature'},
+            'ts': {'dim': '2D', 'units': 'K', 'long_name': 'Surface Temperature'},
+            'psl': {'dim': '2D', 'units': 'Pa', 'long_name': 'Sea Level Pressure'},
+            'ps': {'dim': '2D', 'units': 'Pa', 'long_name': 'Surface Air Pressure'},
+            'rsdt': {'dim': '2D', 'units': 'W/m^2', 'long_name': 'TOA Incident Short-wave Radiation'},
+            'rsut': {'dim': '2D', 'units': 'W/m^2', 'long_name': 'TOA Outgoing Short-wave Radiation'},
+            'rlut': {'dim': '2D', 'units': 'W/m^2', 'long_name': 'TOA Outgoing Long-wave Radiation'},
+            'sfcWind': {'dim': '2D', 'units': 'm/s', 'long_name': 'Near-Surface Wind Speed'},
+            'sfcWindmax': {'dim': '2D', 'units': 'm/s', 'long_name': 'Daily Maximum Near-Surface Wind Speed'},
+            'snd': {'dim': '2D', 'units': 'm', 'long_name': 'Snow Depth'},
+            'albsn': {'dim': '2D', 'units': '1', 'long_name': 'Snow Albedo'},
+            'hfss': {'dim': '2D', 'units': 'W/m^2', 'long_name': 'Surface Upward Sensible Heat Flux'},            
+            'hfls': {'dim': '2D', 'units': 'W/m^2', 'long_name': 'Surface Upward Latent Heat Flux'},
+            'clt': {'dim': '2D', 'units': 'm', 'long_name': 'Total Cloud Cover Percentage'}
         }
 
     else:

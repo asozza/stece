@@ -62,7 +62,7 @@ def regrid_W_to_T(w, ndim):
         w_on_t_grid = w.interp(x=w_coords['x'] + 0.5, y=w_coords['y'], z=w_coords['z'])
     elif ndim == '2D':
         w_coords = {'x': w['x'], 'y': w['y']}
-        w_on_t_grid = v.interp(x=w_coords['x'] + 0.5, y=w_coords['y'])
+        w_on_t_grid = w.interp(x=w_coords['x'] + 0.5, y=w_coords['y'])
     else:
         raise ValueError(" Invalid dimensions ")
 

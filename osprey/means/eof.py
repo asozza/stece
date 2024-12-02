@@ -134,7 +134,7 @@ def process_data(data, mode, dim='3D', grid='T'):
 
 ##########################################################################################
 
-def project_eofs(dir, varname, neofs, xf, mode='full'):
+def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     """ 
     Function to project a field in the future using EOFs. 
     
@@ -146,10 +146,10 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
     
     """
 
+    dirs = folders(expname)
     info = catalogue.observables('nemo')[varname]
 
-    print(dir)
-    filename = os.path.join(dir, f"{varname}_pattern.nc")
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
     field = pattern.isel(time=0)*0
 
@@ -157,7 +157,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
     if mode == 'full':
 
         for i in range(neofs):
-            filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))        
             p = timeseries.polyfit(dim='time', deg=1, skipna = True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
@@ -167,18 +167,18 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
     # First EOF
     elif mode == 'first':
 
-        filename = os.path.join(dir, f"{varname}_series_00000.nc")    
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_00000.nc")    
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))        
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
         theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
-        basis = pattern.isel(time=i)
+        basis = pattern.isel(time=0)
         field = field + theta*basis                
 
     # Reconstruct the last frame (for dry-runs)
     elif mode == 'reco':
 
         for i in range(neofs):
-            filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")    
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))
             theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
@@ -205,7 +205,7 @@ def project_eofs(dir, varname, neofs, xf, mode='full'):
         feofs = np.searchsorted(cumulative_weights, threshold_percentage) + 1
 
         for i in range(feofs):
-            filename = os.path.join(dir, f"{varname}_series_0000{i}.nc")
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))
             p = timeseries.polyfit(dim='time', deg=1, skipna=True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])

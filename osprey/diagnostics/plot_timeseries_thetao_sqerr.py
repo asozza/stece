@@ -35,20 +35,20 @@ def drawing(figname):
     # global mean temperature merge from reference experiments
     varlabel='thetao'
     color='gray'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='gray', linestyle='-', label='REF')
+    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', metric='sqerr', refinfo=refinfo, color='gray', linestyle='-', label='REF')
     timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color=color, linestyle='-')
 
     # comparison with EOF experiments
-    timeseries(expname='FE01', startyear=1990, endyear=2230, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='red', linestyle='-', label='EOF-T 10y')
-    timeseries(expname='FE02', startyear=1990, endyear=2180, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='blue', linestyle='-', label='EOF-TS 10y')
-    timeseries(expname='FE03', startyear=1990, endyear=2100, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='violet', linestyle='-', label='EOF-TS 15y')
+    timeseries(expname='FE01', startyear=1990, endyear=2230, varlabel='thetao', reader='post', metric='sqerr', refinfo=refinfo, color='red', linestyle='-', label='EOF-T 10y')
+    timeseries(expname='FE02', startyear=1990, endyear=2180, varlabel='thetao', reader='post', metric='sqerr', refinfo=refinfo, color='blue', linestyle='-', label='EOF-TS 10y')
+    timeseries(expname='FE03', startyear=1990, endyear=2100, varlabel='thetao', reader='post', metric='sqerr', refinfo=refinfo, color='violet', linestyle='-', label='EOF-TS 15y')
 
     plt.legend(
         bbox_to_anchor=(0.98, 0.98),  # x, y coordinates for legend placement
         loc='upper right',         # Location of the legend relative to bbox_to_anchor
         borderaxespad=0           # Padding between the legend and the plot
     )
-    plt.title('Timeseries of reldiff metric of global mean temperature \n wrt REF [2390-2399]')
+    plt.title('Timeseries of sqerr metric of global mean temperature \n wrt REF [2390-2399]')
 
     # Save the combined figure
     plt.savefig(figname)
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig0_thetao_diff.png'
+    figname='fig_thetao_sqerr.png'
     drawing(figname)
 
     # End timer

@@ -37,6 +37,15 @@ def drawing(figname):
     color='gray'
     timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='gray', linestyle='-', label='REF')
     timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color=color, linestyle='-')
+    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=811, color=color, linestyle='-')
+    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1171, color=color, linestyle='-')
+    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1531, color=color, linestyle='-')
+    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1891, color=color, linestyle='-')
+    timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2251, color=color, linestyle='-')
+    timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2611, color=color, linestyle='-')
+    timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2971, color=color, linestyle='-')
+    timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3331, color=color, linestyle='-')
+    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3691, color=color, linestyle='-')
 
     # comparison with EOF experiments
     timeseries(expname='FE01', startyear=1990, endyear=2230, varlabel='thetao', reader='post', metric='diff', refinfo=refinfo, color='red', linestyle='-', label='EOF-T 10y')
