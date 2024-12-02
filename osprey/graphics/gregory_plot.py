@@ -25,7 +25,7 @@ from osprey.utils.folders import paths
 from osprey.means.means import movave
 from osprey.means.means import cost
 from osprey.means.means import spacemean
-from osprey.utils.vardict import vardict
+from osprey.utils import catalogue
 
 def _cutted(vec):
     """ Cut vector """
@@ -59,8 +59,8 @@ def gregory_plot(expname, startyear, endyear, varname1, varname2,
          
     """
 
-    info1 = vardict('nemo')[varname1]
-    info2 = vardict('nemo')[varname2]
+    info1 = catalogue.observables('nemo')[varname1]
+    info2 = catalogue.observables('nemo')[varname2]
 
     # Read data from raw NEMO output
     if reader == "nemo":

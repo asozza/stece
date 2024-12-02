@@ -20,7 +20,6 @@ from osprey.utils import catalogue
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # dask optimization
 dask.config.set({'array.optimize_blockwise': True})
