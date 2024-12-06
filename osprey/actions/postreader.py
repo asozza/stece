@@ -280,7 +280,7 @@ def averaging(data, varlabel, diagname, format, orca):
                         attrs = {'units' : 'deg', 'long_name' : 'latitude'}),
             'lon': xr.DataArray(data = data['lon'], dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']}, 
                         attrs = {'units' : 'deg', 'long_name' : 'longitude'}),                   
-            varlabel : xr.DataArray(data = vec, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
+            varlabel : xr.DataArray(data = ds, dims = ['y', 'x'], coords = {'y': data['y'], 'x': data['x']},
                         attrs  = {'units' : info['units'], 'long_name' : info['long_name']})}, 
             attrs = {'description': 'ECE4/NEMO averaged map'})
 

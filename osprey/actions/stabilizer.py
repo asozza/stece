@@ -48,7 +48,7 @@ def stabilizer(data):
     return data
 
 
-def constraints(data):
+def constraints_for_restart(data):
     """ 
     Check and apply constraints to variables 
     
@@ -72,6 +72,35 @@ def constraints(data):
     
     # for temperature
     for var in ['tn', 'tb']:
+        if var in data:
+            data[var] = xr.where(data[var] < -2.5, -2.5, data[var])  # Ensure T > -2.5
+
+    return data
+
+def constraints_for_fields(data):
+    """ 
+    Check and apply constraints to variables 
+    
+    U < 10 m/s, |ssh| < 20 m, S in [0,100] psu, T > -2.5 degC
+    """ 
+
+    # for horizontal velocity (u,v)
+    for var in ['uo', 'vo']:
+        if var in data:
+            data[var] = xr.where(data[var] > 10, 10, data[var])  # Ensure U < 10 m/s
+    
+    # for sea surface height (ssh)
+    for var in ['zos']:
+        if var in data:
+            data[var] = xr.where(np.abs(data[var]) > 20, 20 * np.sign(data[var]), data[var])  # Ensure |ssh| < 20
+    
+    # for salinity
+    for var in ['so']:
+        if var in data:
+            data[var] = data[var].clip(0, 100)  # Ensure S in [0, 100]
+    
+    # for temperature
+    for var in ['thetao']:
         if var in data:
             data[var] = xr.where(data[var] < -2.5, -2.5, data[var])  # Ensure T > -2.5
 

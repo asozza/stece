@@ -23,48 +23,54 @@ from osprey.means.means import spacemean, timemean
 from osprey.utils import catalogue
 
 
-def map(expname, startyear, endyear, varname, reader="post", metric="base", replace=False, figname=None):
+def map(expname, startyear, endyear, varlabel, format="global", reader="post", orca="ORCA2",
+        replace=False, metric="base", refinfo=None, rescale=False, ax=None, figname=None):
     """ 
-    Plot of Hovmöller diagram 
+    Horizontal Map
     
     Positional Args:
     - expname: experiment name
     - startyear,endyear: time window
-    - varname: variable name
+    - varlabel: variable name + ztag
 
     Optional Args:
+    - format: time format [global, winter, spring, summer, autumn]
     - reader: read the original raw data or averaged data ['nemo', 'post']
-    - metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    - orca: ORCA configuration [ORCA2, eORCA1]
     - replace: replace existing files [False or True]
+    - metric: choose the type of cost function ['base', 'norm', 'diff' ...]
+    - refinfo: reference information
+    - rescale: rescale by initial value: False or true?
     
     Optional Args for figure settings:
+    - color: color?
+    - ax: axes for subplots
     - figname: save plot to file
     
     """
+
+    if '-' in varlabel:
+        varname, ztag = varlabel.split('-', 1)
+    else:
+        varname, ztag = varlabel, None
     
     info = catalogue.observables('nemo')[varname]
 
     # Read data from raw NEMO output
     if reader == "nemo":
 
-        data = reader_nemo(expname, startyear, endyear)
-        if info['dim'] == '2D':
-            vec = timemean(data, varname)
-        elif info['dim'] == '3D':
-            vec = globalmean(data, varname, '1D')
-        
+
+        data = reader_nemo_field(expname=expname, startyear=startyear, endyear=endyear, varname=varname)        
+        data = averaging(data=data, varlabel=varlabel, diagname='map', format=format, orca=orca)
+                    
     # Read post-processed data
     elif reader == "post":
 
         data = postreader_nemo(expname=expname, startyear=startyear, endyear=endyear, varlabel=varname, diagname='map', replace=replace, metric=metric)
-        vec = data[varname]
+        data = data[varname]
     
     # plot
-    pp = vec.plot(x='time', y='z', cmap=plt.cm.coolwarm)
-    plt.xlabel('time')
-    plt.ylabel('depth')
-    plt.ylim(0,5000)
-    plt.gca().invert_yaxis() # invert y-axis
+    pp = data.plot(x='x', y='y', cmap=plt.cm.coolwarm)
 
     return pp
 
