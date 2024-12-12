@@ -27,3 +27,6 @@ mv $expdir/$exp2/${exp1}.yml $expdir/$exp2/${exp2}.yml
 sed -i "3,$ s/${exp1}/${exp2}/g" $expdir/$exp2/${exp2}.yml
 sed -i "s/${exp1}/${exp2}/g" $expdir/$exp2/launch.sh
 
+rm -rf $expdir/$exp2/ecs*
+rm -rf $expdir/$exp2/*~
+rm -rf $expdir/$exp2/sbatch.tmp.yml

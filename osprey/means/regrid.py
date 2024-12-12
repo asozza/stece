@@ -32,7 +32,7 @@ def regrid_U_to_T(u, ndim):
     domain = read_domain('ORCA2') 
 
     if ndim == '3D':
-        u_coords = {'x': u['x'], 'y': u['y'], 'z': domain['z']}
+        u_coords = {'x': u['x'], 'y': u['y'], 'z': domain['nav_lev'].drop_vars('time')}
         u_on_t_grid = u.interp(x=u_coords['x'] - 0.5, y=u_coords['y'], z=u_coords['z'])
     elif ndim == '2D':
         u_coords = {'x': u['x'], 'y': u['y']}
@@ -52,7 +52,7 @@ def regrid_V_to_T(v, ndim):
     domain = read_domain('ORCA2')    
 
     if ndim == '3D':       
-        v_coords = {'x': v['x'], 'y': v['y'], 'z': domain['z']}
+        v_coords = {'x': v['x'], 'y': v['y'], 'z': domain['nav_lev'].drop_vars('time')}
         v_on_t_grid = v.interp(x=v_coords['x'], y=v_coords['y'] - 0.5, z=v_coords['z'])
     elif ndim == '2D':
         v_coords = {'x': v['x'], 'y': v['y']}

@@ -16,7 +16,7 @@ import shutil
 import xarray as xr
 
 from osprey.actions.reader import reader_nemo, reader_rebuilt
-from osprey.actions.stabilizer import constraints
+from osprey.actions.stabilizer import constraints_for_restart, constraints_for_fields
 from osprey.means.eof import project_eofs, process_data
 from osprey.means.means import timemean
 from osprey.utils.folders import folders
@@ -121,7 +121,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     xf = _forecast_xarray(foreyear)
 
     # read forecast and change restart
-    rdata = reader_rebuilt(expname, endleg, endleg)
+    rdata = reader_rebuilt(expname, endleg, endleg) 
 
     # create EOF
     for varname in varnames:
@@ -133,7 +133,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
         run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
         run_cdo.detrend(expname, varname, endleg)
         run_cdo.get_EOF(expname, varname, endleg, window)
-        
+
         # field projection in the future
         field = project_eofs(expname=expname, varname=varname, endleg=endleg, neofs=window, xf=xf, mode=mode)
         
@@ -149,6 +149,9 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
             total = total.transpose("time", "z", "y", "x")
         if info['dim'] == '2D':
             total = total.transpose("time", "y", "x")
+
+        # move constraints here, before smoothing.
+        total = constraints_for_fields(total)
 
         # add smoothing and post-processing features
         if smoothing:
@@ -167,7 +170,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
             rdata[vars] = xr.where(rdata[vars] != 0.0, total[varname], 0.0)
         
         # add constraints
-        rdata = constraints(rdata)
+        rdata = constraints_for_restart(rdata)
 
     return rdata
 

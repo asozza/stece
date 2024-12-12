@@ -17,7 +17,6 @@ import cftime
 
 from osprey.utils.folders import folders
 from osprey.utils.time import get_leg
-from osprey.utils import run_cdo_old
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import spacemean, timemean
 from osprey.utils import catalogue
