@@ -87,12 +87,14 @@ def constraints_for_fields(data):
     # for horizontal velocity (u,v)
     for var in ['uo', 'vo']:
         if var in data:
-            data[var] = xr.where(data[var] > 10, 10, data[var])  # Ensure U < 10 m/s
+            data[var] = data[var].clip(-10.0,10.0)
+            #data[var] = xr.where(data[var] > 10, 10, data[var])  # Ensure U < 10 m/s
     
     # for sea surface height (ssh)
     for var in ['zos']:
         if var in data:
-            data[var] = xr.where(np.abs(data[var]) > 20, 20 * np.sign(data[var]), data[var])  # Ensure |ssh| < 20
+            data[var] = data[var].clip(-20,20)
+            #data[var] = xr.where(np.abs(data[var]) > 20, 20 * np.sign(data[var]), data[var])  # Ensure |ssh| < 20
     
     # for salinity
     for var in ['so']:
@@ -102,6 +104,7 @@ def constraints_for_fields(data):
     # for temperature
     for var in ['thetao']:
         if var in data:
-            data[var] = xr.where(data[var] < -2.5, -2.5, data[var])  # Ensure T > -2.5
+            data[var] = data[var].clip(-2.5, 32.0)
+            #data[var] = xr.where(data[var] < -2.5, -2.5, data[var])  # Ensure T > -2.5
 
     return data

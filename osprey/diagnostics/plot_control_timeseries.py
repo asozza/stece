@@ -32,22 +32,20 @@ def drawing(figname):
 
     # global mean temperature merge from reference experiments
     # palette: lightcoral, red, orange, green, darkseagreen, cornflowerblue, blue, darkslategray, indigo
-    color='blue'
     varlabel='thetao'
-    #timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', timeoff=0, color=color, linestyle='-')
+    timeseries(expname='pi00', startyear=1990, endyear=2110, varlabel=varlabel, reader='post', timeoff=0, color='blue', linestyle='-')
+    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', timeoff=0, color='red', linestyle='-')
     #timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color=color, linestyle='-')
     #timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=811, color=color, linestyle='-')
     #timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1171, color=color, linestyle='-')
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', avetype='moving', timeoff=1531, color=color, linestyle='-')
-    timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', avetype='moving', timeoff=1891, color='red', linestyle='--')
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', avetype='moving', timeoff=1891, color=color, linestyle='-')
+    #timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', avetype='moving', timeoff=1531, color=color, linestyle='-')
+    #timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', avetype='moving', timeoff=1891, color='red', linestyle='--')
+    #timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', avetype='moving', timeoff=1891, color=color, linestyle='-')
     #timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2251, color=color, linestyle='-')
     #timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2611, color=color, linestyle='-')
     #timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2971, color=color, linestyle='-')
     #timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3331, color=color, linestyle='-')
     #timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3691, color=color, linestyle='-')
-    plt.xlim(3800,4000)
-
 
     plt.title('Timeseries of global mean temperature')
 
@@ -65,7 +63,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig0_thetao.png'
+    figname='pi00_thetao.png'
     drawing(figname)
 
     # End timer

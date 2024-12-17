@@ -94,19 +94,54 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
 
 def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full', smoothing=False):
     """ 
-    Function to forecast winter temperature field using EOF
+    Function to assembly the forecast of multiple fields using EOF
     
     Args:
     expname: experiment name
     varname: variable name
-    endleg: leg
+    endleg: final leg of the simulation
     yearspan: years backward from endleg used by EOFs
     yearleap: years forward from endleg to forecast
-    reco: reconstruction of present time
+    mode: EOF regression mode
+    smoothing: if needed, smooth out the forecasted fields
     
     """
 
-    dirs = folders(expname)
+    # read forecast and change restart
+    rdata = reader_rebuilt(expname, endleg, endleg) 
+
+    # create EOF
+    for varname in varnames:
+        
+        field = create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='full', smoothing=False)
+
+        field = field.rename({'time': 'time_counter', 'z': 'nav_lev'})
+        field['time_counter'] = rdata['time_counter']
+
+        # loop on the corresponding varlist    
+        varlist = varlists.get(varname, []) # Get the corresponding varlist, default to an empty list if not found
+        for vars in varlist:
+            rdata[vars] = xr.where(rdata[vars] != 0.0, field[varname], 0.0)
+
+    return rdata
+
+
+def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='full', format='winter', smoothing=False):
+    """ 
+    Function to forecast a single field using EOF
+    
+    Args:
+    expname: experiment name
+    varname: variable name
+    endleg: final leg of the simulation
+    yearspan: years backward from endleg used by EOFs
+    yearleap: years forward from endleg to forecast
+    mode: EOF regression mode
+    format: time format [plain, moving, winter, etc ...]
+    smoothing: if needed, smooth out the forecasted fields
+    
+    """
+
 
     startleg = endleg - yearspan + 1
     startyear = 1990 + startleg - 2
@@ -116,63 +151,45 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     logging.info(f"Start/end year: {startyear}-{endyear}")
     logging.info(f"Time window: {window}")
 
+    info = catalogue.observables('nemo')[varname]
+    dirs = folders(expname)
+
     # forecast year
     foreyear = get_forecast_year(endyear, yearleap)
     xf = _forecast_xarray(foreyear)
 
-    # read forecast and change restart
-    rdata = reader_rebuilt(expname, endleg, endleg) 
+    # prepare field and EOFs
+    # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
+    run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
+    run_cdo.detrend(expname, varname, endleg)
+    run_cdo.get_EOF(expname, varname, endleg, window)
 
-    # create EOF
-    for varname in varnames:
-        
-        info = catalogue.observables('nemo')[varname]
-        
-        # prepare field and EOFs
-        # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
-        run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
-        run_cdo.detrend(expname, varname, endleg)
-        run_cdo.get_EOF(expname, varname, endleg, window)
+    # field projection in the future
+    field = project_eofs(expname=expname, varname=varname, endleg=endleg, neofs=window, xf=xf, mode=mode)
+     
+    # retrend
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+    xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
+    ave = timemean(xdata[varname])
+    total = field + ave
+    if info['dim'] == '3D':
+        total = total.transpose("time", "z", "y", "x")
+    if info['dim'] == '2D':
+        total = total.transpose("time", "y", "x")
 
-        # field projection in the future
-        field = project_eofs(expname=expname, varname=varname, endleg=endleg, neofs=window, xf=xf, mode=mode)
-        
-        if mode == 'reco':
-            field = field.drop_vars({'time'})
-        
-        # retrend
-        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-        xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
-        ave = timemean(xdata[varname])
-        total = field + ave
-        if info['dim'] == '3D':
-            total = total.transpose("time", "z", "y", "x")
-        if info['dim'] == '2D':
-            total = total.transpose("time", "y", "x")
+    # move constraints here, before smoothing.
+    total = constraints_for_fields(total)
 
-        # move constraints here, before smoothing.
-        total = constraints_for_fields(total)
+    # add smoothing and post-processing features
+    if smoothing:
+        infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_total.nc")
+        total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
+        outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
+        run_cdo.add_smoothing(infile, outfile)
+        total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, mode='post', dim=info['dim'], grid=info['grid']))    
 
-        # add smoothing and post-processing features
-        if smoothing:
-            infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_total.nc")
-            total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
-            outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
-            run_cdo.add_smoothing(infile, outfile)
-            total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, mode='post', dim=info['dim'], grid=info['grid']))    
+    return total
 
-        #total = total.rename({'time': 'time_counter', 'z': 'nav_lev'})
-        total['time_counter'] = rdata['time_counter']
-
-        # loop on the corresponding varlist    
-        varlist = varlists.get(varname, []) # Get the corresponding varlist, default to an empty list if not found
-        for vars in varlist:
-            rdata[vars] = xr.where(rdata[vars] != 0.0, total[varname], 0.0)
-        
-        # add constraints
-        rdata = constraints_for_restart(rdata)
-
-    return rdata
 
 
 ###########################################################################################################

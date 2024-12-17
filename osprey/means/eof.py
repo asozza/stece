@@ -183,7 +183,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
             basis = pattern.isel(time=i)
             field = field + theta*basis
 
-        # add figure
+        field = field.drop_vars({'time'})
 
     # EOFs up to a percentage of the full
     elif mode == 'frac':
@@ -212,5 +212,14 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
             field += theta * basis
 
     # add mode='weighted' weight the yearleap based on the distance from equilibrium.
+
+    # add linear regression fit modes: point-to-poit, global- & basin- based
+    elif mode == 'fit':
+
+        filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+        data = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
+        p = data[varname].polyfit(dim='time', deg=1, skipna=True)
+        field = xr.polyval(xf, p.polyfit_coefficients)
+    
 
     return field

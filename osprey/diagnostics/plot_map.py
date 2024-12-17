@@ -30,7 +30,7 @@ def get_memory_usage():
 
 def drawing(figname):
 
-    map(expname='pi00', startyear=2000, endyear=2000, varlabel='uos', reader='post', replace=True)
+    map(expname='pi00', startyear=2000, endyear=2000, varlabel='tos', reader='post', replace=True)
     
     # Save the combined figure
     plt.savefig(figname)
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='map0_uos.png'
+    figname='pi00_map_uos_2000.png'
     #figname='hovm2.png'
     drawing(figname)
 
