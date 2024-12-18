@@ -28,6 +28,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Initialize CDO
 cdo = Cdo()
 
+
 @error_handling_decorator
 def merge_winter(expname, varname, startyear, endyear, grid='T'):
     """ CDO command to merge winter-only data """
@@ -79,17 +80,57 @@ def merge_winter(expname, varname, startyear, endyear, grid='T'):
 
 
 @error_handling_decorator
+def cat(expname, startyear, endyear):
+    """ CDO command to merge files """
+
+    dirs = folders(expname)
+    leg = get_leg(endyear)
+
+    filelist = []
+    for year in range(startyear, endyear):
+        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
+        print(pattern)
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+    
+    os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
+    datafile = os.path.join(dirs['tmp'], str(leg).zfill(3), "data.nc")
+    remove_existing_file(datafile)
+    
+    cdo.run(f"cat {' '.join(filelist)} {datafile}")
+
+    return None
+
+
+@error_handling_decorator
+def selname(expname, varname, leg):
+    """ CDO command to select variable """
+
+    dirs = folders(expname)
+
+    datafile = os.path.join(dirs['tmp'], str(leg).zfill(3), "data.nc")
+
+    varfile = os.path.join(dirs['tmp'],  str(leg).zfill(3), f"{varname}.nc")
+    remove_existing_file(varfile)
+    
+    cdo.run(f"selname,{varname} {datafile} {varfile}")      
+
+    return None
+
+
+@error_handling_decorator
 def detrend(expname, varname, leg):
     """Detrend data by subtracting the time average using the CDO Python package."""
     
     dirs = folders(expname)
+
     varfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
+
     anomfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_anomaly.nc")
     remove_existing_file(anomfile)
 
     logging.info(f"Detrending variable {varname} by subtracting the time average.")
     
-    # Detrending using CDO: subtract the time mean from the variable
     cdo.sub(input=[varfile, f"-timmean {varfile}"], output=anomfile)
 
     return None
@@ -180,14 +221,64 @@ def EOF_info(expname, varname, leg):
 
     return None
 
+
 @error_handling_decorator
 def add_smoothing(input, output):
     """ add smoothing """
 
     remove_existing_file(output)
 
-    #cdo.smooth("radius=2deg", input=input, output=output)
-    cdo.smooth9(input=input, output=output)
+    cdo.smooth("radius=10deg", input=input, output=output)
+    #cdo.smooth9(input=input, output=output)
 
     return None
 
+
+@error_handling_decorator
+def merge(expname, varname, startyear, endyear, format='winter', grid='T'):
+    """ CDO command to merge winter-only data """
+
+    dirs = folders(expname)
+    endleg = endyear - 1990 + 2
+    
+    os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
+
+    filelist = []
+    for year in range(startyear-1, endyear):
+        for i in range(2):
+            pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_{grid}_{year-i}-{year-i}.nc")
+            matching_files = glob.glob(pattern)
+            filelist.extend(matching_files)
+
+        datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_data.nc")
+        remove_existing_file(datafile)
+        varfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_monthly.nc")
+        remove_existing_file(varfile)
+        djfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ.nc")
+        remove_existing_file(djfile)
+        auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ2.nc")
+        remove_existing_file(auxfile)
+        winterfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")
+        remove_existing_file(winterfile)
+
+        cdo.run(f"cat {' '.join(filelist)} {datafile}")        
+        cdo.run(f"selname,{varname} {datafile} {varfile}")        
+        cdo.run(f"selmon,12,1 {varfile} {djfile}")        
+        cdo.run(f"delete,timestep=1,-1 {djfile} {auxfile}")        
+        cdo.run(f"timmean {auxfile} {winterfile}")
+
+    filelist = []
+    for year in range(startyear-1, endyear):
+        pattern = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")                        
+        matching_files = glob.glob(pattern)
+        filelist.extend(matching_files)
+
+    datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+    remove_existing_file(datafile)
+
+    cdo.run(f"cat {' '.join(filelist)} {datafile}")
+
+    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_")
+    remove_existing_filelist(auxfile)
+
+    return None

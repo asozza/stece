@@ -20,7 +20,16 @@ from osprey.actions.reader import elements
 #dask.config.set({'array.optimize_blockwise': True})
 
 # dictionary of months by seasons
-season_months = {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]}
+season_months = {
+        "DJF": [12, 1, 2], 
+        "MAM": [3, 4, 5], 
+        "JJA": [6, 7, 8], 
+        "SON": [9, 10, 11],
+        'winter': [12, 1, 2],
+        'spring': [3, 4, 5],
+        'summer': [6, 7, 8],
+        'autumn': [9, 10, 11]
+    }
 
 
 #################################################################################
@@ -97,24 +106,55 @@ def timemean(data, format='global', use_cftime=True):
         ave = data.groupby('time.month').mean(dim='time')
         
         if use_cftime:
+            
+            # create cftime array of dates
             last_year = data['time.year'].values[-1]
             dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
-            ave = xr.DataArray(data=ave, dims=["time"], coords={"time": dates})
+            
+            # create new coordinates ( space unchanged)
+            coords = {"time": dates}
+            for dim in data.coords:
+                if dim not in coords:
+                    coords[dim] = data[dim]
+            
+            # combine all in a new array
+            ave = xr.DataArray(
+                data=ave, 
+                dims=["time"] + [dim for dim in ave.dims if dim != "month"], # replace 'month' with 'time' 
+                coords=coords
+            )
+
 
     elif format == 'seasonally':
         # Average by season (DJF, MAM, JJA, SON) across years
         ave = data.groupby('time.season').mean(dim='time')
 
         if use_cftime:
+
+            # create cftime array of dates
             last_year = data['time.year'].values[-1]
             dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
+
+            # create new coordinates (space unchanged)
+            coords = {"time": dates}
+            for dim in data.coords:
+                if dim not in coords:
+                    coords[dim] = data[dim]
+
+            # spread seasonal values across all months 
             values = []
             for month in range(1, 13):
                 for season, months in season_months.items():
                     if month in months:
                         values.append(ave.sel(season=season).values)
                         break
-            ave = xr.DataArray(data=values, dims=["time"], coords={"time": dates})
+
+            # put all in a new array
+            ave = xr.DataArray(
+                data=values, 
+                dims=["time"] + [dim for dim in ave.dims if dim != "season"], # replace 'season' with 'time' 
+                coords=coords)
+
 
     elif format == 'yearly':
         # Average by year
@@ -122,7 +162,20 @@ def timemean(data, format='global', use_cftime=True):
         
         if use_cftime:
             dates = [cftime.DatetimeGregorian(year, 7, 1, 0, 0, 0, has_year_zero=False) for year in ave['year'].values]
-            ave = xr.DataArray(data=ave, dims=["time"], coords={"time": dates})
+
+            # create new coordinates ( space unchanged)
+            coords = {"time": dates}
+            for dim in data.coords:
+                if dim not in coords:
+                    coords[dim] = data[dim]
+            
+            # combine all in a new array
+            ave = xr.DataArray(
+                data=ave, 
+                dims=["time"] + [dim for dim in ave.dims if dim != "year"], # replace 'year' with 'time' 
+                coords=coords
+            )
+
 
     elif format == 'seasons':
         # Average by seasons over years        
@@ -137,10 +190,22 @@ def timemean(data, format='global', use_cftime=True):
             ave = ave.stack(time=("year", "season"))
             ave = ave.drop_vars(['year','season'])
 
-    # ADD SIGLE SEASONS. can it be extracted from the previous block? 
+    elif format in season_months:
+        # Average by a specific season (e.g., 'winter', 'summer', etc.) yearly
+        season = format.lower()
+        if season not in season_months:
+            raise ValueError(f"Invalid season specified. Choose from: {', '.join(season_months.keys())}.")
+        
+        # Filter data by the months corresponding to the season
+        ave = data.sel(time=data['time.month'].isin(season_months[season])).mean(dim='time')
+        
+        if use_cftime:
+            last_year = data['time.year'].values[-1]
+            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in season_months[season]]
+            ave = xr.DataArray(data=ave, dims=["time"], coords={"time": dates})
 
     else:
-        raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly'.")
+        raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly', 'seasons', or a specific season like 'winter', 'spring', 'summer', 'autumn'.")
 
     return ave
 

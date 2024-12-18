@@ -70,15 +70,15 @@ def _grid_mapping(grid):
         raise ValueError(f"Unsupported grid type: {grid}")
 
 
-def process_data(data, mode, dim='3D', grid='T'):
+def process_data(data, ftype, dim='3D', grid='T'):
     """
     Function for preprocessing or postprocessing 2D/3D data.
 
     Parameters:
     - data: xarray.DataArray or xarray.Dataset
         Input data to be processed.
-    - mode: str
-        Operation mode. Choose from:
+    - ftype: str
+        Operation type. Choose from:
         'pattern' - Preprocessing for EOF pattern.
         'series' - Preprocessing for EOF timeseries.
         'post' - Post-processing for variable field.
@@ -99,7 +99,7 @@ def process_data(data, mode, dim='3D', grid='T'):
 
     grid_mappings = _grid_mapping(grid)
 
-    if mode == 'pattern':
+    if ftype == 'pattern':
         # Preprocessing routine for EOF pattern
         data = data.rename_dims({grid_mappings['x']: 'x', grid_mappings['y']: 'y'})
         data = data.rename({grid_mappings['lat']: 'lat', grid_mappings['lon']: 'lon'})
@@ -110,7 +110,7 @@ def process_data(data, mode, dim='3D', grid='T'):
             data = data.drop_vars({f"{grid_mappings['z']}_bnds"}, errors='ignore')
 
 
-    elif mode == 'series':
+    elif ftype == 'series':
         # Preprocessing routine for EOF timeseries
         data = data.rename({'time_counter': 'time'})
         data = data.isel(lon=0, lat=0)
@@ -119,14 +119,14 @@ def process_data(data, mode, dim='3D', grid='T'):
             data = data.isel(zaxis_Reduced=0)
             data = data.drop_vars({'zaxis_Reduced'}, errors='ignore')
 
-    elif mode == 'post':
+    elif ftype == 'post':
         # Post-processing routine for variable field
         data = data.rename({'time': 'time_counter'})
         if dim == '3D':
             data = data.rename({'z': 'nav_lev'})
 
     else:
-        raise ValueError(f"Invalid mode '{mode}'. Choose from 'pattern', 'series', or 'post'.")
+        raise ValueError(f"Invalid mode '{ftype}'. Choose from 'pattern', 'series', or 'post'.")
 
     return data
 
@@ -149,7 +149,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     info = catalogue.observables('nemo')[varname]
 
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
-    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
+    pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
     field = pattern.isel(time=0)*0
 
     # Full set of EOFs
@@ -157,7 +157,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
 
         for i in range(neofs):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))        
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
             p = timeseries.polyfit(dim='time', deg=1, skipna = True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
             basis = pattern.isel(time=i)
@@ -167,7 +167,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     elif mode == 'first':
 
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_00000.nc")    
-        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))        
+        timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
         theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
         basis = pattern.isel(time=0)
@@ -178,7 +178,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
 
         for i in range(neofs):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
             theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
             field = field + theta*basis
@@ -205,7 +205,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
 
         for i in range(feofs):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")
-            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='series', dim=info['dim'], grid=info['grid']))
+            timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
             p = timeseries.polyfit(dim='time', deg=1, skipna=True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
             basis = pattern.isel(time=i)
@@ -217,7 +217,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     elif mode == 'fit':
 
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-        data = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
+        data = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
         p = data[varname].polyfit(dim='time', deg=1, skipna=True)
         field = xr.polyval(xf, p.polyfit_coefficients)
     
