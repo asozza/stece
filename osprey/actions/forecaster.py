@@ -160,7 +160,7 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
 
     # prepare field and EOFs
     # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
-    run_cdo.merge_winter(expname, varname, startyear, endyear, grid=info['grid'])
+    run_cdo.merge(expname, varname, startyear, endyear, format=format, grid=info['grid'])
     run_cdo.detrend(expname, varname, endleg)
     run_cdo.get_EOF(expname, varname, endleg, window)
 
@@ -169,7 +169,7 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
      
     # retrend
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-    xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, mode='pattern', dim=info['dim'], grid=info['grid']))
+    xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
     ave = timemean(xdata[varname])
     total = field + ave
     if info['dim'] == '3D':
@@ -186,7 +186,7 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
         total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
         outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
         run_cdo.add_smoothing(infile, outfile)
-        total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, mode='post', dim=info['dim'], grid=info['grid']))    
+        total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, ftype='post', dim=info['dim'], grid=info['grid']))    
 
     return total
 

@@ -100,7 +100,7 @@ def timemean(data, format='global', use_cftime=True):
         # Global time average over all time points
         ave = data.mean(dim='time')
         
-    # TO BE FIXED YET: monthly and seasonally sohuld be at center of the period.
+    # ISSUE: use centroids for months and seasons
     elif format == 'monthly':       
         # Average by month across years
         ave = data.groupby('time.month').mean(dim='time')
@@ -109,7 +109,7 @@ def timemean(data, format='global', use_cftime=True):
             
             # create cftime array of dates
             last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
+            dates = [cftime.DatetimeGregorian(last_year, month, 15, 12, 0, 0, has_year_zero=False) for month in range(1, 13)]
             
             # create new coordinates ( space unchanged)
             coords = {"time": dates}
@@ -133,7 +133,7 @@ def timemean(data, format='global', use_cftime=True):
 
             # create cftime array of dates
             last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in range(1, 13)]
+            dates = [cftime.DatetimeGregorian(last_year, month, 15, 12, 0, 0, has_year_zero=False) for month in range(1, 13)]
 
             # create new coordinates (space unchanged)
             coords = {"time": dates}
@@ -146,7 +146,7 @@ def timemean(data, format='global', use_cftime=True):
             for month in range(1, 13):
                 for season, months in season_months.items():
                     if month in months:
-                        values.append(ave.sel(season=season).values)
+                        values.append(ave.sel(season=season))
                         break
 
             # put all in a new array
@@ -177,32 +177,38 @@ def timemean(data, format='global', use_cftime=True):
             )
 
 
-    elif format == 'seasons':
+    elif format == 'seasons' or format in season_months:
         # Average by seasons over years        
         ave = data.groupby(['time.year', 'time.season']).mean(dim='time')
 
         if use_cftime:
-            season_times = []
+            
+            season_times = []            
             for (year, season), group in data.groupby(['time.year', 'time.season']):            
-                center_time = group['time'].mean()
-                season_times.append(center_time.item())
+                # Determine the center month of the season
+                if season in season_months:
+                    center_month = season_months[season][1]
+                else:
+                    raise ValueError(f"Unknown season: {season}")
+
+                # Create a cftime object for the center of the season
+                center_time = cftime.DatetimeGregorian(year, center_month, 15, 12, 0, 0, has_year_zero=False)
+                season_times.append(center_time)
+            
+            season_times = sorted(season_times)
             season_times = xr.DataArray(season_times, dims=['time'], name='time', coords={'time': season_times})
+            
             ave = ave.stack(time=("year", "season"))
             ave = ave.drop_vars(['year','season'])
+            ave['time'] = season_times
+        
+        # reorder dimensions
+        ave = ave.transpose(*data.dims)
 
-    elif format in season_months:
-        # Average by a specific season (e.g., 'winter', 'summer', etc.) yearly
-        season = format.lower()
-        if season not in season_months:
-            raise ValueError(f"Invalid season specified. Choose from: {', '.join(season_months.keys())}.")
-        
-        # Filter data by the months corresponding to the season
-        ave = data.sel(time=data['time.month'].isin(season_months[season])).mean(dim='time')
-        
-        if use_cftime:
-            last_year = data['time.year'].values[-1]
-            dates = [cftime.DatetimeGregorian(last_year, month, 1, 0, 0, 0, has_year_zero=False) for month in season_months[season]]
-            ave = xr.DataArray(data=ave, dims=["time"], coords={"time": dates})
+        if format in season_months:
+            # Select a specific season
+            ave = ave.sel(time=ave['time.month'].isin(season_months[format]))
+
 
     else:
         raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly', 'seasons', or a specific season like 'winter', 'spring', 'summer', 'autumn'.")

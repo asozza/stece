@@ -18,7 +18,7 @@ from cdo import Cdo
 from osprey.utils.folders import folders
 from osprey.utils.utils import run_bash_command
 from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
-from osprey.utils.time import get_leg, get_year
+from osprey.utils.time import get_leg, get_year, get_season_months
 from osprey.utils import catalogue
 from osprey.actions.reader import reader_nemo
 
@@ -30,65 +30,15 @@ cdo = Cdo()
 
 
 @error_handling_decorator
-def merge_winter(expname, varname, startyear, endyear, grid='T'):
-    """ CDO command to merge winter-only data """
-
-    dirs = folders(expname)
-    endleg = endyear - 1990 + 2
-    
-    os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
-
-    for year in range(startyear-1, endyear):
-        filelist = []
-        for i in range(2):
-            pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_{grid}_{year-i}-{year-i}.nc")
-            matching_files = glob.glob(pattern)
-            filelist.extend(matching_files)
-
-        datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_data.nc")
-        remove_existing_file(datafile)
-        varfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_monthly.nc")
-        remove_existing_file(varfile)
-        djfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ.nc")
-        remove_existing_file(djfile)
-        auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ2.nc")
-        remove_existing_file(auxfile)
-        winterfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")
-        remove_existing_file(winterfile)
-
-        cdo.run(f"cat {' '.join(filelist)} {datafile}")        
-        cdo.run(f"selname,{varname} {datafile} {varfile}")        
-        cdo.run(f"selmon,12,1 {varfile} {djfile}")        
-        cdo.run(f"delete,timestep=1,-1 {djfile} {auxfile}")        
-        cdo.run(f"timmean {auxfile} {winterfile}")
-
-    filelist = []
-    for year in range(startyear-1, endyear):
-        pattern = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")                        
-        matching_files = glob.glob(pattern)
-        filelist.extend(matching_files)
-
-    datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-    remove_existing_file(datafile)
-
-    cdo.run(f"cat {' '.join(filelist)} {datafile}")
-
-    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_")
-    remove_existing_filelist(auxfile)
-
-    return None
-
-
-@error_handling_decorator
-def cat(expname, startyear, endyear):
+def cat(expname, startyear, endyear, grid='T', freq='1m'):
     """ CDO command to merge files """
 
     dirs = folders(expname)
-    leg = get_leg(endyear)
+    leg = get_leg(endyear+1)
 
     filelist = []
-    for year in range(startyear, endyear):
-        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_T_{year}-{year}.nc")
+    for year in range(startyear, endyear+1):
+        pattern = os.path.join(dirs['nemo'], f"{expname}_oce_{freq}_{grid}_{year}-{year}.nc")
         print(pattern)
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
@@ -119,6 +69,51 @@ def selname(expname, varname, leg):
 
 
 @error_handling_decorator
+def timmean(expname, varname, leg, format='global'):
+    """ CDO command to compute time mean """
+
+    dirs = folders(expname)
+
+    infile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
+
+    outfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_timmean.nc")
+    remove_existing_file(outfile)
+
+    if format == 'global':
+        cdo.run(f"timmean {infile} {outfile}")
+
+    elif format == 'seasonal' or format in get_season_months():
+        cdo.run(f"seasmean {infile} {outfile}")
+
+        if format in get_season_months():
+            cdo.run(f"selmon,{get_season_months()[format][1]} {infile} {outfile}")
+
+    return None
+
+
+@error_handling_decorator
+def merge(expname, varname, startyear, endyear, format='winter', grid='T', freq='1m'):
+    """ CDO command to merge data """
+
+    dirs = folders(expname)
+    endleg = endyear - 1990 + 2
+    
+    os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
+
+    cat(expname=expname, startyear=startyear, endyear=endyear, grid=grid, freq=freq)
+    selname(expname=expname, varname=varname, leg=endleg)
+    timmean(expname=expname, varname=varname, leg=endleg, format=format)
+
+    # rename final file
+    old_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_timmean.nc")
+    new_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+    if os.path.exists(old_file):
+        os.rename(old_file, new_file)
+
+    return None
+
+
+@error_handling_decorator
 def detrend(expname, varname, leg):
     """Detrend data by subtracting the time average using the CDO Python package."""
     
@@ -132,6 +127,31 @@ def detrend(expname, varname, leg):
     logging.info(f"Detrending variable {varname} by subtracting the time average.")
     
     cdo.sub(input=[varfile, f"-timmean {varfile}"], output=anomfile)
+
+    return None
+
+
+@error_handling_decorator
+def retrend(expname, varname, leg):
+    """Add trend to a variable using the CDO Python package with error handling."""
+
+    # Get the directories and file paths
+    dirs = folders(expname)
+    
+    # Define file paths for the original data, auxiliary product, and the final forecast
+    inifile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
+    auxfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_product.nc")
+    newfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_forecast.nc")
+    
+    # Remove existing forecast file if it already exists
+    remove_existing_file(newfile)
+
+    logging.info(f"Adding trend to {varname} using {auxfile} and {inifile}.")
+
+    # CDO command to add the trend back to the detrended data
+    cdo.add(input=[auxfile, f"-timmean {inifile}"], output=newfile)
+
+    logging.info(f"Retrended forecast data created: {newfile}")
 
     return None
 
@@ -180,31 +200,6 @@ def get_EOF(expname, varname, leg, window):
 
 
 @error_handling_decorator
-def retrend(expname, varname, leg):
-    """Add trend to a variable using the CDO Python package with error handling."""
-
-    # Get the directories and file paths
-    dirs = folders(expname)
-    
-    # Define file paths for the original data, auxiliary product, and the final forecast
-    inifile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
-    auxfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_product.nc")
-    newfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_forecast.nc")
-    
-    # Remove existing forecast file if it already exists
-    remove_existing_file(newfile)
-
-    logging.info(f"Adding trend to {varname} using {auxfile} and {inifile}.")
-
-    # CDO command to add the trend back to the detrended data
-    cdo.add(input=[auxfile, f"-timmean {inifile}"], output=newfile)
-
-    logging.info(f"Retrended forecast data created: {newfile}")
-
-    return None
-
-
-@error_handling_decorator
 def EOF_info(expname, varname, leg):
     """Get the relative magnitude of EOF eigenvectors using the CDO Python package with error handling."""
 
@@ -233,52 +228,3 @@ def add_smoothing(input, output):
 
     return None
 
-
-@error_handling_decorator
-def merge(expname, varname, startyear, endyear, format='winter', grid='T'):
-    """ CDO command to merge winter-only data """
-
-    dirs = folders(expname)
-    endleg = endyear - 1990 + 2
-    
-    os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
-
-    filelist = []
-    for year in range(startyear-1, endyear):
-        for i in range(2):
-            pattern = os.path.join(dirs['nemo'], f"{expname}_oce_*_{grid}_{year-i}-{year-i}.nc")
-            matching_files = glob.glob(pattern)
-            filelist.extend(matching_files)
-
-        datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_data.nc")
-        remove_existing_file(datafile)
-        varfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_monthly.nc")
-        remove_existing_file(varfile)
-        djfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ.nc")
-        remove_existing_file(djfile)
-        auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_DJ2.nc")
-        remove_existing_file(auxfile)
-        winterfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")
-        remove_existing_file(winterfile)
-
-        cdo.run(f"cat {' '.join(filelist)} {datafile}")        
-        cdo.run(f"selname,{varname} {datafile} {varfile}")        
-        cdo.run(f"selmon,12,1 {varfile} {djfile}")        
-        cdo.run(f"delete,timestep=1,-1 {djfile} {auxfile}")        
-        cdo.run(f"timmean {auxfile} {winterfile}")
-
-    filelist = []
-    for year in range(startyear-1, endyear):
-        pattern = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_winter_{year}.nc")                        
-        matching_files = glob.glob(pattern)
-        filelist.extend(matching_files)
-
-    datafile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-    remove_existing_file(datafile)
-
-    cdo.run(f"cat {' '.join(filelist)} {datafile}")
-
-    auxfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"aux_")
-    remove_existing_filelist(auxfile)
-
-    return None

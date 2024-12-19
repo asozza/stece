@@ -100,3 +100,28 @@ def get_leg(year, year_zero=1990):
     """ Get leg from date """
 
     return (year - year_zero + 1)
+
+def get_season_months():
+    """
+    Returns the list of months associated with a specified season.
+
+    Args:
+    - season (str): Name or abbreviation of the season ('winter', 'spring', 'summer', 'autumn', 
+                    or 'DJF', 'MAM', 'JJA', 'SON').
+
+    Returns:
+    - list: List of months associated with the season.
+    - None: If the season is invalid.
+    """
+    months_by_season = {
+        "DJF": [12, 1, 2], 
+        "MAM": [3, 4, 5], 
+        "JJA": [6, 7, 8], 
+        "SON": [9, 10, 11],
+        "winter": [12, 1, 2],
+        "spring": [3, 4, 5],
+        "summer": [6, 7, 8],
+        "autumn": [9, 10, 11]
+    }
+    
+    return months_by_season
