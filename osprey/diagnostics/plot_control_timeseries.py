@@ -33,8 +33,8 @@ def drawing(figname):
     # global mean temperature merge from reference experiments
     # palette: lightcoral, red, orange, green, darkseagreen, cornflowerblue, blue, darkslategray, indigo
     varlabel='thetao'
-    timeseries(expname='pi00', startyear=1990, endyear=2110, varlabel=varlabel, reader='post', timeoff=0, color='blue', linestyle='-')
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', timeoff=0, color='red', linestyle='-')
+    timeseries(expname='pi00', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=0, color='blue', linestyle='-')
+    timeseries(expname='pi01', startyear=1990, endyear=2160, varlabel=varlabel, reader='post', timeoff=360, color='red', linestyle='-')
     #timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', timeoff=410, color=color, linestyle='-')
     #timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=811, color=color, linestyle='-')
     #timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1171, color=color, linestyle='-')
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='pi00_thetao.png'
+    figname='pi00-01_thetao.png'
     drawing(figname)
 
     # End timer

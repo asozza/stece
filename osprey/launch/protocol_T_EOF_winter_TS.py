@@ -37,6 +37,7 @@ def parse_args():
     # optional to activate nemo rebuild
     parser.add_argument("--rebuild", action="store_true", help="Enable nemo-rebuild")
     parser.add_argument("--forecast", action="store_true", help="Create forecast")
+    parser.add_argument("--mode", choices=['first', 'full', 'other'], default='full', help="Mode for processing")
     parser.add_argument("--replace", action="store_true", help="Replace nemo restart files")
     parser.add_argument("--restore", action="store_true", help="Restore nemo restart files")
 
@@ -52,6 +53,7 @@ if __name__ == "__main__":
     leg = args.leg
     yearspan = args.yearspan
     yearleap = args.yearleap
+    mode = args.mode
 
     # define folders
     dirs = folders(expname)
@@ -64,7 +66,7 @@ if __name__ == "__main__":
 
     # forecast based on local temperature fit
     if args.forecast:
-        rdata = forecaster_EOF_def(expname=expname, varnames=varnames, endleg=leg, yearspan=yearspan, yearleap=yearleap, mode='full', smoothing=True)
+        rdata = forecaster_EOF_def(expname=expname, varnames=varnames, endleg=leg, yearspan=yearspan, yearleap=yearleap, mode=mode, smoothing=False)
         writer_restart(expname, rdata, leg)
 
     # replace nemo restart files

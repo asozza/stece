@@ -11,6 +11,7 @@ Date: May 2024
 import os
 import glob
 import subprocess
+import logging
 import numpy as np
 import xarray as xr
 import cftime
@@ -20,6 +21,8 @@ from osprey.utils.time import get_leg
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import spacemean, timemean
 from osprey.utils import catalogue
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def _forecast_xarray(foreyear):
     """Get the xarray for the forecast time"""
@@ -156,7 +159,8 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     if mode == 'full':
 
         for i in range(neofs):
-            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
+            logging.warning(f"Reading filename: {filename}")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
             p = timeseries.polyfit(dim='time', deg=1, skipna = True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
@@ -176,8 +180,8 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     # Reconstruct the last frame (for dry-runs)
     elif mode == 'reco':
 
-        for i in range(neofs):
-            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")    
+        for i in range(neofs):            
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
             theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
@@ -204,7 +208,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
         feofs = np.searchsorted(cumulative_weights, threshold_percentage) + 1
 
         for i in range(feofs):
-            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_0000{i}.nc")
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
             p = timeseries.polyfit(dim='time', deg=1, skipna=True)
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
