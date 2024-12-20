@@ -21,6 +21,7 @@ from osprey.utils.time import get_leg
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import spacemean, timemean
 from osprey.utils import catalogue
+from osprey.utils.utils import remove_existing_filelist
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -174,8 +175,9 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
         theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
+        logging.info(f"polyval theta value: {theta}")
         basis = pattern.isel(time=0)
-        field = field + theta*basis                
+        field = field + theta*basis
 
     # Reconstruct the last frame (for dry-runs)
     elif mode == 'reco':
@@ -225,5 +227,8 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
         p = data[varname].polyfit(dim='time', deg=1, skipna=True)
         field = xr.polyval(xf, p.polyfit_coefficients)
     
+    infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_eof.nc")
+    remove_existing_filelist(infile)
+    field.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
 
     return field

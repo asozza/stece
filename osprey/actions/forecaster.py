@@ -162,23 +162,25 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
     # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
     run_cdo.merge(expname, varname, startyear, endyear, format=format, grid=info['grid'])
     run_cdo.detrend(expname, varname, endleg)
-    run_cdo.get_EOF(expname, varname, endleg, window)
+    run_cdo.get_eofs(expname, varname, endleg, window)
 
     # field projection in the future
     field = project_eofs(expname=expname, varname=varname, endleg=endleg, neofs=window, xf=xf, mode=mode)
-     
+    
     # retrend
-    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
-    xdata = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
-    ave = timemean(xdata[varname])
-    total = field + ave
-    if info['dim'] == '3D':
-        total = total.transpose("time", "z", "y", "x")
-    if info['dim'] == '2D':
-        total = total.transpose("time", "y", "x")
+    run_cdo.retrend(expname, varname, endleg)
+    
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_new.nc")
+    total = xr.open_mfdataset(filename, use_cftime=True)
+    #ave = timemean(xdata[varname], format='global')
+    #total = field + ave
+    #if info['dim'] == '3D':
+    #    total = total.transpose("time", "z", "y", "x")
+    #if info['dim'] == '2D':
+    #    total = total.transpose("time", "y", "x")
 
-    # move constraints here, before smoothing.
-    total = constraints_for_fields(total)
+    # apply constraints
+    #total = constraints_for_fields(total)
 
     # add smoothing and post-processing features
     if smoothing:

@@ -140,13 +140,13 @@ def retrend(expname, varname, leg):
     
     # Define file paths for the original data, auxiliary product, and the final forecast
     inifile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
-    auxfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_product.nc")
-    newfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_forecast.nc")
+    auxfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_eof.nc")
+    newfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_proj.nc")
     
     # Remove existing forecast file if it already exists
     remove_existing_file(newfile)
 
-    logging.info(f"Adding trend to {varname} using {auxfile} and {inifile}.")
+    logging.info(f"Adding trend to {varname} using {inifile} on {auxfile}.")
 
     # CDO command to add the trend back to the detrended data
     cdo.add(input=[auxfile, f"-timmean {inifile}"], output=newfile)
@@ -157,7 +157,7 @@ def retrend(expname, varname, leg):
 
 
 @error_handling_decorator
-def get_EOF(expname, varname, leg, window):
+def get_eofs(expname, varname, leg, window):
     """Compute EOF using the CDO Python package with error handling."""
 
     # Get the directories and file paths
@@ -173,7 +173,7 @@ def get_EOF(expname, varname, leg, window):
     remove_existing_file(fldcov)
     remove_existing_file(fldpat)
 
-    logging.info(f"Computing EOF for variable {varname} with window size {window}.")
+    logging.info(f"Computing EOFs for variable {varname} with window size {window}.")
     
     # CDO command to compute EOFs covariance and pattern
     if info['dim'] == '3D':
