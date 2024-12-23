@@ -17,7 +17,7 @@ import xarray as xr
 import cftime
 
 from osprey.utils.folders import folders
-from osprey.utils.time import get_leg
+from osprey.utils.time import get_leg, get_decimal_year, get_forecast_year
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import spacemean, timemean
 from osprey.utils import catalogue
@@ -25,10 +25,14 @@ from osprey.utils.utils import remove_existing_filelist
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def _forecast_xarray(foreyear):
+def _forecast_xarray(foreyear, use_cftime=True):
     """Get the xarray for the forecast time"""
+
+    fdate = cftime.DatetimeGregorian(foreyear, 1, 16, 12, 0, 0, has_year_zero=False)
+
+    if use_cftime == False:
+        fdate = get_decimal_year([fdate])[0]
     
-    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 0, 0, 0, has_year_zero=False)
     xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])},
                       attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
 
@@ -137,7 +141,7 @@ def process_data(data, ftype, dim='3D', grid='T'):
 
 ##########################################################################################
 
-def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
+def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full'):
     """ 
     Function to project a field in the future using EOFs. 
     
@@ -149,9 +153,23 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
     
     """
 
-    dirs = folders(expname)
-    info = catalogue.observables('nemo')[varname]
+    startleg = endleg - yearspan + 1
+    startyear = 1990 + startleg - 2
+    endyear = 1990 + endleg - 2
+    neofs = endyear - startyear + 1
 
+    logging.info(f"Start/end year: {startyear}-{endyear}")
+    logging.info(f"Time window: {neofs}")
+
+    info = catalogue.observables('nemo')[varname]
+    dirs = folders(expname)
+
+    # forecast year
+    foreyear = get_forecast_year(endyear, yearleap)
+    xf = _forecast_xarray(foreyear, use_cftime=False)
+    yf = _forecast_xarray(foreyear, use_cftime=True)
+
+    # prepare patterns for EOFs
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
     pattern = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
     field = pattern.isel(time=0)*0
@@ -163,21 +181,32 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
             logging.warning(f"Reading filename: {filename}")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
-            p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+            new_time = get_decimal_year(timeseries['time'].values)
+            timeseries['time'] = new_time
+            p = timeseries.polyfit(dim='time', deg=1, skipna=True)
+            m, q = p[f"{varname}_polyfit_coefficients"].values
+            print(f"m={m}, q={q}")
             theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
+            print(f"theta={theta.values}")
             basis = pattern.isel(time=i)
-            field = field + theta*basis        
+            field += theta * basis
+            field['time'] = yf
 
     # First EOF
     elif mode == 'first':
 
         filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_00000.nc")    
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
+        new_time = get_decimal_year(timeseries['time'].values)
+        timeseries['time'] = new_time
         p = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        m, q = p[f"{varname}_polyfit_coefficients"].values
+        print(f"m={m}, q={q}")
         theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
-        logging.info(f"polyval theta value: {theta}")
+        print(f"theta={theta.values}")
         basis = pattern.isel(time=0)
-        field = field + theta*basis
+        field += theta * basis
+        field['time'] = yf
 
     # Reconstruct the last frame (for dry-runs)
     elif mode == 'reco':
@@ -187,7 +216,7 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
             theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
-            field = field + theta*basis
+            field += theta * basis
 
         field = field.drop_vars({'time'})
 
@@ -226,7 +255,13 @@ def project_eofs(expname, varname, endleg, neofs, xf, mode='full'):
         data = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
         p = data[varname].polyfit(dim='time', deg=1, skipna=True)
         field = xr.polyval(xf, p.polyfit_coefficients)
-    
+
+    # fit dimensions before writing on file
+    if info['dim'] == '3D':
+        field = field.transpose("time", "z", "y", "x")
+    if info['dim'] == '2D':
+        field = field.transpose("time", "y", "x")
+
     infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_eof.nc")
     remove_existing_filelist(infile)
     field.to_netcdf(infile, mode='w', unlimited_dims={'time': True})

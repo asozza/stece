@@ -20,7 +20,7 @@ from osprey.actions.stabilizer import constraints_for_restart, constraints_for_f
 from osprey.means.eof import project_eofs, process_data
 from osprey.means.means import timemean
 from osprey.utils.folders import folders
-from osprey.utils.time import get_year, get_startyear, get_forecast_year
+from osprey.utils.time import get_year, get_startyear, get_forecast_year, get_decimal_year
 from osprey.utils import run_cdo
 from osprey.utils import catalogue
 
@@ -35,16 +35,6 @@ varlists = {
     'uo': ['un', 'ub'],
     'vo': ['vn', 'vb']
 }
-
-
-def _forecast_xarray(foreyear):
-    """Get the xarray for the forecast time"""
-    
-    fdate = cftime.DatetimeGregorian(foreyear, 1, 1, 0, 0, 0, has_year_zero=False)
-    xf = xr.DataArray(data = np.array([fdate]), dims = ['time'], coords = {'time': np.array([fdate])},
-                      attrs = {'stardand_name': 'time', 'long_name': 'Time axis', 'bounds': 'time_counter_bnds', 'axis': 'T'})
-
-    return xf
 
 def _time_xarray(startyear, endyear):
     """Reconstruct the time array of restarts"""
@@ -142,7 +132,6 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
     
     """
 
-
     startleg = endleg - yearspan + 1
     startyear = 1990 + startleg - 2
     endyear = 1990 + endleg - 2
@@ -154,10 +143,6 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
     info = catalogue.observables('nemo')[varname]
     dirs = folders(expname)
 
-    # forecast year
-    foreyear = get_forecast_year(endyear, yearleap)
-    xf = _forecast_xarray(foreyear)
-
     # prepare field and EOFs
     # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
     run_cdo.merge(expname, varname, startyear, endyear, format=format, grid=info['grid'])
@@ -165,21 +150,14 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
     run_cdo.get_eofs(expname, varname, endleg, window)
 
     # field projection in the future
-    field = project_eofs(expname=expname, varname=varname, endleg=endleg, neofs=window, xf=xf, mode=mode)
+    field = project_eofs(expname=expname, varname=varname, endleg=endleg, yearspan=yearspan, yearleap=yearleap, mode=mode)
     
     # retrend
     run_cdo.retrend(expname, varname, endleg)
-    
-    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_new.nc")
-    total = xr.open_mfdataset(filename, use_cftime=True)
-    #ave = timemean(xdata[varname], format='global')
-    #total = field + ave
-    #if info['dim'] == '3D':
-    #    total = total.transpose("time", "z", "y", "x")
-    #if info['dim'] == '2D':
-    #    total = total.transpose("time", "y", "x")
 
     # apply constraints
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_proj.nc")
+    total = xr.open_mfdataset(filename, use_cftime=True)
     #total = constraints_for_fields(total)
 
     # add smoothing and post-processing features
