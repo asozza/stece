@@ -30,11 +30,11 @@ def cat(expname, startyear, endyear, grid='T', freq='1m'):
 
     dirs = config.folders(expname)
     leg = get_leg(endyear+1)
-
+    
     filelist = []
     for year in range(startyear, endyear+1):
         pattern = os.path.join(dirs['nemo'], f"{expname}_oce_{freq}_{grid}_{year}-{year}.nc")
-        print(pattern)
+        logging.info(f"Merging filename: {pattern}")
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     

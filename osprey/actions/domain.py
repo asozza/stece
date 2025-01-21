@@ -9,12 +9,9 @@ Date: Dec 2024
 """
 
 import os
-import glob
-import logging
 import xarray as xr
 
 from osprey.utils import config
-from osprey.utils import catalogue
 
 
 ##########################################################################################

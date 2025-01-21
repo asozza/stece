@@ -14,6 +14,8 @@ Date: May 2024
 """
 
 import argparse
+import shutil
+import os
 import xarray as xr
 
 from osprey.utils import config
@@ -75,3 +77,6 @@ if __name__ == "__main__":
 
     if args.restore:
         restorer(expname, leg)
+
+    shutil.copy('logfile.log', os.path.join(dirs['tmp'], str(leg).zfill(3), 'logfile.log'))
+    

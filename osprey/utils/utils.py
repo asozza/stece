@@ -13,11 +13,11 @@ import glob
 import subprocess
 import logging
 
-from osprey.utils import config
-
+########################################################################################
+# bash communication functions
 
 def run_bash_command(command):
-    """Run a bash command using subprocess"""
+    """ Run a bash command using subprocess """
 
     try:
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -39,6 +39,7 @@ def run_bash_command(command):
 # error handling functions
 
 def remove_existing_file(filename):
+    """ Remove a file if it exists """
 
     try:
         os.remove(filename)
@@ -48,6 +49,7 @@ def remove_existing_file(filename):
 
 
 def remove_existing_filelist(filename):
+    """ Remove all files matching the filename pattern """
 
     pattern = os.path.join(filename + '*.nc')
     files = glob.glob(pattern)
@@ -60,7 +62,7 @@ def remove_existing_filelist(filename):
 
 
 def error_handling_decorator(func):
-    """Decorator to add standardized error handling to functions."""
+    """ Decorator to add standardized error handling to functions """
 
     def wrapper(*args, **kwargs):
         try:
@@ -73,8 +75,6 @@ def error_handling_decorator(func):
             logging.error(f"Value error: {val_error}")
         except Exception as e:
             logging.error(f"An unexpected error occurred: {e}")
-        else:
-            logging.info(f"Function {func.__name__} completed successfully.")
         finally:
             logging.info(f"Execution of {func.__name__} finished.")
     

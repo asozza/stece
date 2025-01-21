@@ -11,9 +11,6 @@ Date: Mar 2024
 import os
 import numpy as np
 import xarray as xr
-import dask
-import yaml
-import cftime
 import matplotlib.pyplot as plt
 
 from osprey.utils import config
@@ -21,7 +18,7 @@ from osprey.utils import catalogue
 from osprey.utils.time import get_decimal_year
 
 from osprey.means.means import apply_cost_function, movave
-from osprey.means.means import spacemean, timemean, year_shift
+from osprey.means.means import spacemean, year_shift
 from osprey.actions.reader import reader_nemo, reader_nemo_field
 from osprey.actions.postreader import postreader_nemo, averaging
 

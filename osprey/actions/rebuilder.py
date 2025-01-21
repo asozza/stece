@@ -11,6 +11,7 @@ Date: Oct 2023
 import subprocess
 import os
 import glob
+import shutil
 
 from osprey.utils import config
 from osprey.utils.utils import get_nemo_timestep
@@ -50,18 +51,11 @@ def rebuilder(expname, leg):
             destination_path = os.path.join(dirs['tmp'], str(leg).zfill(3), os.path.basename(filename))
             os.remove(destination_path)
 
-    # read timestep
-    #filelist = glob.glob(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'))    
-    #timestep = ost.get_nemo_timestep(filelist[0])
-
     # copy restart
-    #shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc'))
-    #shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + timestep + '_restart_ice.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc'))
+    shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc'))
+    shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart_ice.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc'))
 
-    # remove 
-    #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart.nc'))
-    #os.remove(os.path.join(dirs['tmp'], expname + '_' + timestep + '_restart_ice.nc'))
-
+    # delete temporary files
     flist = glob.glob('nam_rebuild*')
     for file in flist:
         os.remove(file)

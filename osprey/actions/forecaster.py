@@ -11,18 +11,15 @@ Date: Mar 2024
 
 import os
 import numpy as np
-import cftime
 import logging
-import shutil
 import xarray as xr
 
 from osprey.utils import config
 from osprey.utils import run_cdo
 from osprey.utils import catalogue
-from osprey.actions.reader import reader_nemo, reader_rebuilt
+from osprey.actions.reader import reader_rebuilt
 from osprey.actions.stabilizer import constraints_for_fields
 from osprey.means.eof import project_eofs, process_data
-from osprey.utils.time import get_year, get_startyear, get_forecast_year
 
 
 # Define the varlists for each variable

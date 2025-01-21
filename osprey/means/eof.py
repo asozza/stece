@@ -10,7 +10,6 @@ Date: May 2024
 """
 
 import os
-import glob
 import subprocess
 import logging
 import numpy as np
@@ -43,17 +42,6 @@ def _forecast_xarray(foreyear, use_cftime=True):
 
     return xf
 
-def _time_xarray(startyear, endyear):
-    """Reconstruct the time array of restarts"""
-
-    dates=[]
-    for year in range(startyear,endyear+1):
-        x = cftime.DatetimeGregorian(year, 1, 1, 0, 0, 0, has_year_zero=False)
-        dates.append(x)
-    tdata = xr.DataArray(data = np.array(dates), dims = ['time_counter'], coords = {'time_counter': np.array(dates)}, 
-                         attrs = {'stardand_name': 'time', 'axis': 'T'})
-
-    return tdata
 
 ##########################################################################################
 # Pre-processing options for EOF reader
