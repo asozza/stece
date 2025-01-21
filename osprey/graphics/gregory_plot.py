@@ -21,7 +21,7 @@ import matplotlib.colors as mcolors
 from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
 from osprey.utils.time import get_decimal_year
-from osprey.utils.folders import paths
+from osprey.utils.config import paths
 from osprey.means.means import movave
 from osprey.means.means import cost
 from osprey.means.means import spacemean

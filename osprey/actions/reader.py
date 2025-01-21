@@ -15,7 +15,7 @@ import xarray as xr
 import cftime
 import dask
 
-from osprey.utils.folders import folders, paths
+from osprey.utils.config import folders, paths
 from osprey.utils import catalogue
 
 # Configure logging
@@ -231,7 +231,7 @@ def reader_rebuilt(expname, startleg, endleg):
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     logging.info(' File to be loaded %s', filelist)
-    data = xr.open_mfdataset(filelist, use_cftime=True)
+    data = xr.open_mfdataset(filelist, use_cftime=True, engine="netcdf4")
 
     return data
 
@@ -248,7 +248,7 @@ def reader_rebuilt2(expname, startleg, endleg):
         matching_files = glob.glob(pattern)
         filelist.extend(matching_files)
     logging.info(' File to be loaded %s', filelist)
-    data = xr.open_mfdataset(filelist, use_cftime=True)
+    data = xr.open_mfdataset(filelist, use_cftime=True, engine="netcdf4")
 
     return data
 

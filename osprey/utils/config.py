@@ -9,6 +9,13 @@ Date: Mar 2024
 """
 
 import os
+import logging
+
+logging.basicConfig(
+    filename='logfile.log',
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def folders(expname):
     """ List of global paths dependent on expname """
@@ -41,3 +48,4 @@ def paths():
     }
 
     return dirs
+

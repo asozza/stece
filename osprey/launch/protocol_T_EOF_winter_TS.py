@@ -16,7 +16,7 @@ Date: May 2024
 import argparse
 import xarray as xr
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.actions.rebuilder import rebuilder
 from osprey.actions.forecaster import forecaster_EOF_def
 from osprey.actions.writer import writer_restart
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     # forecast based on local temperature fit
     if args.forecast:
-        rdata = forecaster_EOF_def(expname=expname, varnames=varnames, endleg=leg, yearspan=yearspan, yearleap=yearleap, mode=mode, smoothing=False)
+        rdata = forecaster_EOF_def(expname=expname, varnames=varnames, endleg=leg, yearspan=yearspan, yearleap=yearleap, mode=mode, smoothing=False, debug=False)
         writer_restart(expname, rdata, leg)
 
     # replace nemo restart files

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 """
 EOF module
 
@@ -15,15 +16,25 @@ import logging
 import numpy as np
 import xarray as xr
 import cftime
+import matplotlib.pyplot as plt
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.utils.time import get_leg, get_decimal_year, get_forecast_year
 from osprey.utils.utils import remove_existing_file
 from osprey.means.means import spacemean, timemean
 from osprey.utils import catalogue
 from osprey.utils.utils import remove_existing_filelist
+from osprey.actions.reader import reader_rebuilt
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+restart_varlist = {
+    'thetao': 'tn',
+    'so': 'sn',
+    'zos': 'sshn',
+    'uo': 'un',
+    'vo': 'vn'
+}
 
 def _forecast_xarray(foreyear, use_cftime=True):
     """Get the xarray for the forecast time"""
@@ -130,18 +141,62 @@ def process_data(data, ftype, dim='3D', grid='T'):
     elif ftype == 'post':
         # Post-processing routine for variable field
         data = data.rename({'time': 'time_counter'})
+        data = data.rename_dims({'x': grid_mappings['x'], 'y': grid_mappings['y']})
+        data = data.rename({'lat': grid_mappings['lat'], 'lon': grid_mappings['lon']})        
         if dim == '3D':
-            data = data.rename({'z': 'nav_lev'})
+            data = data.rename({'z': grid_mappings['z']})
 
     else:
         raise ValueError(f"Invalid mode '{ftype}'. Choose from 'pattern', 'series', or 'post'.")
 
     return data
 
+##########################################################################################
+
+def debug_fitplot(timeseries, coeffs, varname, figname=None):
+    """ Plots the EOF timeseries and the fitted line """
+
+    m, q = coeffs[f"{varname}_polyfit_coefficients"].values
+    print(f"m={m}, q={q}")
+    x = timeseries['time'].values
+    y = m * x + q
+    plt.figure(figsize=(8, 6))
+    plt.plot(timeseries['time'].values, y, label='Fitted line')
+    timeseries[varname].plot(label='EOF')
+    plt.legend()
+    if figname:
+        plt.savefig(figname)
+    else:
+        plt.show()
+
+def debug_fieldplot(data, varname, figname=None):
+    """ Plot the reconstructed field at the surface """
+
+    if 'time' in data.dims:
+        data[varname].isel(time=0,z=0).plot()
+    else:
+        data[varname].isel(z=0).plot()
+
+    if figname:
+        plt.savefig(figname)
+    else:
+        plt.show()
+
+def debug_recoplot(data, rdata, varname, figname=None):
+    """ Plot the reconstructed field at the surface """
+
+    delta = data[varname].isel(z=0)-rdata[varname].isel(time=-1, z=0)
+    delta.plot()
+
+    if figname:
+        plt.savefig(figname)
+    else:
+        plt.show()
 
 ##########################################################################################
 
-def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full'):
+# ISSUE: This function can be valid also for non-EOF methods (e.g. linear regression)
+def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debug=False):
     """ 
     Function to project a field in the future using EOFs. 
     
@@ -179,18 +234,24 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full'):
 
         for i in range(neofs):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
-            logging.warning(f"Reading filename: {filename}")
+            logging.info(f"Reading filename: {filename}")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
             new_time = get_decimal_year(timeseries['time'].values)
             timeseries['time'] = new_time
-            p = timeseries.polyfit(dim='time', deg=1, skipna=True)
-            m, q = p[f"{varname}_polyfit_coefficients"].values
-            print(f"m={m}, q={q}")
-            theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
-            print(f"theta={theta.values}")
+            coeffs = timeseries.polyfit(dim='time', deg=1, skipna=True)
+            theta = xr.polyval(xf, coeffs[f"{varname}_polyfit_coefficients"])
+            
+            if debug == True:
+                logging.info(f"Debug mode: ON --> Plotting fit EOF timeseries n={i}")
+                figname=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_fit_{str(i).zfill(5)}.png")
+                logging.info(f"Creating figure: {figname}")
+                debug_fitplot(timeseries, coeffs, varname, figname=figname)
+                print(f"theta={theta.values}")
+
             basis = pattern.isel(time=i)
             field += theta * basis
-            field['time'] = yf
+        
+        field['time'] = yf
 
     # First EOF
     elif mode == 'first':
@@ -199,11 +260,16 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full'):
         timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
         new_time = get_decimal_year(timeseries['time'].values)
         timeseries['time'] = new_time
-        p = timeseries.polyfit(dim='time', deg=1, skipna = True)
-        m, q = p[f"{varname}_polyfit_coefficients"].values
-        print(f"m={m}, q={q}")
-        theta = xr.polyval(xf, p[f"{varname}_polyfit_coefficients"])
-        print(f"theta={theta.values}")
+        coeffs = timeseries.polyfit(dim='time', deg=1, skipna = True)
+        theta = xr.polyval(xf, coeffs[f"{varname}_polyfit_coefficients"])
+        
+        if debug == True:
+            logging.info(f"Debug mode: ON --> Plotting fit EOF timeseries n={i}")
+            figname=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_fit_00000.png")
+            logging.info(f"Creating figure: {figname}")        
+            debug_fitplot(timeseries, p, varname, figname=figname)
+            print(f"theta={theta.values}")
+        
         basis = pattern.isel(time=0)
         field += theta * basis
         field['time'] = yf
@@ -217,8 +283,18 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full'):
             theta = timeseries[varname].isel(time=-1)
             basis = pattern.isel(time=i)
             field += theta * basis
+        
+        #field = field.drop_vars({'time'})
 
-        field = field.drop_vars({'time'})
+        if debug == True:
+            logging.info(f"Debug mode: ON --> Plotting reconstructed field")
+            #rdata = reader_rebuilt(expname, endleg, endleg)
+            filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_anomaly.nc")
+            data = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
+            figname=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_reco.png")
+            logging.info(f"Creating figure: {figname}")
+            debug_recoplot(field, data, varname, figname)
+
 
     # EOFs up to a percentage of the full
     elif mode == 'frac':
@@ -257,13 +333,27 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full'):
         field = xr.polyval(xf, p.polyfit_coefficients)
 
     # fit dimensions before writing on file
-    if info['dim'] == '3D':
-        field = field.transpose("time", "z", "y", "x")
-    if info['dim'] == '2D':
-        field = field.transpose("time", "y", "x")
+    if 'time' in field.dims:
+        if info['dim'] == '3D':
+            field = field.transpose("time", "z", "y", "x")
+        if info['dim'] == '2D':
+            field = field.transpose("time", "y", "x")
 
-    infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_eof.nc")
-    remove_existing_filelist(infile)
-    field.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
+    # add mean
+    logging.info(f"Adding mean trend of {varname}.")
+    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+    data = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='pattern', dim=info['dim'], grid=info['grid']))
+    field[varname] = field[varname] + data[varname].mean(dim='time')
+    
+    if debug == True:
+        logging.info(f"Debug mode: ON --> Plotting field")
+        figname=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_field.png")
+        logging.info(f"Creating figure: {figname}")
+        debug_fieldplot(field, varname, figname=figname)
+
+    #infile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_eof.nc")
+    #remove_existing_filelist(infile)
+    #outfield = process_data(field, ftype='post', dim=info['dim'], grid=info['grid'])
+    #outfield.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
 
     return field

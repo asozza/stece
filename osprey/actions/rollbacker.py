@@ -15,7 +15,7 @@ import shutil
 import yaml
 from dateutil.relativedelta import relativedelta
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.utils.utils import get_nemo_timestep
 from osprey.utils.time import get_year
 

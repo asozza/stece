@@ -13,7 +13,7 @@ import glob
 import shutil
 import netCDF4 as nc
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.utils.utils import get_nemo_timestep
 
 

@@ -15,7 +15,7 @@ Alessandro Sozza and Paolo Davini (CNR-ISAC, Apr 2024)
 
 import argparse
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.actions.rebuilder import rebuilder
 from osprey.actions.forecaster import forecaster_fit_re
 from osprey.actions.writer import writer_restart

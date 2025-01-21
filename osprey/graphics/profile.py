@@ -16,7 +16,7 @@ import cftime
 #import nc_time_axis
 import matplotlib.pyplot as plt
 
-from osprey.utils.folders import paths
+from osprey.utils.config import paths
 from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
 from osprey.means.means import cost

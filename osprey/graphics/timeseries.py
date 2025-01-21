@@ -16,7 +16,7 @@ import yaml
 import cftime
 import matplotlib.pyplot as plt
 
-from osprey.utils.folders import paths
+from osprey.utils.config import paths
 from osprey.utils.time import get_decimal_year
 from osprey.utils import catalogue
 from osprey.means.means import apply_cost_function, movave

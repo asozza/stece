@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 """
 Forecasters Module
 
@@ -19,11 +20,10 @@ from osprey.actions.reader import reader_nemo, reader_rebuilt
 from osprey.actions.stabilizer import constraints_for_restart, constraints_for_fields
 from osprey.means.eof import project_eofs, process_data
 from osprey.means.means import timemean
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.utils.time import get_year, get_startyear, get_forecast_year, get_decimal_year
 from osprey.utils import run_cdo
 from osprey.utils import catalogue
-
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -82,7 +82,7 @@ def forecaster_fit(expname, var, endleg, yearspan, yearleap):
 
 ###########################################################################################################
 
-def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full', smoothing=False):
+def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full', smoothing=False, debug=False):
     """ 
     Function to assembly the forecast of multiple fields using EOF
     
@@ -98,12 +98,12 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     """
 
     # read forecast and change restart
-    rdata = reader_rebuilt(expname, endleg, endleg) 
+    rdata = reader_rebuilt(expname, endleg, endleg)
 
     # create EOF
     for varname in varnames:
         
-        field = create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='full', smoothing=False)
+        field = create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='full', smoothing=False, debug=debug)
 
         field = field.rename({'time': 'time_counter', 'z': 'nav_lev'})
         field['time_counter'] = rdata['time_counter']
@@ -116,7 +116,7 @@ def forecaster_EOF_def(expname, varnames, endleg, yearspan, yearleap, mode='full
     return rdata
 
 
-def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='full', format='winter', smoothing=False):
+def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='full', format='winter', smoothing=False, debug=False):
     """ 
     Function to forecast a single field using EOF
     
@@ -148,17 +148,12 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
     run_cdo.merge(expname, varname, startyear, endyear, format=format, grid=info['grid'])
     run_cdo.detrend(expname, varname, endleg)
     run_cdo.get_eofs(expname, varname, endleg, window)
-
-    # field projection in the future
-    field = project_eofs(expname=expname, varname=varname, endleg=endleg, yearspan=yearspan, yearleap=yearleap, mode=mode)
     
-    # retrend
-    run_cdo.retrend(expname, varname, endleg)
-
+    # field projection in the future
+    data = project_eofs(expname=expname, varname=varname, endleg=endleg, yearspan=yearspan, yearleap=yearleap, mode=mode, debug=debug)
+    
     # apply constraints
-    filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_proj.nc")
-    total = xr.open_mfdataset(filename, use_cftime=True)
-    #total = constraints_for_fields(total)
+    data = constraints_for_fields(data=data)
 
     # add smoothing and post-processing features
     if smoothing:
@@ -166,10 +161,9 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
         total.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
         outfile = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_smoother.nc")
         run_cdo.add_smoothing(infile, outfile)
-        total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, ftype='post', dim=info['dim'], grid=info['grid']))    
+        total = xr.open_mfdataset(outfile, use_cftime=True, preprocess=lambda data: process_data(data, ftype='post', dim=info['dim'], grid=info['grid']))
 
-    return total
-
+    return data
 
 
 ###########################################################################################################

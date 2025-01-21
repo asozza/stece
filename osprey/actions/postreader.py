@@ -17,7 +17,7 @@ import cftime
 import dask
 
 from osprey.utils import catalogue
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.utils.time import get_leg
 from osprey.utils.utils import error_handling_decorator
 from osprey.utils.utils import remove_existing_file

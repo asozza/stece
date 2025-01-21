@@ -16,7 +16,7 @@ Date: May 2024
 import argparse
 import xarray as xr
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.actions.rebuilder import rebuilder
 from osprey.actions.forecaster import forecaster_EOF_restart
 from osprey.actions.writer import writer_restart

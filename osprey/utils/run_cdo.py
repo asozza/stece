@@ -15,7 +15,7 @@ import logging
 import xarray as xr
 from cdo import Cdo
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 from osprey.utils.utils import run_bash_command
 from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
 from osprey.utils.time import get_leg, get_year, get_season_months
@@ -53,7 +53,7 @@ def cat(expname, startyear, endyear, grid='T', freq='1m'):
 
 
 @error_handling_decorator
-def selname(expname, varname, leg):
+def selname(expname, varname, leg, cleanup=True):
     """ CDO command to select variable """
 
     dirs = folders(expname)
@@ -64,6 +64,9 @@ def selname(expname, varname, leg):
     remove_existing_file(varfile)
     
     cdo.run(f"selname,{varname} {datafile} {varfile}")      
+
+    if cleanup:
+        remove_existing_file(datafile)
 
     return None
 
@@ -141,13 +144,18 @@ def retrend(expname, varname, leg):
     # Define file paths for the original data, auxiliary product, and the final forecast
     inifile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
     auxfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_eof.nc")
+    updfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_eof_updated.nc")
     newfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_proj.nc")
     
     # Remove existing forecast file if it already exists
     remove_existing_file(newfile)
 
-    logging.info(f"Adding trend to {varname} using {inifile} on {auxfile}.")
+    logging.info(f"Adding time and depth bounds to {varname} using {inifile} in {auxfile}.")
+    cdo.run(f"selvar,time_counter_bnds,deptht_bnds {inifile} time_depth_bnds.nc")
+    cdo.run(f"merge {auxfile} time_depth_bnds.nc {updfile}")
 
+    logging.info(f"Adding trend to {varname} using {inifile} on {auxfile}.")
+    
     # CDO command to add the trend back to the detrended data
     cdo.add(input=[auxfile, f"-timmean {inifile}"], output=newfile)
 
@@ -159,7 +167,7 @@ def retrend(expname, varname, leg):
 @error_handling_decorator
 def get_eofs(expname, varname, leg, window):
     """Compute EOF using the CDO Python package with error handling."""
-
+    
     # Get the directories and file paths
     dirs = folders(expname)
     info = catalogue.observables('nemo')[varname]

@@ -37,58 +37,50 @@ def drawing(figname):
     # Surface layer
     color='red'
     varlabel='tos'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', replace=True, avetype='moving', timeoff=0, color=color, linestyle='-', label='Surface', ax=axes[0])
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', replace=True, avetype='moving', timeoff=410, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', replace=True, avetype='moving', timeoff=811, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', replace=True, avetype='moving', timeoff=1171, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', replace=True, avetype='moving', timeoff=1531, color=color, linestyle='-', ax=axes[0])
-    #timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', replace=False, avetype='moving', timeoff=1891, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1891, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2251, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2611, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2971, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=3331, color=color, linestyle='-', ax=axes[0])
-    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=3691, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi00', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=0, color=color, linestyle='-', label='Surface', ax=axes[0])
+    timeseries(expname='pi01', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=360, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi02', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=720, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi03', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1080, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi04', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1440, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1800, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi06', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2160, color=color, linestyle='-', ax=axes[0])
+    timeseries(expname='pi07', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2520, color=color, linestyle='-', ax=axes[0])
     axes[0].legend(loc='upper right')
-    axes[0].set_xlim(1990, 6010) 
-    #axes[0].set_title('Surface')
+    axes[0].grid(True)
+    axes[0].tick_params(labelbottom=False)  # Remove x-axis labels
+    axes[0].set_xlabel('')  # Remove x-axis label
 
     # Pycnocline layer
     color='green'
     varlabel='thetao-pyc'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=0, color=color, linestyle='-', label='Pycnocline', ax=axes[1])
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=410, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=811, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1171, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1531, color=color, linestyle='-', ax=axes[1])
-    #timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', replace=False, avetype='moving', timeoff=1891, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1891, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2251, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2611, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2971, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=3331, color=color, linestyle='-', ax=axes[1])
-    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=3691, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi00', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=0, color=color, linestyle='-', label='Bulk', ax=axes[1])
+    timeseries(expname='pi01', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=360, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi02', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=720, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi03', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1080, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi04', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1440, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1800, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi06', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2160, color=color, linestyle='-', ax=axes[1])
+    timeseries(expname='pi07', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2520, color=color, linestyle='-', ax=axes[1])
     axes[1].legend(loc='upper right')
-    axes[1].set_xlim(1990, 6010)
-    #axes[1].set_title('Pycnocline')
+    axes[1].set_ylabel('Sea Bulk Temperature')
+    axes[1].grid(True)
+    axes[1].tick_params(labelbottom=False)  # Remove x-axis labels
+    axes[1].set_xlabel('')  # Remove x-axis label
 
     # Bottom layer
     color='blue'
     varlabel='sbt'
-    timeseries(expname='lfr0', startyear=1990, endyear=2399, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=0, color=color, linestyle='-', label='Bottom', ax=axes[2])
-    timeseries(expname='lfr1', startyear=1990, endyear=2390, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=410, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lfr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=811, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lfr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1171, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lfr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1531, color=color, linestyle='-', ax=axes[2])
-    #timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1891, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lfr5', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=1891, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lgr0', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2251, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lgr1', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2611, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lgr2', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=2971, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lgr3', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=3331, color=color, linestyle='-', ax=axes[2])
-    timeseries(expname='lgr4', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', rescale=False, avetype='moving', timeoff=3691, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi00', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=0, color=color, linestyle='-', label='Bottom', ax=axes[2])
+    timeseries(expname='pi01', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=360, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi02', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=720, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi03', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1080, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi04', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1440, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1800, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi06', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2160, color=color, linestyle='-', ax=axes[2])
+    timeseries(expname='pi07', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2520, color=color, linestyle='-', ax=axes[2])
     axes[2].legend(loc='upper right')
-    axes[2].set_xlim(1990, 6010)
+    axes[2].grid(True)
+    #axes[2].set_xlim(1990, 6010)
     #axes[2].set_title('Bottom')
 
     # Adjust layout to prevent overlap
@@ -107,7 +99,7 @@ if __name__ == "__main__":
     # Start timer
     start_time = time.time()
 
-    figname='fig0_thetao_by_layers_3.png'
+    figname='pi_ts_by_layers.png'
     drawing(figname)
 
     # End timer

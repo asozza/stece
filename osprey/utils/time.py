@@ -14,7 +14,7 @@ import numpy as np
 import datetime
 import time
 
-from osprey.utils.folders import folders
+from osprey.utils.config import folders
 
 
 def get_epoch(date):

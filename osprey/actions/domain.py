@@ -13,7 +13,7 @@ import glob
 import logging
 import xarray as xr
 
-from osprey.utils.folders import folders, paths
+from osprey.utils.config import folders, paths
 from osprey.utils import catalogue
 
 # Configure logging
