@@ -15,7 +15,7 @@ import shutil
 import yaml
 from dateutil.relativedelta import relativedelta
 
-from osprey.utils.config import folders
+from osprey.utils import config
 from osprey.utils.utils import get_nemo_timestep
 from osprey.utils.time import get_year
 
@@ -23,7 +23,7 @@ def rollbacker(expname, leg):
     """ Function to rollback an EC-Earth4 run to a previous leg """
 
     # Define directories
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     year = get_year(leg)
 
     # Cleaning - remove files in the run folder

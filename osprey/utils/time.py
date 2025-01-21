@@ -14,7 +14,7 @@ import numpy as np
 import datetime
 import time
 
-from osprey.utils.config import folders
+from osprey.utils import config
 
 
 def get_epoch(date):
@@ -66,7 +66,7 @@ def count_total_steps(start_year, end_year, steps_per_day):
 def read_legfile(expname):
     """ Read date & leg from legfile """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     legfile = os.path.join(dirs['exp'], 'leginfo.yml')
     with open(legfile, 'r', encoding='utf-8') as file:
         leginfo = yaml.load(file, Loader=yaml.FullLoader)

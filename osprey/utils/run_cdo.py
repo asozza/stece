@@ -15,25 +15,20 @@ import logging
 import xarray as xr
 from cdo import Cdo
 
-from osprey.utils.config import folders
-from osprey.utils.utils import run_bash_command
-from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
-from osprey.utils.time import get_leg, get_year, get_season_months
+from osprey.utils import config
 from osprey.utils import catalogue
-from osprey.actions.reader import reader_nemo
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
+from osprey.utils.time import get_leg, get_season_months
 
 # Initialize CDO
 cdo = Cdo()
-
 
 @error_handling_decorator
 def cat(expname, startyear, endyear, grid='T', freq='1m'):
     """ CDO command to merge files """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     leg = get_leg(endyear+1)
 
     filelist = []
@@ -56,7 +51,7 @@ def cat(expname, startyear, endyear, grid='T', freq='1m'):
 def selname(expname, varname, leg, cleanup=True):
     """ CDO command to select variable """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     datafile = os.path.join(dirs['tmp'], str(leg).zfill(3), "data.nc")
 
@@ -75,7 +70,7 @@ def selname(expname, varname, leg, cleanup=True):
 def timmean(expname, varname, leg, format='global'):
     """ CDO command to compute time mean """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     infile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
 
@@ -98,7 +93,7 @@ def timmean(expname, varname, leg, format='global'):
 def merge(expname, varname, startyear, endyear, format='winter', grid='T', freq='1m'):
     """ CDO command to merge data """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     endleg = endyear - 1990 + 2
     
     os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
@@ -120,7 +115,7 @@ def merge(expname, varname, startyear, endyear, format='winter', grid='T', freq=
 def detrend(expname, varname, leg):
     """Detrend data by subtracting the time average using the CDO Python package."""
     
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     varfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
 
@@ -139,7 +134,7 @@ def retrend(expname, varname, leg):
     """Add trend to a variable using the CDO Python package with error handling."""
 
     # Get the directories and file paths
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     
     # Define file paths for the original data, auxiliary product, and the final forecast
     inifile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
@@ -169,7 +164,7 @@ def get_eofs(expname, varname, leg, window):
     """Compute EOF using the CDO Python package with error handling."""
     
     # Get the directories and file paths
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     info = catalogue.observables('nemo')[varname]
 
     # Define file paths for anomaly, covariance, and pattern output files
@@ -212,7 +207,7 @@ def EOF_info(expname, varname, leg):
     """Get the relative magnitude of EOF eigenvectors using the CDO Python package with error handling."""
 
     # Get the directories and file path for the covariance (variance) file
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     cov = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_variance.nc")
 
     logging.info(f"Getting relative magnitude of EOF eigenvectors for {varname} using {cov}")

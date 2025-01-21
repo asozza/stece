@@ -13,19 +13,19 @@ import numpy as np
 import xarray as xr
 import dask
 import cftime
+
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
+from osprey.utils import config
+from osprey.utils import catalogue
+from osprey.utils.time import get_decimal_year
+
 from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
-from osprey.utils.time import get_decimal_year
-from osprey.utils.config import paths
-from osprey.means.means import movave
-from osprey.means.means import cost
-from osprey.means.means import spacemean
-from osprey.utils import catalogue
+from osprey.means.means import movave, cost, spacemean
 
 def _cutted(vec):
     """ Cut vector """
@@ -124,7 +124,7 @@ def gregory_plot(expname, startyear, endyear, varname1, varname2,
 
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return fig
@@ -154,8 +154,8 @@ def gregory_plot_january(expname, startyear, endyear, varname1, varname2,
          
     """
 
-    info1 = vardict('nemo')[varname1]
-    info2 = vardict('nemo')[varname2]
+    info1 = catalogue.observables('nemo')[varname1]
+    info2 = catalogue.observables('nemo')[varname2]
 
     # Read data from raw NEMO output
     if reader == "nemo":
@@ -211,7 +211,7 @@ def gregory_plot_january(expname, startyear, endyear, varname1, varname2,
 
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return fig

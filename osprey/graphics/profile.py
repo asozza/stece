@@ -16,12 +16,13 @@ import cftime
 #import nc_time_axis
 import matplotlib.pyplot as plt
 
-from osprey.utils.config import paths
+from osprey.utils import config
+from osprey.utils import catalogue
+
 from osprey.actions.reader import reader_nemo
 from osprey.actions.postreader import postreader_nemo
-from osprey.means.means import cost
-from osprey.means.means import spacemean, timemean
-from osprey.utils import catalogue
+from osprey.means.means import spacemean, timemean, cost
+
 
 def _rescaled(vec):
     """ rescale by the initial value """
@@ -93,7 +94,7 @@ def profile(expname, startyear, endyear, varlabel,
 
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp

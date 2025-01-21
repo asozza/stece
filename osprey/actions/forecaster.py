@@ -16,16 +16,14 @@ import logging
 import shutil
 import xarray as xr
 
-from osprey.actions.reader import reader_nemo, reader_rebuilt
-from osprey.actions.stabilizer import constraints_for_restart, constraints_for_fields
-from osprey.means.eof import project_eofs, process_data
-from osprey.means.means import timemean
-from osprey.utils.config import folders
-from osprey.utils.time import get_year, get_startyear, get_forecast_year, get_decimal_year
+from osprey.utils import config
 from osprey.utils import run_cdo
 from osprey.utils import catalogue
+from osprey.actions.reader import reader_nemo, reader_rebuilt
+from osprey.actions.stabilizer import constraints_for_fields
+from osprey.means.eof import project_eofs, process_data
+from osprey.utils.time import get_year, get_startyear, get_forecast_year
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Define the varlists for each variable
 varlists = {
@@ -35,49 +33,6 @@ varlists = {
     'uo': ['un', 'ub'],
     'vo': ['vn', 'vb']
 }
-
-def _time_xarray(startyear, endyear):
-    """Reconstruct the time array of restarts"""
-
-    dates=[]
-    for year in range(startyear,endyear+1):
-        x = cftime.DatetimeGregorian(year, 1, 1, 0, 0, 0, has_year_zero=False)
-        dates.append(x)
-    tdata = xr.DataArray(data = np.array(dates), dims = ['time_counter'], coords = {'time_counter': np.array(dates)}, 
-                         attrs = {'stardand_name': 'time', 'axis': 'T'})
-
-    return tdata
-
-
-###########################################################################################################
-
-def forecaster_fit(expname, var, endleg, yearspan, yearleap):
-    """ Function to forecast local temperature using linear fit of output files """
-
-    # get time interval
-    endyear = get_year(endleg)
-    startyear = get_startyear(endyear, yearspan)
-
-    # get forecast year
-    foreyear = get_forecast_year(endyear,yearleap)
-    xf = _forecast_xarray(foreyear)
-
-    # load data
-    data = reader_nemo(expname, startyear, endyear)
-
-    # fit
-    p = data[var].polyfit(dim='time', deg=1, skipna=True)
-    yf = xr.polyval(xf, p.polyfit_coefficients)
-    yf = yf.rename({'time': 'time_counter', 'z': 'nav_lev'})
-    yf = yf.drop_indexes({'x', 'y'})
-    yf = yf.reset_coords({'x', 'y'}, drop=True)
-    
-    rdata = reader_rebuilt(expname, endleg, endleg)
-    varlist = ['tn', 'tb']
-    for var1 in varlist:
-        rdata[var1] = xr.where(rdata[var1] != 0 , yf.values, 0.0)
-
-    return rdata
 
 
 ###########################################################################################################
@@ -141,7 +96,7 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
     logging.info(f"Time window: {window}")
 
     info = catalogue.observables('nemo')[varname]
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     # prepare field and EOFs
     # ISSUE: run_cdo COMMANDS can be replaced by xrarray operations
@@ -165,6 +120,6 @@ def create_forecast_field(expname, varname, endleg, yearspan, yearleap, mode='fu
 
     return data
 
-
 ###########################################################################################################
+
 

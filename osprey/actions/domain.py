@@ -13,11 +13,8 @@ import glob
 import logging
 import xarray as xr
 
-from osprey.utils.config import folders, paths
+from osprey.utils import config
 from osprey.utils import catalogue
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 ##########################################################################################
@@ -33,7 +30,7 @@ def preproc_nemo_domain(data):
 def read_domain(orca):
     """ Read NEMO domain configuration file """
 
-    dirs = paths()
+    dirs = config.paths()
     filename = os.path.join(dirs['domain'], orca, 'domain_cfg.nc')
     domain = xr.open_mfdataset(filename, preprocess=preproc_nemo_domain)
     domain = domain.isel(time=0)

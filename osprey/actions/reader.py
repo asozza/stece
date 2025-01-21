@@ -15,14 +15,11 @@ import xarray as xr
 import cftime
 import dask
 
-from osprey.utils.config import folders, paths
+from osprey.utils import config
 from osprey.utils import catalogue
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 # dask optimization
-dask.config.set({'array.optimize_blockwise': True})
+#dask.config.set({'array.optimize_blockwise': True})
 
 ##########################################################################################
 # Readers of NEMO output
@@ -123,7 +120,7 @@ def reader_nemo(expname, startyear, endyear, grid="T", freq="1m"):
 
     """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     dict = _nemodict(grid, freq)
 
     filelist = []
@@ -196,7 +193,7 @@ def preproc_nemo_domain(data):
 def read_domain(orca):
     """ Read NEMO domain configuration file """
 
-    dirs = paths()
+    dirs = config.paths()
     filename = os.path.join(dirs['domain'], orca, 'domain_cfg.nc')
     domain = xr.open_mfdataset(filename, preprocess=preproc_nemo_domain)
     domain = domain.isel(time=0)
@@ -222,7 +219,7 @@ def elements(orca):
 def reader_rebuilt(expname, startleg, endleg):
     """ Read rebuilt NEMO restart files """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     
     filelist = []
     for leg in range(startleg,endleg+1):
@@ -239,7 +236,7 @@ def reader_rebuilt(expname, startleg, endleg):
 def reader_rebuilt2(expname, startleg, endleg):
     """ Read rebuilt NEMO restart files """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     
     filelist = []
     for leg in range(startleg,endleg+1):

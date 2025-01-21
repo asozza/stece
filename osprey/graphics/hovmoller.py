@@ -15,11 +15,12 @@ import dask
 import cftime
 import matplotlib.pyplot as plt
 
+from osprey.utils import catalogue
 from osprey.actions.reader import reader_nemo_field
 from osprey.actions.postreader import postreader_nemo, averaging
 from osprey.utils.time import get_decimal_year
 from osprey.means.means import apply_cost_function, movave
-from osprey.utils import catalogue
+
 
 def _cutted(data):
     """ Cut the first and last 6 points along the 'time' dimension for xarray objects. """

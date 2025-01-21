@@ -17,10 +17,8 @@ import cftime
 import dask
 
 from osprey.utils import catalogue
-from osprey.utils.config import folders
+from osprey.utils import config
 from osprey.utils.time import get_leg
-from osprey.utils.utils import error_handling_decorator
-from osprey.utils.utils import remove_existing_file
 
 from osprey.means.means import spacemean, timemean
 from osprey.means.means import apply_cost_function
@@ -29,10 +27,7 @@ from osprey.actions.reader import reader_rebuilt, reader_nemo_field
 from osprey.actions.rebuilder import rebuilder
 
 # dask optimization of blocksizes
-dask.config.set({'array.optimize_blockwise': True})
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+#dask.config.set({'array.optimize_blockwise': True})
 
 # dictionary of months by seasons
 season_months = {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]}
@@ -64,7 +59,7 @@ def reader_averaged(expname, startyear, endyear, varlabel, diagname, format, met
     
     """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}"
     if metric != 'base':
@@ -92,7 +87,7 @@ def writer_averaged(data, expname, startyear, endyear, varlabel, diagname, forma
     
     """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     filename = f"{varlabel}_{expname}_{startyear}-{endyear}_{diagname}_{format}_{metric}"
     if metric != 'base':
         filename += f"_{refinfo['expname']}_{refinfo['startyear']}-{refinfo['endyear']}_{refinfo['diagname']}_{refinfo['format']}"
@@ -128,7 +123,7 @@ def postreader_nemo(expname, startyear, endyear, varlabel, diagname, format='glo
         varname=varlabel
         ztag=None
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     info = catalogue.observables('nemo')[varname]
 
     ## try to read averaged data

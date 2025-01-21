@@ -16,9 +16,10 @@ import yaml
 import cftime
 import matplotlib.pyplot as plt
 
-from osprey.utils.config import paths
-from osprey.utils.time import get_decimal_year
+from osprey.utils import config
 from osprey.utils import catalogue
+from osprey.utils.time import get_decimal_year
+
 from osprey.means.means import apply_cost_function, movave
 from osprey.means.means import spacemean, timemean, year_shift
 from osprey.actions.reader import reader_nemo, reader_nemo_field
@@ -132,7 +133,7 @@ def timeseries(expname, startyear, endyear, varlabel, format="plain",
 
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp
@@ -236,7 +237,7 @@ def timeseries_yearshift(expname1, startyear1, endyear1, expname2, startyear2, e
 
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp
@@ -355,7 +356,7 @@ def timeseries_yearshift_mean(expname1, startyear1, endyear1, expname2, startyea
 
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return pp
@@ -456,7 +457,7 @@ def timeseries_with_markers(expname, startyear, endyear, varlabel, format="plain
     
     # Save figure
     if figname:
-        dirs = paths()
+        dirs = config.paths()
         plt.savefig(os.path.join(dirs['osprey'], figname))
 
     return fig

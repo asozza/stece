@@ -18,15 +18,9 @@ import xarray as xr
 import cftime
 import matplotlib.pyplot as plt
 
-from osprey.utils.config import folders
-from osprey.utils.time import get_leg, get_decimal_year, get_forecast_year
-from osprey.utils.utils import remove_existing_file
-from osprey.means.means import spacemean, timemean
+from osprey.utils import config
 from osprey.utils import catalogue
-from osprey.utils.utils import remove_existing_filelist
-from osprey.actions.reader import reader_rebuilt
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from osprey.utils.time import get_decimal_year, get_forecast_year
 
 restart_varlist = {
     'thetao': 'tn',
@@ -217,7 +211,7 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debu
     logging.info(f"Time window: {neofs}")
 
     info = catalogue.observables('nemo')[varname]
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     # forecast year
     foreyear = get_forecast_year(endyear, yearleap)

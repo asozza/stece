@@ -16,7 +16,7 @@ Date: May 2024
 import argparse
 import xarray as xr
 
-from osprey.utils.config import folders
+from osprey.utils import config
 from osprey.actions.rebuilder import rebuilder
 from osprey.actions.forecaster import forecaster_EOF_def
 from osprey.actions.writer import writer_restart
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     yearleap = args.yearleap
 
     # define folders
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     # rebuild nemo restart files
     if args.rebuild:

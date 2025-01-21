@@ -13,10 +13,7 @@ import glob
 import subprocess
 import logging
 
-# Set up logging (if not already set up)
-logging.basicConfig(level=logging.INFO, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from osprey.utils import config
 
 
 def run_bash_command(command):
@@ -24,17 +21,17 @@ def run_bash_command(command):
 
     try:
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logger.info(f"Command executed: {command}")
+        logging.info(f"Command executed: {command}")
         
         if result.stdout:
-            logger.info(f"Command stdout: {result.stdout.decode('utf-8').strip()}")
+            logging.info(f"Command stdout: {result.stdout.decode('utf-8').strip()}")
         if result.stderr:
-            logger.warning(f"Command stderr: {result.stderr.decode('utf-8').strip()}")
+            logging.warning(f"Command stderr: {result.stderr.decode('utf-8').strip()}")
         return result.stdout.decode('utf-8').strip()
 
     except subprocess.CalledProcessError as e:        
-        logger.error(f"Command '{command}' failed with return code {e.returncode}")
-        logger.error(f"Error output: {e.stderr.decode('utf-8').strip()}")
+        logging.error(f"Command '{command}' failed with return code {e.returncode}")
+        logging.error(f"Error output: {e.stderr.decode('utf-8').strip()}")
         
         raise
 
@@ -45,9 +42,9 @@ def remove_existing_file(filename):
 
     try:
         os.remove(filename)
-        logger.info(f"File {filename} successfully removed.")
+        logging.info(f"File {filename} successfully removed.")
     except FileNotFoundError:
-        logger.info(f"File {filename} not found.")
+        logging.info(f"File {filename} not found.")
 
 
 def remove_existing_filelist(filename):
@@ -57,9 +54,9 @@ def remove_existing_filelist(filename):
     try:
         for file in files:
             os.remove(file)
-            logger.info(f"File {file} successfully removed.")
+            logging.info(f"File {file} successfully removed.")
     except FileNotFoundError:
-        logger.error(f"File {file} not found.")
+        logging.error(f"File {file} not found.")
 
 
 def error_handling_decorator(func):
@@ -69,17 +66,17 @@ def error_handling_decorator(func):
         try:
             return func(*args, **kwargs)
         except FileNotFoundError as fnf_error:
-            logger.error(f"File not found: {fnf_error}")
+            logging.error(f"File not found: {fnf_error}")
         except PermissionError as perm_error:
-            logger.error(f"Permission denied: {perm_error}")
+            logging.error(f"Permission denied: {perm_error}")
         except ValueError as val_error:
-            logger.error(f"Value error: {val_error}")
+            logging.error(f"Value error: {val_error}")
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
+            logging.error(f"An unexpected error occurred: {e}")
         else:
-            logger.info(f"Function {func.__name__} completed successfully.")
+            logging.info(f"Function {func.__name__} completed successfully.")
         finally:
-            logger.info(f"Execution of {func.__name__} finished.")
+            logging.info(f"Execution of {func.__name__} finished.")
     
     return wrapper
 

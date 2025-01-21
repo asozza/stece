@@ -13,7 +13,7 @@ import glob
 import shutil
 import netCDF4 as nc
 
-from osprey.utils.config import folders
+from osprey.utils import config
 from osprey.utils.utils import get_nemo_timestep
 
 
@@ -34,7 +34,7 @@ def delete_attrs(file):
 def writer_restart(expname, rdata, leg):
     """ Write NEMO restart file in a temporary folder """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     flist = glob.glob(os.path.join(dirs['restart'], str(leg).zfill(3), expname + '*_' + 'restart' + '_????.nc'))
     timestep = get_nemo_timestep(flist[0])
 

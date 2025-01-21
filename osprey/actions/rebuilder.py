@@ -12,14 +12,14 @@ import subprocess
 import os
 import glob
 
-from osprey.utils.config import folders
+from osprey.utils import config
 from osprey.utils.utils import get_nemo_timestep
 
 
 def rebuilder(expname, leg):
     """Function to rebuild NEMO restart """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
     
     os.makedirs(os.path.join(dirs['tmp'], str(leg).zfill(3)), exist_ok=True)
 

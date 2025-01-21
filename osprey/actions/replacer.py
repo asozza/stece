@@ -12,13 +12,13 @@ import os
 import glob
 import shutil
 
-from osprey.utils.config import folders
+from osprey.utils import config
 
 
 def replacer(expname, leg):
     """ Replace modified restart files in the run folder """
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     # cleaning
     browser = ['restart*.nc']
@@ -44,7 +44,7 @@ def replacer(expname, leg):
 
 def restorer(expname, leg):
 
-    dirs = folders(expname)
+    dirs = config.folders(expname)
 
     # copying from the restart folder required for the leg you asked
     browser = ['*restart*']
