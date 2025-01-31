@@ -18,6 +18,8 @@ from cdo import Cdo
 from osprey.utils import config
 from osprey.utils import catalogue
 
+from osprey.actions.reader import reader_nemo_field
+
 from osprey.utils.utils import error_handling_decorator, remove_existing_file, remove_existing_filelist
 from osprey.utils.time import get_leg, get_season_months
 
@@ -73,8 +75,9 @@ def timmean(expname, varname, leg, format='global'):
     dirs = config.folders(expname)
 
     infile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}.nc")
-
+    tmpfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_tmp.nc")
     outfile = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_timmean.nc")
+    remove_existing_file(outfile)
     remove_existing_file(outfile)
 
     if format == 'global':
@@ -84,7 +87,37 @@ def timmean(expname, varname, leg, format='global'):
         cdo.run(f"seasmean {infile} {outfile}")
 
         if format in get_season_months():
-            cdo.run(f"selmon,{get_season_months()[format][1]} {infile} {outfile}")
+            cdo.run(f"selmon,{get_season_months()[format][0:1]} {infile} {tmpfile}")
+            cdo.run(f"seasmean {tmpfile} {outfile}")
+
+    return None
+
+def pymerge(expname, varname, startyear, endyear):
+    """ CDO command to merge data """
+
+    dirs = config.folders(expname)
+    endleg = endyear - 1990 + 2
+
+    os.makedirs(os.path.join(dirs['tmp'], str(endleg).zfill(3)), exist_ok=True)
+
+    data = reader_nemo_field(expname=expname, startyear=startyear, endyear=endyear, varname=varname)
+
+    wdata = data.sel(time=data.time.dt.month.isin([12, 1]))
+    wdata.to_netcdf(os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc"))
+
+    cdo.seasmean(input=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc"), 
+                 output=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_timmean.nc"))
+    
+
+    #cat(expname=expname, startyear=startyear, endyear=endyear, grid=grid, freq=freq)
+    #selname(expname=expname, varname=varname, leg=endleg)
+    #timmean(expname=expname, varname=varname, leg=endleg, format=format)
+
+    # rename final file
+    old_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_timmean.nc")
+    new_file = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}.nc")
+    if os.path.exists(old_file):
+        os.rename(old_file, new_file)
 
     return None
 

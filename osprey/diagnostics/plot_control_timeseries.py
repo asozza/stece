@@ -33,15 +33,17 @@ def drawing(figname):
     # global mean temperature merge from reference experiments
     # palette: lightcoral, red, orange, green, darkseagreen, cornflowerblue, blue, darkslategray, indigo
     varlabel='thetao'
-    timeseries(expname='pi00', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=0, color='blue', linestyle='-')
-    timeseries(expname='pi01', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=360, color='blue', linestyle='-')
-    timeseries(expname='pi02', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=720, color='blue', linestyle='-')
-    timeseries(expname='pi03', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1080, color='blue', linestyle='-')
-    timeseries(expname='pi04', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1440, color='blue', linestyle='-')
-    timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1800, color='blue', linestyle='-')
-    timeseries(expname='pi06', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2160, color='blue', linestyle='-')
-    timeseries(expname='pi07', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2520, color='blue', linestyle='-')
-
+    #timeseries(expname='pi00', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=0, color='blue', linestyle='-')
+    #timeseries(expname='pi01', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=360, color='blue', linestyle='-')
+    #timeseries(expname='pi02', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=720, color='blue', linestyle='-')
+    #timeseries(expname='pi03', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1080, color='blue', linestyle='-')
+    #timeseries(expname='pi04', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1440, color='blue', linestyle='-')
+    #timeseries(expname='pi05', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=1800, color='blue', linestyle='-')
+    #timeseries(expname='pi06', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2160, color='blue', linestyle='-')
+    #timeseries(expname='pi07', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2520, color='blue', linestyle='-')
+    timeseries(expname='pi08', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=2880, color='blue', linestyle='-')
+    #timeseries(expname='pi09', startyear=1990, endyear=2349, varlabel=varlabel, reader='post', timeoff=3240, color='blue', linestyle='-')
+    
     plt.title('Timeseries of global mean temperature')
 
     # Adjust layout to prevent overlap

@@ -52,8 +52,9 @@ def rebuilder(expname, leg):
             os.remove(destination_path)
 
     # copy restart
-    shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc'))
-    shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart_ice.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc'))
+    tstep = get_nemo_timestep(glob.glob(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '*_restart.nc'))[0])
+    shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + tstep + '_restart.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart.nc'))
+    shutil.copy(os.path.join(dirs['tmp'], str(leg).zfill(3), expname + '_' + tstep + '_restart_ice.nc'), os.path.join(dirs['tmp'], str(leg).zfill(3), 'restart_ice.nc'))
 
     # delete temporary files
     flist = glob.glob('nam_rebuild*')

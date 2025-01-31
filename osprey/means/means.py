@@ -100,6 +100,9 @@ def timemean(data, format='global', use_cftime=True):
         # Global time average over all time points
         ave = data.mean(dim='time')
         
+    elif format == 'rolling':
+        ave = data.rolling(time=12, center=True).mean()
+
     # ISSUE: use centroids for months and seasons
     elif format == 'monthly':       
         # Average by month across years
@@ -209,9 +212,9 @@ def timemean(data, format='global', use_cftime=True):
             # Select a specific season
             ave = ave.sel(time=ave['time.month'].isin(season_months[format]))
 
-
     else:
-        raise ValueError("Invalid format specified. Choose from: 'plain', 'global', 'monthly', 'seasonally', 'yearly', 'seasons', or a specific season like 'winter', 'spring', 'summer', 'autumn'.")
+        raise ValueError("""Invalid format specified. Choose between: 'plain', 'global', 'rolling', 'monthly', 'seasonally', 'yearly', 'seasons', 
+                         or a specific season like 'winter', 'spring', 'summer', 'autumn'.""")
 
     return ave
 

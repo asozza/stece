@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from osprey.utils import config
 from osprey.utils import catalogue
 from osprey.utils.time import get_decimal_year, get_forecast_year
+from osprey.means.means import spacemean
 
 restart_varlist = {
     'thetao': 'tn',
@@ -135,6 +136,24 @@ def process_data(data, ftype, dim='3D', grid='T'):
 
 ##########################################################################################
 
+def reader_EOF_coeffs(expname, leg, varname):
+    """ Read the EOF coefficients for a given variable """
+
+    info = catalogue.observables('nemo')[varname]
+    dirs = config.folders(expname)
+
+    filename = os.path.join(dirs['tmp'], str(leg).zfill(3), f"{varname}_series_00000.nc")
+    timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
+    new_time = get_decimal_year(timeseries['time'].values)
+    timeseries['time'] = new_time
+    coeffs = timeseries.polyfit(dim='time', deg=1, skipna=True)
+    eof_slope, eof_intercept = coeffs[f"{varname}_polyfit_coefficients"].values
+
+    return eof_slope, eof_intercept
+
+
+##########################################################################################
+
 def debug_fitplot(timeseries, coeffs, varname, figname=None):
     """ Plots the EOF timeseries and the fitted line """
 
@@ -178,7 +197,7 @@ def debug_recoplot(data, rdata, varname, figname=None):
 ##########################################################################################
 
 # ISSUE: This function can be valid also for non-EOF methods (e.g. linear regression)
-def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debug=False):
+def project_eofs(expname, varname, endleg, window, yearleap, mode='full', debug=False):
     """ 
     Function to project a field in the future using EOFs. 
     
@@ -190,21 +209,20 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debu
     
     """
 
-    startleg = endleg - yearspan + 1
+    startleg = endleg - window + 1
     startyear = 1990 + startleg - 2
     endyear = 1990 + endleg - 2
-    neofs = endyear - startyear + 1
+    targetyear = endyear + yearleap
 
     logging.info(f"Start/end year: {startyear}-{endyear}")
-    logging.info(f"Time window: {neofs}")
+    logging.info(f"Time window: {window}")
 
     info = catalogue.observables('nemo')[varname]
     dirs = config.folders(expname)
 
-    # forecast year
-    foreyear = get_forecast_year(endyear, yearleap)
-    xf = _forecast_xarray(foreyear, use_cftime=False)
-    yf = _forecast_xarray(foreyear, use_cftime=True)
+    # forecast target year
+    xf = _forecast_xarray(targetyear, use_cftime=False)
+    yf = _forecast_xarray(targetyear, use_cftime=True)
 
     # prepare patterns for EOFs
     filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_pattern.nc")
@@ -214,7 +232,7 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debu
     # Full set of EOFs
     if mode == 'full':
 
-        for i in range(neofs):
+        for i in range(window-1):
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
             logging.info(f"Reading filename: {filename}")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))        
@@ -222,7 +240,7 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debu
             timeseries['time'] = new_time
             coeffs = timeseries.polyfit(dim='time', deg=1, skipna=True)
             theta = xr.polyval(xf, coeffs[f"{varname}_polyfit_coefficients"])
-            
+
             if debug == True:
                 logging.info(f"Debug mode: ON --> Plotting fit EOF timeseries n={i}")
                 figname=os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_fit_{str(i).zfill(5)}.png")
@@ -259,7 +277,7 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debu
     # Reconstruct the last frame (for dry-runs)
     elif mode == 'reco':
 
-        for i in range(neofs):            
+        for i in range(window-1):            
             filename = os.path.join(dirs['tmp'], str(endleg).zfill(3), f"{varname}_series_{str(i).zfill(5)}.nc")
             timeseries = xr.open_mfdataset(filename, use_cftime=True, preprocess=lambda data: process_data(data, ftype='series', dim=info['dim'], grid=info['grid']))
             theta = timeseries[varname].isel(time=-1)
@@ -339,3 +357,61 @@ def project_eofs(expname, varname, endleg, yearspan, yearleap, mode='full', debu
     #outfield.to_netcdf(infile, mode='w', unlimited_dims={'time': True})
 
     return field
+
+##########################################################################################
+
+def performance_eofs(fdata, udata, targetyear, varname):
+    """ 
+    Function to test the forecast method in dry-run mode
+    
+    Args:
+    - fdata: xarray.DataArray   Forecasted field
+    - udata: xarray.DataArray   Unperturbed field
+    - eof_slope: float          EOF slope
+    - targetyear: int           Target year of the forecast
+    - varname: str              Variable name
+    
+    """
+
+    # compute error and squared-error (on the future window)
+    start_date = f"{targetyear}0101"
+    end_date = f"{targetyear}0131"
+    delta = fdata[varname].isel(time=0) - udata.sel(time=slice(start_date, end_date)).mean(dim='time')
+    squared_delta = delta**2
+
+    # local temporal slope of the unperturbed field (on the window)
+    # moving average needed (using rolling)
+    udata_rolled = udata.rolling(time=12, center=True).mean()    
+    time_diff = np.diff(udata_rolled['time'].values).astype('timedelta64[D]').astype(float)
+    time_diff_da = xr.DataArray(time_diff, coords=[udata_rolled['time'][1:]], dims=["time"])
+    time_diff_aligned, ds0_diff_aligned = xr.align(time_diff_da, udata_rolled.diff(dim="time"), join='exact')
+    slopes = ds0_diff_aligned / time_diff_aligned
+    slope = slopes.sel(time=slice(start_date, end_date))
+
+    # create a dataset with the results
+    # (3D+time) fields: delta, squared_delta, local_slope 
+    # parameters: window, yearleap, endyear (in the filename)
+
+    return delta, squared_delta, slope
+
+
+def mean_performance_eofs(delta, squared_delta, slope, info):
+    """ global average of performance metrics """
+
+    # compute the mean error and mean squared error
+    mean_delta = spacemean(delta, ndim=info['dim'])
+    mean_squared_delta = spacemean(squared_delta, ndim=info['dim'])
+    #std_delta = np.sqrt(mean_squared_delta - mean_delta**2)
+
+    # compute the mean slope of the unperturbed field (on the regression window!!)
+    mean_slope = spacemean(slope, ndim=info['dim'])
+
+    return mean_delta, mean_squared_delta, mean_slope
+
+def create_table_eofs(mdata):
+
+    # create a table with the results
+    # columns: window, targetyear, endyear, mean_delta, mean_squared_delta, mean_slope, eof_slope
+
+
+    return None
